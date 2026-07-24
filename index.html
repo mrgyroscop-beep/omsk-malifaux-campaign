@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Локальный билдер кампании Malifaux Fourth Edition по Index of the Untold."
+    />
+    <title>Неписаный реестр — M4E Campaign Builder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" type="button" data-route="dossier" aria-label="Открыть досье">
+          <span class="brand-mark" aria-hidden="true">M</span>
+          <span>
+            <strong>Неписаный реестр</strong>
+            <small>M4E · Campaign Builder</small>
+          </span>
+        </button>
+
+        <div class="campaign-pulse" aria-live="polite">
+          <span class="pulse-dot"></span>
+          <span id="headerCampaign">Новое досье</span>
+          <span class="slash">/</span>
+          <span id="headerWeek">Неделя 1</span>
+        </div>
+
+        <div class="top-actions">
+          <button class="button button-ghost" id="resetButton" type="button">Новое</button>
+          <button class="button button-ghost" id="importButton" type="button">Импорт</button>
+          <button class="button button-ghost" id="exportButton" type="button">Экспорт</button>
+          <button class="button button-ink" id="printButton" type="button">Печать</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+      </header>
+
+      <aside class="rail" aria-label="Разделы билдера">
+        <div class="rail-index">INDEX / 01</div>
+        <nav class="primary-nav">
+          <button class="nav-item is-active" type="button" data-route="dossier">
+            <span>01</span>
+            <b>Досье</b>
+            <small>Кампания и команда</small>
+          </button>
+          <button class="nav-item" type="button" data-route="leader">
+            <span>02</span>
+            <b>Лидер</b>
+            <small>Архетип и способности</small>
+          </button>
+          <button class="nav-item" type="button" data-route="arsenal">
+            <span>03</span>
+            <b>Арсенал</b>
+            <small>Модели и снаряжение</small>
+          </button>
+          <button class="nav-item" type="button" data-route="chronicle">
+            <span>04</span>
+            <b>Хроника</b>
+            <small>Недели и последствия</small>
+          </button>
+          <button class="nav-item" type="button" data-route="reference">
+            <span>05</span>
+            <b>Справочник</b>
+            <small>Правила и таблицы</small>
+          </button>
+        </nav>
+
+        <div class="rail-footer">
+          <span>Источник</span>
+          <b>Index of the Untold</b>
+          <small>Campaign Mode · стр. 14–56</small>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="route is-active" id="route-dossier" aria-labelledby="dossierTitle">
+          <div class="route-heading">
+            <div>
+              <p class="eyebrow">Запись I · Начало кампании</p>
+              <h1 id="dossierTitle">Откройте новое досье</h1>
+              <p class="lede">
+                Зафиксируйте договорённости группы. Эти сведения станут титульным листом
+                арсенала и основой всех автоматических расчётов.
+              </p>
+            </div>
+            <div class="folio">01</div>
+          </div>
+
+          <div class="two-column">
+            <article class="ledger-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Идентификация</span>
+                  <h2>Команда и игрок</h2>
+                </div>
+                <span class="page-ref">стр. 15</span>
+              </div>
+
+              <div class="form-grid">
+                <label class="field field-wide">
+                  <span>Название команды</span>
+                  <input id="crewName" data-bind="crew.name" placeholder="Например, Святые из Шахты №7" />
+                </label>
+                <label class="field">
+                  <span>Игрок</span>
+                  <input id="playerName" data-bind="crew.player" placeholder="Имя владельца досье" />
+                </label>
+                <label class="field">
+                  <span>Фракция</span>
+                  <select id="faction" data-bind="crew.faction">
+                    <option value="">Выберите фракцию</option>
+                    <option>Guild</option>
+                    <option>Resurrectionists</option>
+                    <option>Neverborn</option>
+                    <option>Arcanists</option>
+                    <option>Outcasts</option>
+                    <option>Ten Thunders</option>
+                    <option>Bayou</option>
+                    <option>Explorer's Society</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Первый ключ</span>
+                  <input id="keywordOne" data-bind="crew.keywords.0" placeholder="Marshal" />
+                </label>
+                <label class="field">
+                  <span>Второй ключ</span>
+                  <input id="keywordTwo" data-bind="crew.keywords.1" placeholder="Witch Hunter" />
+                </label>
+              </div>
+
+              <div class="rule-note">
+                <span class="rule-note-mark">!</span>
+                <p>
+                  Минимум один ключ должен принадлежать выбранной фракции. Модели одного
+                  выбранного ключа навсегда получают второй ключ в этой кампании.
+                </p>
+              </div>
+            </article>
+
+            <aside class="side-stack">
+              <article class="ledger-card compact-card">
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Срок</span>
+                    <h2>Ритм кампании</h2>
+                  </div>
+                  <span class="page-ref">стр. 15, 18</span>
+                </div>
+                <label class="range-field">
+                  <span>Продолжительность</span>
+                  <output id="campaignLengthOutput">8 недель</output>
+                  <input id="campaignLength" data-bind="campaign.length" type="range" min="4" max="12" step="1" />
+                </label>
+                <label class="field">
+                  <span>Текущая неделя</span>
+                  <input id="currentWeek" data-bind="campaign.week" type="number" min="1" max="12" />
+                </label>
+                <label class="field">
+                  <span>День общего сбора</span>
+                  <input id="meetingDay" data-bind="campaign.meetingDay" placeholder="Например, четверг" />
+                </label>
+              </article>
+
+              <article class="ink-panel">
+                <span class="ink-panel-number" id="dossierProgress">0%</span>
+                <div>
+                  <small>Готовность досье</small>
+                  <strong id="dossierStatus">Нужны основные сведения</strong>
+                </div>
+                <button class="text-link" type="button" data-route="leader">Перейти к лидеру →</button>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="route" id="route-leader" aria-labelledby="leaderTitle">
+          <div class="route-heading">
+            <div>
+              <p class="eyebrow">Запись II · Уникальная нить Судьбы</p>
+              <h1 id="leaderTitle">Соберите лидера</h1>
+              <p class="lede">
+                Выберите каркас характеристик, затем запишите действия и способности,
+                заимствованные у подходящих союзников.
+              </p>
+            </div>
+            <div class="folio">02</div>
+          </div>
+
+          <article class="ledger-card">
+            <div class="card-title">
+              <div>
+                <span class="kicker">Основа</span>
+                <h2>Архетип</h2>
+              </div>
+              <span class="page-ref">стр. 17</span>
+            </div>
+            <div class="archetype-grid" id="archetypeGrid"></div>
+          </article>
+
+          <div class="two-column leader-columns">
+            <article class="ledger-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Личное дело</span>
+                  <h2>Облик и путь</h2>
+                </div>
+                <span class="page-ref">стр. 17–18</span>
+              </div>
+              <div class="form-grid">
+                <label class="field field-wide">
+                  <span>Имя лидера</span>
+                  <input data-bind="leader.name" placeholder="Имя, которого ещё нет в Malifaux" />
+                </label>
+                <label class="field">
+                  <span>Характеристика I</span>
+                  <input data-bind="leader.characteristics.0" placeholder="Living" />
+                </label>
+                <label class="field">
+                  <span>Характеристика II</span>
+                  <input data-bind="leader.characteristics.1" placeholder="Construct" />
+                </label>
+                <label class="field">
+                  <span>Размер Sz</span>
+                  <select data-bind="leader.size">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>База</span>
+                  <select data-bind="leader.base">
+                    <option value="30">30 мм</option>
+                    <option value="40">40 мм</option>
+                    <option value="50">50 мм</option>
+                  </select>
+                </label>
+              </div>
+
+              <fieldset class="choice-fieldset">
+                <legend>Путь получения опыта</legend>
+                <label class="path-choice">
+                  <input type="radio" name="path" value="Bruiser" data-path-choice />
+                  <span class="path-icon">✦</span>
+                  <span>
+                    <b>Bruiser</b>
+                    <small>+1 XP, если лидер убил хотя бы одну вражескую не-peon модель.</small>
+                  </span>
+                </label>
+                <label class="path-choice">
+                  <input type="radio" name="path" value="Strategist" data-path-choice />
+                  <span class="path-icon">⌖</span>
+                  <span>
+                    <b>Strategist</b>
+                    <small>+1 XP за Interact в пределах 6″ от вражеской зоны развёртывания.</small>
+                  </span>
+                </label>
+              </fieldset>
+            </article>
+
+            <article class="ledger-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Заимствованные таланты</span>
+                  <h2>Действия и способности</h2>
+                </div>
+                <span class="page-ref">стр. 17</span>
+              </div>
+              <div id="talentFields" class="talent-fields"></div>
+              <div class="rule-note">
+                <span class="rule-note-mark">i</span>
+                <p id="archetypeRule">
+                  Выберите архетип. Билдер покажет допустимое число талантов и предел стоимости
+                  модели-источника.
+                </p>
+              </div>
+            </article>
+          </div>
+
+          <article class="ledger-card crew-card-section">
+            <div class="card-title">
+              <div>
+                <span class="kicker">Стартовая карта команды</span>
+                <h2>Первый общий приём</h2>
+              </div>
+              <span class="page-ref">стр. 15–16</span>
+            </div>
+            <div class="crew-card-grid" id="crewCardGrid"></div>
+          </article>
+        </section>
+
+        <section class="route" id="route-arsenal" aria-labelledby="arsenalTitle">
+          <div class="route-heading">
+            <div>
+              <p class="eyebrow">Запись III · Имущество команды</p>
+              <h1 id="arsenalTitle">Ведите арсенал</h1>
+              <p class="lede">
+                Стартовый лимит — 25 камней. Лидер добавляется бесплатно; до трёх
+                неистраченных камней превращаются в скрип.
+              </p>
+            </div>
+            <div class="folio">03</div>
+          </div>
+
+          <div class="metric-strip">
+            <div>
+              <span>Стоимость моделей</span>
+              <strong id="arsenalCost">0</strong>
+              <small>/ 25 SS на старте</small>
+            </div>
+            <div>
+              <span>Моделей</span>
+              <strong id="modelCount">0</strong>
+              <small>лидер не считается</small>
+            </div>
+            <div>
+              <span>Скрип</span>
+              <strong id="scripCount">0</strong>
+              <small>в текущем досье</small>
+            </div>
+            <div>
+              <span>Травм</span>
+              <strong id="injuryCount">0</strong>
+              <small>−1 CR за каждую</small>
+            </div>
+          </div>
+
+          <div class="arsenal-layout">
+            <article class="ledger-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Состав</span>
+                  <h2>Модели в арсенале</h2>
+                </div>
+                <button class="button button-red" id="addModelButton" type="button">+ Добавить модель</button>
+              </div>
+              <div class="model-list" id="modelList"></div>
+            </article>
+
+            <aside class="side-stack">
+              <article class="ledger-card compact-card">
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Подготовка встречи</span>
+                    <h2>Рейтинг кампании</h2>
+                  </div>
+                  <span class="page-ref">стр. 19</span>
+                </div>
+                <div class="rating-equation">
+                  <label>
+                    <span>Снаряжение в игре</span>
+                    <input id="ratingEquipment" type="number" min="0" value="0" />
+                  </label>
+                  <span class="operator">+</span>
+                  <label>
+                    <span>Продвижения</span>
+                    <input id="ratingAdvances" type="number" min="0" value="0" />
+                  </label>
+                  <span class="operator">−</span>
+                  <label>
+                    <span>Травмы в ростере</span>
+                    <input id="ratingInjuries" type="number" min="0" value="0" />
+                  </label>
+                </div>
+                <div class="rating-result">
+                  <span>Campaign Rating</span>
+                  <strong id="ratingResult">0</strong>
+                </div>
+              </article>
+
+              <article class="ledger-card compact-card">
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Хранилище</span>
+                    <h2>Снаряжение</h2>
+                  </div>
+                  <button class="icon-button" id="addEquipmentButton" type="button" aria-label="Добавить снаряжение">+</button>
+                </div>
+                <div id="equipmentList" class="equipment-list"></div>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="route" id="route-chronicle" aria-labelledby="chronicleTitle">
+          <div class="route-heading">
+            <div>
+              <p class="eyebrow">Запись IV · Свидетельства и последствия</p>
+              <h1 id="chronicleTitle">Записывайте игры</h1>
+              <p class="lede">
+                Результат встречи превращается в скрип, опыт и новые страницы истории.
+                Калькулятор следует шести фазам Aftermath.
+              </p>
+            </div>
+            <div class="folio">04</div>
+          </div>
+
+          <div class="chronicle-layout">
+            <article class="ledger-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Новая запись</span>
+                  <h2>Итог встречи</h2>
+                </div>
+                <span class="page-ref">стр. 20–35</span>
+              </div>
+              <form id="gameForm" class="game-form">
+                <div class="form-grid">
+                  <label class="field">
+                    <span>Соперник</span>
+                    <input name="opponent" placeholder="Название команды" />
+                  </label>
+                  <label class="field">
+                    <span>Ваши VP</span>
+                    <input name="vp" type="number" min="0" value="0" />
+                  </label>
+                  <label class="field">
+                    <span>Разница CR в пользу соперника</span>
+                    <input name="ratingGap" type="number" min="0" value="0" />
+                  </label>
+                  <label class="field">
+                    <span>Выполнено схем</span>
+                    <input name="schemes" type="number" min="0" max="3" value="0" />
+                  </label>
+                </div>
+                <div class="toggle-grid">
+                  <label class="check-tile">
+                    <input name="won" type="checkbox" data-game-result="won" />
+                    <span><b>Победа</b><small>+1 скрип</small></span>
+                  </label>
+                  <label class="check-tile">
+                    <input name="lost" type="checkbox" data-game-result="lost" />
+                    <span><b>Поражение</b><small>+1 XP</small></span>
+                  </label>
+                  <label class="check-tile">
+                    <input name="pathGoal" type="checkbox" />
+                    <span><b>Цель пути</b><small id="pathGoalLabel">Bruiser / Strategist</small></span>
+                  </label>
+                  <label class="check-tile">
+                    <input name="withdrewEarly" type="checkbox" data-withdrawal="early" />
+                    <span><b>Ранний отход</b><small>Ход 1–2: только травмы</small></span>
+                  </label>
+                  <label class="check-tile">
+                    <input name="withdrewLate" type="checkbox" data-withdrawal="late" />
+                    <span><b>Поздний отход</b><small>Ход 3+: без базовой карты</small></span>
+                  </label>
+                </div>
+
+                <div class="aftermath-preview">
+                  <div>
+                    <span>Aftermath hand</span>
+                    <strong id="previewHand">1</strong>
+                  </div>
+                  <div>
+                    <span>Выплата</span>
+                    <strong id="previewScrip">0 скрип</strong>
+                  </div>
+                  <div>
+                    <span>Опыт лидера</span>
+                    <strong id="previewXp">1 XP</strong>
+                  </div>
+                </div>
+                <button class="button button-red button-wide" type="submit">Записать в хронику</button>
+              </form>
+            </article>
+
+            <aside class="ledger-card chronicle-card">
+              <div class="card-title">
+                <div>
+                  <span class="kicker">Журнал</span>
+                  <h2>История кампании</h2>
+                </div>
+                <span class="counter-stamp" id="gameCount">0 игр</span>
+              </div>
+              <div id="gameLog" class="game-log"></div>
+            </aside>
+          </div>
+
+          <article class="ledger-card advancement-card">
+            <div class="card-title">
+              <div>
+                <span class="kicker">Leadership Experience</span>
+                <h2>Трек развития лидера</h2>
+              </div>
+              <span class="page-ref">стр. 31, 56</span>
+            </div>
+            <div id="xpTrack" class="xp-track" aria-label="Трек опыта лидера"></div>
+            <div class="xp-legend">
+              <span><i></i> Полученный опыт</span>
+              <span><i class="tier-dot"></i> Число внутри — максимальный тир продвижения</span>
+            </div>
+          </article>
+        </section>
+
+        <section class="route" id="route-reference" aria-labelledby="referenceTitle">
+          <div class="route-heading">
+            <div>
+              <p class="eyebrow">Запись V · Полевой указатель</p>
+              <h1 id="referenceTitle">Не листайте книгу в разгар игры</h1>
+              <p class="lede">
+                Короткие алгоритмы и таблицы для кампании. Формулировки сокращены;
+                спорные случаи сверяйте с оригиналом.
+              </p>
+            </div>
+            <div class="folio">05</div>
+          </div>
+
+          <div class="reference-tabs" role="tablist">
+            <button class="is-active" type="button" data-reference-tab="flow">Цикл кампании</button>
+            <button type="button" data-reference-tab="injuries">Травмы</button>
+            <button type="button" data-reference-tab="equipment">Снаряжение</button>
+            <button type="button" data-reference-tab="advancement">Продвижение</button>
+          </div>
+
+          <div class="reference-panel is-active" id="reference-flow"></div>
+          <div class="reference-panel" id="reference-injuries"></div>
+          <div class="reference-panel" id="reference-equipment"></div>
+          <div class="reference-panel" id="reference-advancement"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="modelDialog" class="modal">
+      <form method="dialog" id="modelForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Новая единица</span>
+            <h2>Добавить модель</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="modelDialog" aria-label="Закрыть">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span>Название</span>
+            <input name="name" required placeholder="Например, Death Marshal" />
+          </label>
+          <label class="field">
+            <span>Стоимость</span>
+            <input name="cost" type="number" min="0" required value="5" />
+          </label>
+          <label class="field">
+            <span>Тип</span>
+            <select name="type">
+              <option value="Minion">Minion</option>
+              <option value="Enforcer">Enforcer</option>
+              <option value="Henchman">Henchman</option>
+              <option value="Peon">Peon</option>
+              <option value="Other">Другое</option>
+            </select>
+          </label>
+          <label class="field field-wide">
+            <span>Ключевые слова</span>
+            <input name="keywords" placeholder="Через запятую" />
+          </label>
+        </div>
+        <div class="toggle-grid modal-toggles">
+          <label class="check-tile">
+            <input name="versatile" type="checkbox" />
+            <span><b>Versatile</b><small>В выбранной фракции</small></span>
+          </label>
+          <label class="check-tile">
+            <input name="outOfKeyword" type="checkbox" />
+            <span><b>Вне ключа</b><small>+1 скрип при найме</small></span>
+          </label>
+        </div>
+        <button class="button button-red button-wide" value="default">Добавить в арсенал</button>
+      </form>
+    </dialog>
+
+    <dialog id="equipmentDialog" class="modal">
+      <form method="dialog" id="equipmentForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Хранилище</span>
+            <h2>Добавить снаряжение</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="equipmentDialog" aria-label="Закрыть">×</button>
+        </div>
+        <label class="field">
+          <span>Из таблицы книги</span>
+          <select name="catalog" id="equipmentCatalog"></select>
+        </label>
+        <label class="field">
+          <span>Или своё название</span>
+          <input name="customName" placeholder="Пользовательское снаряжение" />
+        </label>
+        <button class="button button-red button-wide" value="default">Добавить</button>
+      </form>
+    </dialog>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
