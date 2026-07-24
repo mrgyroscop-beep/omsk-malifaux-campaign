@@ -155,6 +155,36 @@ button {
   padding-right: 24px;
 }
 
+.language-switch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 39px;
+  margin-right: 4px;
+  padding: 0 10px;
+  color: rgba(244, 238, 223, 0.32);
+  border: 1px solid rgba(244, 238, 223, 0.12);
+  font-family: var(--display);
+  font-size: 11px;
+}
+
+.language-switch button {
+  padding: 5px 3px 3px;
+  color: rgba(244, 238, 223, 0.45);
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.language-switch button:hover,
+.language-switch button.is-active {
+  color: var(--paper-bright);
+  border-bottom-color: var(--red-bright);
+}
+
 .button {
   min-height: 39px;
   border: 1px solid transparent;
@@ -1533,6 +1563,11 @@ h1 {
 
   .top-actions {
     padding-right: 12px;
+  }
+
+  .language-switch {
+    margin-right: 0;
+    padding: 0 7px;
   }
 
   .rail {
