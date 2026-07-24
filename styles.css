@@ -1629,6 +1629,17 @@ h1 {
   .xp-track {
     grid-template-columns: repeat(7, 1fr);
   }
+
+  .reference-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .reference-tabs button {
+    min-width: 0;
+    padding: 12px 8px;
+  }
 }
 
 @media print {

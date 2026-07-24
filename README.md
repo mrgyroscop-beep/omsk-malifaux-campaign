@@ -43,8 +43,10 @@ python -m http.server 4173
 `Upgrade Cards`, чтобы автоматически фильтровать таланты по фракции, ключу и
 стоимости.
 
-Сокращённые формулировки предназначены для удобства. В спорных случаях приоритет
-имеет оригинальная книга.
+Английские формулировки правил перенесены из оригинальной книги дословно.
+Нетекстовые игровые пиктограммы при необходимости переданы понятными текстовыми
+обозначениями. Русские формулировки остаются сокращённой справочной версией; в
+спорных случаях приоритет имеет оригинальная книга.
 
 ## English
 
@@ -86,5 +88,6 @@ are entered manually. The natural next step is to add the `Stat Cards` and
 `Upgrade Cards` data so eligible talents can be filtered automatically by Faction,
 Keyword, and Cost.
 
-Reference text is abbreviated for convenience. The original rulebook takes
-precedence in edge cases.
+English rules wording is reproduced verbatim from the original rulebook.
+Non-text game symbols are rendered with accessible text labels where needed.
+The Russian wording remains a condensed quick-reference version.
