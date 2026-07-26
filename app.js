@@ -39,6 +39,7 @@ const STATIC_TEXT_EN = {
   "Ритм кампании": "Campaign cadence",
   "стр. 15, 18": "pp. 15, 18",
   "Продолжительность": "Campaign length",
+  "До 14 недель для кооперативной кампании": "Up to 14 weeks for a cooperative campaign",
   "8 недель": "8 weeks",
   "Текущая неделя": "Current week",
   "День общего сбора": "Weekly meeting day",
