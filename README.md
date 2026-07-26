@@ -38,7 +38,7 @@ python -m http.server 4173
 - травмы моделей, снаряжение и калькулятор Campaign Rating;
 - журнал игр с расчётом Aftermath Hand, Payday и XP;
 - полный 39-ячеечный трек Leadership Experience;
-- краткие справочники по травмам, снаряжению и продвижениям;
+- краткие справочники по травмам и продвижениям, а также полный каталог из 82 предметов снаряжения;
 - раздел «Правила» с точными страницами 14–56 оригинальной книги, иллюстрациями и
   двуязычным оглавлением;
 - кликабельные номера страниц во всех разделах и возврат к исходному месту;
@@ -113,7 +113,7 @@ Then open `http://localhost:4173`.
 - model Injuries, Equipment storage, and Campaign Rating calculator;
 - game chronicle with Aftermath Hand, Payday, and XP calculations;
 - complete 39-box Leadership Experience track;
-- concise Injury, Equipment, and Advancement references;
+- concise Injury and Advancement references plus the complete 82-item Equipment catalog;
 - a Rules section containing exact original pages 14–56, illustrations, and a
   bilingual table of contents;
 - clickable page references throughout the builder with contextual back navigation;
