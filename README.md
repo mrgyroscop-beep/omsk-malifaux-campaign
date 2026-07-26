@@ -39,7 +39,27 @@ python -m http.server 4173
 - журнал игр с расчётом Aftermath Hand, Payday и XP;
 - полный 39-ячеечный трек Leadership Experience;
 - краткие справочники по травмам, снаряжению и продвижениям;
+- раздел «Правила» с точными страницами 14–56 оригинальной книги, иллюстрациями и
+  двуязычным оглавлением;
+- кликабельные номера страниц во всех разделах и возврат к исходному месту;
 - автосохранение, импорт/экспорт JSON и печать.
+
+### Правила и навигация
+
+В приложение включён отдельный структурированный PDF раздела **Campaign Mode**:
+печатные страницы 14–56 сохранены в исходной векторной вёрстке вместе с таблицами
+и иллюстрациями. В PDF добавлены закладки по разделам, а в интерфейсе — русское и
+английское оглавление, переход к номеру печатной страницы и прямые ссылки вида
+`#rules/31`.
+
+Номера страниц в Досье, Лидере, Арсенале, Хронике и Справочнике открывают нужную
+страницу правил. Кнопка «Назад» возвращает в тот же раздел, вкладку и положение
+страницы, откуда был выполнен переход. На мобильных устройствах показывается
+точное постраничное изображение оригинала; полный PDF всегда можно открыть
+отдельно.
+
+Сам документ правил остаётся официальным английским оригиналом без обратного
+перевода с русского. Переключатель RU / EN меняет интерфейс и оглавление.
 
 ### Карточки моделей и офлайн-режим
 
@@ -94,7 +114,25 @@ Then open `http://localhost:4173`.
 - game chronicle with Aftermath Hand, Payday, and XP calculations;
 - complete 39-box Leadership Experience track;
 - concise Injury, Equipment, and Advancement references;
+- a Rules section containing exact original pages 14–56, illustrations, and a
+  bilingual table of contents;
+- clickable page references throughout the builder with contextual back navigation;
 - browser autosave, JSON import/export, and print layout.
+
+### Rules and navigation
+
+The app includes a structured standalone PDF of the **Campaign Mode** section.
+Printed pages 14–56 retain the original vector layout, tables, and illustrations,
+with PDF bookmarks added for the section hierarchy. The app provides a bilingual
+table of contents, printed-page navigation, and direct links such as `#rules/31`.
+
+Page references in Dossier, Leader, Arsenal, Chronicle, and Reference open the
+relevant rulebook page. Back returns to the originating section, Reference tab,
+scroll position, and link. Mobile devices use exact page images from the same
+source, while the complete PDF remains available separately.
+
+The rules document is the official English source, not a translation back from
+Russian. The RU / EN switch changes the interface and table of contents.
 
 ### Model cards and offline use
 

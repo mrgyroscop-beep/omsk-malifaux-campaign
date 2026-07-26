@@ -18,6 +18,8 @@ const STATIC_TEXT_EN = {
   "Недели и последствия": "Weeks & aftermath",
   "Справочник": "Reference",
   "Правила и таблицы": "Rules & tables",
+  "Правила": "Rules",
+  "Оригинал и навигация": "Original & navigation",
   "Источник": "Source",
   "Campaign Mode · стр. 14–56": "Campaign Mode · pp. 14–56",
   "Запись I · Начало кампании": "Record I · Starting the campaign",
@@ -139,6 +141,37 @@ const STATIC_TEXT_EN = {
   "Цикл кампании": "Campaign flow",
   "Травмы": "Injuries",
   "Продвижение": "Advancement",
+  "Запись VI · Первоисточник": "Record VI · Primary source",
+  "Правила кампании": "Campaign rules",
+  "Печатные страницы 14–56 из Index of the Untold — с оригинальной версткой, таблицами и иллюстрациями. Используйте указатель или переходите сюда прямо из ссылок в билдере.":
+    "Printed pages 14–56 from Index of the Untold, preserving the original layout, tables, and illustrations. Use the index or jump here directly from references in the builder.",
+  "Навигация по правилам": "Rules navigation",
+  "Назад в справочник": "Back to reference",
+  "Официальный оригинал": "Official source",
+  "Структура раздела": "Section index",
+  "43 страницы": "43 pages",
+  "Оглавление правил": "Rules table of contents",
+  "Страница 14 из 56": "Page 14 of 56",
+  "Открыть PDF отдельно ↗": "Open PDF separately ↗",
+  "Открыть PDF с закладками ↗": "Open bookmarked PDF ↗",
+  "Связанные страницы": "Related pages",
+  "Навигация по страницам PDF": "PDF page navigation",
+  "Предыдущая страница": "Previous page",
+  "Предыдущая": "Previous",
+  "Страница": "Page",
+  "Перейти": "Go",
+  "Следующая страница": "Next page",
+  "Следующая": "Next",
+  "Правила Campaign Mode, страница 14": "Campaign Mode rules, page 14",
+  "Оригинальный PDF": "Original PDF",
+  "Точная страница из оригинала; увеличьте жестом при необходимости.":
+    "An exact page from the original; pinch to zoom if needed.",
+  "Точная страница из оригинала; нажмите, чтобы открыть в полном размере.":
+    "An exact page from the original; select it to open at full size.",
+  "Полный структурированный PDF с закладками:": "Complete structured PDF with bookmarks:",
+  "открыть в новой вкладке": "open in a new tab",
+  "Если встроенный просмотр недоступен,": "If the embedded viewer is unavailable,",
+  "откройте PDF в новой вкладке": "open the PDF in a new tab",
   "Новая единица": "New asset",
   "Добавить модель": "Add model",
   "Название": "Name",
@@ -194,6 +227,15 @@ const UI_MESSAGES = {
   dossierComplete: { ru: "Титульный лист заполнен", en: "Cover sheet complete" },
   dossierTakingShape: { ru: "Досье уже обретает форму", en: "The dossier is taking shape" },
   dossierNeedsDetails: { ru: "Нужны основные сведения", en: "Essential details needed" },
+  rulesBackTo: { ru: "Назад в раздел «{section}»", en: "Back to {section}" },
+  rulesBackFallback: { ru: "Назад в справочник", en: "Back to reference" },
+  rulesPageCounter: { ru: "Страница {page} из 56", en: "Page {page} of 56" },
+  rulesFrameTitle: {
+    ru: "Правила Campaign Mode, страница {page}",
+    en: "Campaign Mode rules, page {page}",
+  },
+  rulesMobilePage: { ru: "стр. {page}", en: "p. {page}" },
+  rulesLinkAria: { ru: "Открыть правила: {pages}", en: "Open rules: {pages}" },
   keywordHint: {
     ru: "Свободный ввод · проверка по BiggerHat",
     en: "Free entry · validated with BiggerHat",
@@ -390,6 +432,68 @@ try {
 }
 let currentLocale =
   storedLocale || (navigator.language?.toLowerCase().startsWith("en") ? "en" : "ru");
+
+const ROUTE_META = {
+  dossier: { index: "01", ru: "Досье", en: "Dossier" },
+  leader: { index: "02", ru: "Лидер", en: "Leader" },
+  arsenal: { index: "03", ru: "Арсенал", en: "Arsenal" },
+  chronicle: { index: "04", ru: "Хроника", en: "Chronicle" },
+  reference: { index: "05", ru: "Справочник", en: "Reference" },
+  rules: { index: "06", ru: "Правила", en: "Rules" },
+};
+const RULES_MIN_PAGE = 14;
+const RULES_MAX_PAGE = 56;
+const RULES_PDF_PAGE_OFFSET = 13;
+const RULES_PDF_PATH = "assets/rules/index-of-the-untold-campaign-mode.pdf";
+const RULES_PAGE_IMAGE_PATH = "assets/rules/pages";
+const RULES_GROUPS = [
+  {
+    ru: "Основа кампании",
+    en: "Campaign foundation",
+    items: [
+      { page: 14, ru: "Введение", en: "Introduction" },
+      { page: 15, ru: "Начало кампании", en: "Starting the Campaign" },
+      { page: 17, ru: "Создание лидера", en: "Building a Leader" },
+      { page: 18, ru: "Начало новой недели", en: "Start of a New Week" },
+      { page: 19, ru: "Подготовка игры", en: "Setting Up a Game" },
+      { page: 20, ru: "Игра и Aftermath", en: "Playing & Aftermath" },
+    ],
+  },
+  {
+    ru: "Последствия",
+    en: "Aftermath",
+    items: [
+      { page: 21, ru: "Payday и Barter", en: "Payday & Barter" },
+      { page: 22, ru: "Таблицы снаряжения", en: "Equipment Tables" },
+      { page: 29, ru: "Those Who Thirst", en: "Those Who Thirst" },
+      { page: 31, ru: "Развитие лидера", en: "Advance Leader" },
+      { page: 33, ru: "Подпольный доктор", en: "Back-Alley Doctor" },
+      { page: 34, ru: "Определение травм", en: "Determine Injuries" },
+      { page: 36, ru: "Lucky Miss", en: "Lucky Miss" },
+      { page: 37, ru: "Завершение кампании", en: "Ending a Campaign" },
+    ],
+  },
+  {
+    ru: "Таблицы развития",
+    en: "Advancement tables",
+    items: [
+      { page: 38, ru: "Тир I · Атака", en: "Tier 1 · Attack" },
+      { page: 41, ru: "Тир I · Тактика", en: "Tier 1 · Tactical" },
+      { page: 44, ru: "Тир II · Действия", en: "Tier 2 · Actions" },
+      { page: 50, ru: "Тир II · Способности", en: "Tier 2 · Abilities" },
+      { page: 52, ru: "Тир III · Тотем", en: "Tier 3 · Totem" },
+      { page: 54, ru: "Тир III · Призыв", en: "Tier 3 · Summoning" },
+    ],
+  },
+  {
+    ru: "Приложение",
+    en: "Appendix",
+    items: [
+      { page: 55, ru: "Иллюстрация", en: "Illustration" },
+      { page: 56, ru: "Лист арсенала", en: "Arsenal Sheet" },
+    ],
+  },
+];
 
 function localized(ru, en) {
   return currentLocale === "en" ? en : ru;
@@ -755,6 +859,10 @@ let keywordValidation = [0, 1].map((index) => ({
 }));
 let keywordSuggestions = [0, 1].map(() => ({ items: [], activeIndex: -1 }));
 let keywordValidationRequest = [0, 0];
+let currentRulesPage = RULES_MIN_PAGE;
+let currentRulesRelatedPages = [];
+let currentRulesOrigin = null;
+let currentReferenceTab = "flow";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -1602,7 +1710,7 @@ function applyStaticTranslations() {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    if (node.parentElement?.closest("script, style")) continue;
+    if (node.parentElement?.closest("script, style, [data-dynamic-i18n]")) continue;
     const normalized = node.__i18nRu || normalizeText(node.nodeValue);
     if (!STATIC_TEXT_EN[normalized]) continue;
     if (!node.__i18nRu) {
@@ -1631,6 +1739,15 @@ function applyStaticTranslations() {
     button.classList.toggle("is-active", button.dataset.locale === currentLocale);
     button.setAttribute("aria-pressed", String(button.dataset.locale === currentLocale));
   });
+
+  document.querySelectorAll("[data-rules-pages]").forEach((button) => {
+    const pages = parseRulesPages(button.dataset.rulesPages);
+    if (!pages.length) return;
+    button.setAttribute(
+      "aria-label",
+      message("rulesLinkAria", { pages: rulesPagesLabel(button.dataset.rulesPages) }),
+    );
+  });
 }
 
 function toast(message) {
@@ -1641,15 +1758,383 @@ function toast(message) {
   setTimeout(() => node.remove(), 2800);
 }
 
-function routeTo(route) {
+function activeRoute() {
+  return document.querySelector(".route.is-active")?.id.replace("route-", "") || "dossier";
+}
+
+function normalizeRulesPage(page) {
+  const number = Math.round(Number(page));
+  if (!Number.isFinite(number)) return RULES_MIN_PAGE;
+  return Math.min(RULES_MAX_PAGE, Math.max(RULES_MIN_PAGE, number));
+}
+
+function parseRulesPages(spec) {
+  const pages = [];
+  String(spec || "")
+    .replace(/[–—]/g, "-")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .forEach((part) => {
+      const range = part.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (range) {
+        const start = normalizeRulesPage(range[1]);
+        const end = normalizeRulesPage(range[2]);
+        const direction = start <= end ? 1 : -1;
+        for (let page = start; page !== end + direction; page += direction) {
+          pages.push(page);
+        }
+        return;
+      }
+      const page = Number(part);
+      if (Number.isFinite(page)) pages.push(normalizeRulesPage(page));
+    });
+  return [...new Set(pages)];
+}
+
+function rulesPagesLabel(spec) {
+  const display = String(spec || "").replace(/-/g, "–");
+  const multiple = /[,–]/.test(display);
+  return currentLocale === "en"
+    ? `${multiple ? "pp." : "p."} ${display}`
+    : `стр. ${display}`;
+}
+
+function rulesSectionForPage(page) {
+  const items = RULES_GROUPS.flatMap((group) => group.items).sort((a, b) => a.page - b.page);
+  return items.reduce(
+    (current, item) => (item.page <= page ? item : current),
+    items[0],
+  );
+}
+
+function activateReferenceTab(tab = "flow") {
+  const allowed = ["flow", "injuries", "equipment", "advancement"];
+  currentReferenceTab = allowed.includes(tab) ? tab : "flow";
+  document.querySelectorAll("[data-reference-tab]").forEach((item) => {
+    const active = item.dataset.referenceTab === currentReferenceTab;
+    item.classList.toggle("is-active", active);
+    item.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll(".reference-panel").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.id === `reference-${currentReferenceTab}`);
+  });
+}
+
+function activateRoute(route) {
+  const target = ROUTE_META[route] ? route : "dossier";
   document.querySelectorAll(".route").forEach((section) => {
-    section.classList.toggle("is-active", section.id === `route-${route}`);
+    section.classList.toggle("is-active", section.id === `route-${target}`);
   });
   document.querySelectorAll("[data-route]").forEach((button) => {
-    button.classList.toggle("is-active", button.classList.contains("nav-item") && button.dataset.route === route);
+    button.classList.toggle(
+      "is-active",
+      button.classList.contains("nav-item") && button.dataset.route === target,
+    );
   });
-  history.replaceState(null, "", `#${route}`);
+  const railIndex = document.querySelector("#railIndex");
+  if (railIndex) railIndex.textContent = `INDEX / ${ROUTE_META[target].index}`;
+  const activeNav = document.querySelector(`.nav-item[data-route="${target}"]`);
+  if (activeNav && window.matchMedia("(max-width: 860px)").matches) {
+    requestAnimationFrame(() => {
+      const nav = activeNav.closest(".primary-nav");
+      if (!nav) return;
+      const left =
+        activeNav.offsetLeft - (nav.clientWidth - activeNav.offsetWidth) / 2;
+      nav.scrollTo({ left: Math.max(0, left), behavior: "auto" });
+    });
+  }
+  return target;
+}
+
+function renderRulesNavigation() {
+  const toc = document.querySelector("#rulesToc");
+  if (!toc) return;
+  const activeSection = rulesSectionForPage(currentRulesPage);
+  toc.innerHTML = RULES_GROUPS.map(
+    (group) => {
+      const activeGroup = group.items.some((item) => item.page === activeSection.page);
+      const firstPage = group.items[0].page;
+      const lastPage = group.items[group.items.length - 1].page;
+      return `
+      <details class="rules-toc-group ${activeGroup ? "is-current" : ""}" ${activeGroup ? "open" : ""}>
+        <summary>
+          <span>${escapeHtml(localized(group.ru, group.en))}</span>
+          <small>${firstPage}–${lastPage}</small>
+        </summary>
+        ${group.items
+          .map(
+            (item) => `
+              <button
+                class="rules-toc-button ${item.page === activeSection.page ? "is-active" : ""}"
+                type="button"
+                data-rules-page="${item.page}"
+                ${item.page === activeSection.page ? 'aria-current="page"' : ""}
+              >
+                <span>${item.page}</span>
+                <b>${escapeHtml(localized(item.ru, item.en))}</b>
+              </button>`,
+          )
+          .join("")}
+      </details>`;
+    },
+  ).join("");
+}
+
+function renderRulesRelatedPages() {
+  const wrap = document.querySelector("#rulesRelated");
+  const list = document.querySelector("#rulesRelatedPages");
+  if (!wrap || !list) return;
+  if (
+    currentRulesRelatedPages.length <= 1 ||
+    currentRulesRelatedPages.length > 8
+  ) {
+    wrap.hidden = true;
+    list.innerHTML = "";
+    return;
+  }
+  wrap.hidden = false;
+  list.innerHTML = currentRulesRelatedPages
+    .map(
+      (page) => `
+        <button
+          class="rules-related-page ${page === currentRulesPage ? "is-active" : ""}"
+          type="button"
+          data-rules-page="${page}"
+          ${page === currentRulesPage ? 'aria-current="page"' : ""}
+        >${page}</button>`,
+    )
+    .join("");
+}
+
+function renderRulesPage() {
+  const section = rulesSectionForPage(currentRulesPage);
+  const pageImage = document.querySelector("#rulesPageImage");
+  const pageImageLink = document.querySelector("#rulesPageImageLink");
+  const mobilePageLabel = document.querySelector("#rulesMobilePageLabel");
+  const input = document.querySelector("#rulesPageInput");
+  const previous = document.querySelector("#rulesPreviousPage");
+  const next = document.querySelector("#rulesNextPage");
+  const openPdf = document.querySelector("#rulesOpenPdf");
+  const fallbackLink = document.querySelector("#rulesFallbackLink");
+  const backLabel = document.querySelector("#rulesBackLabel");
+  const readerBackLabel = document.querySelector("#rulesReaderBackLabel");
+  if (
+    !pageImage ||
+    !pageImageLink ||
+    !mobilePageLabel ||
+    !input ||
+    !previous ||
+    !next ||
+    !openPdf ||
+    !fallbackLink ||
+    !backLabel ||
+    !readerBackLabel
+  ) return;
+
+  document.querySelector("#rulesPageCounter").textContent = message("rulesPageCounter", {
+    page: currentRulesPage,
+  });
+  document.querySelector("#rulesPageTitle").textContent = localized(section.ru, section.en);
+  input.value = currentRulesPage;
+  previous.disabled = currentRulesPage <= RULES_MIN_PAGE;
+  next.disabled = currentRulesPage >= RULES_MAX_PAGE;
+
+  const pdfPage = currentRulesPage - RULES_PDF_PAGE_OFFSET;
+  const pdfUrl = `${RULES_PDF_PATH}#page=${pdfPage}&view=Fit`;
+  const pageTitle = message("rulesFrameTitle", { page: currentRulesPage });
+  if (pageImage.dataset.rulesPage !== String(currentRulesPage)) {
+    pageImage.src = `${RULES_PAGE_IMAGE_PATH}/page-${currentRulesPage}.jpg`;
+    pageImage.dataset.rulesPage = String(currentRulesPage);
+  }
+  pageImage.alt = pageTitle;
+  pageImageLink.href = `${RULES_PAGE_IMAGE_PATH}/page-${currentRulesPage}.jpg`;
+  pageImageLink.setAttribute("aria-label", pageTitle);
+  mobilePageLabel.textContent = message("rulesMobilePage", { page: currentRulesPage });
+  openPdf.href = pdfUrl;
+  fallbackLink.href = pdfUrl;
+
+  const originMeta = ROUTE_META[currentRulesOrigin?.route];
+  const backText = originMeta
+    ? message("rulesBackTo", { section: localized(originMeta.ru, originMeta.en) })
+    : message("rulesBackFallback");
+  backLabel.textContent = backText;
+  readerBackLabel.textContent = backText;
+
+  renderRulesNavigation();
+  renderRulesRelatedPages();
+}
+
+function navigateRulesPage(page, options = {}) {
+  currentRulesPage = normalizeRulesPage(page);
+  if (Array.isArray(options.relatedPages)) {
+    currentRulesRelatedPages = options.relatedPages.map(normalizeRulesPage);
+  }
+  activateRoute("rules");
+  renderRulesPage();
+  if (options.updateHistory !== false) {
+    const nextState = {
+      ...(history.state || {}),
+      route: "rules",
+      page: currentRulesPage,
+      relatedPages: currentRulesRelatedPages,
+      origin: currentRulesOrigin,
+    };
+    history.replaceState(nextState, "", `#rules/${currentRulesPage}`);
+  }
+}
+
+function focusRulesReaderOnCompactScreen(behavior = "smooth") {
+  if (!window.matchMedia("(max-width: 860px)").matches) return false;
+  requestAnimationFrame(() => {
+    document
+      .querySelector(".rules-reader")
+      ?.scrollIntoView({ block: "start", behavior });
+  });
+  return true;
+}
+
+function routeTo(route) {
+  const target = ROUTE_META[route] ? route : "dossier";
+  if (target === "rules") {
+    if (activeRoute() !== "rules") {
+      currentRulesOrigin = null;
+      currentRulesRelatedPages = [];
+    }
+    navigateRulesPage(currentRulesPage);
+  } else {
+    activateRoute(target);
+    history.replaceState(
+      { route: target, referenceTab: currentReferenceTab },
+      "",
+      `#${target}`,
+    );
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function openRulesFromReference(trigger) {
+  const pages = parseRulesPages(trigger.dataset.rulesPages);
+  if (!pages.length) return;
+  if (activeRoute() === "rules") {
+    navigateRulesPage(pages[0], { relatedPages: pages });
+    return;
+  }
+
+  const origin = {
+    route: activeRoute(),
+    scrollY: window.scrollY,
+    referenceTab: currentReferenceTab,
+    focusId: trigger.id || null,
+  };
+  history.replaceState(
+    {
+      ...(history.state || {}),
+      route: origin.route,
+      scrollY: origin.scrollY,
+      referenceTab: origin.referenceTab,
+      focusId: origin.focusId,
+    },
+    "",
+    `#${origin.route}`,
+  );
+  currentRulesOrigin = origin;
+  currentRulesRelatedPages = pages;
+  currentRulesPage = pages[0];
+  history.pushState(
+    {
+      route: "rules",
+      page: currentRulesPage,
+      relatedPages: currentRulesRelatedPages,
+      origin,
+    },
+    "",
+    `#rules/${currentRulesPage}`,
+  );
+  activateRoute("rules");
+  renderRulesPage();
+  if (!focusRulesReaderOnCompactScreen()) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function returnFromRules() {
+  if (currentRulesOrigin && history.state?.origin) {
+    history.back();
+    return;
+  }
+  routeTo("reference");
+}
+
+function routeFromLocation() {
+  const raw = decodeURIComponent(location.hash.slice(1));
+  const rulesMatch = raw.match(/^rules(?:\/(\d+))?$/);
+  if (rulesMatch) {
+    return { route: "rules", page: normalizeRulesPage(rulesMatch[1] || RULES_MIN_PAGE) };
+  }
+  return { route: ROUTE_META[raw] ? raw : "dossier", page: null };
+}
+
+function restoreRouteFromHistory(state = {}) {
+  const locationRoute = routeFromLocation();
+  if (locationRoute.route === "rules") {
+    currentRulesPage = normalizeRulesPage(locationRoute.page || state.page);
+    currentRulesRelatedPages = Array.isArray(state.relatedPages)
+      ? state.relatedPages.map(normalizeRulesPage)
+      : [];
+    currentRulesOrigin = state.origin || null;
+    activateRoute("rules");
+    renderRulesPage();
+    window.scrollTo({ top: 0, behavior: "auto" });
+    return;
+  }
+
+  currentRulesOrigin = null;
+  currentRulesRelatedPages = [];
+  activateReferenceTab(state.referenceTab || currentReferenceTab);
+  activateRoute(locationRoute.route);
+  requestAnimationFrame(() => {
+    if (state.focusId) {
+      document.querySelector(`#${CSS.escape(state.focusId)}`)?.focus({ preventScroll: true });
+    }
+    window.scrollTo({ top: Math.max(0, Number(state.scrollY || 0)), behavior: "auto" });
+  });
+}
+
+function initializeRouting() {
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const locationRoute = routeFromLocation();
+  if (locationRoute.route === "rules") {
+    currentRulesPage = normalizeRulesPage(locationRoute.page || history.state?.page);
+    currentRulesRelatedPages = Array.isArray(history.state?.relatedPages)
+      ? history.state.relatedPages.map(normalizeRulesPage)
+      : [];
+    currentRulesOrigin = history.state?.origin || null;
+    history.replaceState(
+      {
+        ...(history.state || {}),
+        route: "rules",
+        page: currentRulesPage,
+        relatedPages: currentRulesRelatedPages,
+        origin: currentRulesOrigin,
+      },
+      "",
+      `#rules/${currentRulesPage}`,
+    );
+    activateRoute("rules");
+    renderRulesPage();
+    return;
+  }
+  activateRoute(locationRoute.route);
+  history.replaceState(
+    {
+      ...(history.state || {}),
+      route: locationRoute.route,
+      referenceTab: currentReferenceTab,
+    },
+    "",
+    `#${locationRoute.route}`,
+  );
 }
 
 function bindFields() {
@@ -2079,6 +2564,7 @@ function renderReference() {
         "Начиная со второй недели каждый игрок нанимает минимум одну модель. Первая модель недели стоит на 5 скрип меньше.",
         "The start of each week is the only time players may add new models to their arsenal, and every player must add at least one model. The first model a player adds to their arsenal each week requires 5 fewer scrip.",
       ),
+      "18",
     ],
     [
       "02",
@@ -2087,6 +2573,7 @@ function renderReference() {
         "Размер встречи не выше стоимости меньшего арсенала +6. Нанимать можно только из своего арсенала.",
         "During the hire crew step of playing the encounter, you may only hire models in your current arsenal. You do not need to hire every model in your arsenal.",
       ),
+      "19",
     ],
     [
       "03",
@@ -2095,6 +2582,7 @@ function renderReference() {
         "Снаряжение в выбранной команде + продвижения лидера и тотема − травмы выбранных моделей.",
         "A crew’s campaign rating is equal to the total number of its pieces of equipment selected when hiring, +1 for each advancement the crew’s leader and totem have received (pg. 31). Then, subtract the total number of injuries in the crew from this total.",
       ),
+      "19,31",
     ],
     [
       "04",
@@ -2103,6 +2591,7 @@ function renderReference() {
         "Можно сделать Strategic Withdrawal в Start Phase. Ранний отход лишает VP, Barter, руки и выплаты.",
         "During the start phase of any turn, a crew may make a strategic withdrawal. The crew with initiative has the first chance to withdraw.",
       ),
+      "20",
     ],
     [
       "05",
@@ -2111,6 +2600,7 @@ function renderReference() {
         "Рука → Payday → Barter → развитие лидера → доктор → травмы. Флипы делаются строго по очереди.",
         "Aftermath is a special step added to every campaign game that takes place after a winner has been determined. Aftermath is used to determine what happened to the models during the course of the game. The aftermath step is broken into six phases:",
       ),
+      "20-35",
     ],
     [
       "06",
@@ -2119,15 +2609,22 @@ function renderReference() {
         "Сохраняйте арсенал, скрип, травмы и продвижения до конца согласованных 4–12 недель.",
         "At the start of the campaign, the group agreed to an allotted amount of time for the campaign to last (4-12 weeks). When the time is up, the campaign ends.",
       ),
+      "37",
     ],
   ];
   document.querySelector("#reference-flow").innerHTML = `<div class="flow-grid">${flow
     .map(
-      ([number, title, text]) => `
+      ([number, title, text, pages]) => `
         <article class="flow-step">
           <span class="flow-step-number">${number}</span>
           <h3>${title}</h3>
           <p>${text}</p>
+          <button
+            class="page-ref flow-page-ref"
+            id="rules-ref-flow-${number}"
+            type="button"
+            data-rules-pages="${pages}"
+          >${rulesPagesLabel(pages)}</button>
         </article>`,
     )
     .join("")}</div>`;
@@ -2145,22 +2642,31 @@ function renderReference() {
     [
       localized("Тир I", "Tier 1"),
       localized("Модификации", "Advancement Tables"),
-      ["Attack Modification Advancement (pg. 38)", "Tactical Modification Advancement (pg. 41)"],
+      [
+        { label: "Attack Modification Advancement", page: 38 },
+        { label: "Tactical Modification Advancement", page: 41 },
+      ],
     ],
     [
       localized("Тир II", "Tier 2"),
       localized("Новые таланты", "Advancement Tables"),
-      ["Action Advancement (pg. 44)", "Ability Advancement (pg. 50)"],
+      [
+        { label: "Action Advancement", page: 44 },
+        { label: "Ability Advancement", page: 50 },
+      ],
     ],
     [
       localized("Тир III", "Tier 3"),
       localized("Переломный момент", "Advancement Tables"),
-      ["Totem Advancement (pg. 52)", "Summoning Advancement (pg. 54)"],
+      [
+        { label: "Totem Advancement", page: 52 },
+        { label: "Summoning Advancement", page: 54 },
+      ],
     ],
     [
       localized("Тир IV", "Tier 4"),
       localized("Наследие команды", "Advancements"),
-      ["Crew Card Advancement"],
+      [{ label: "Crew Card Advancement", page: null }],
     ],
   ];
   document.querySelector("#reference-advancement").innerHTML = `
@@ -2171,7 +2677,26 @@ function renderReference() {
             <article class="tier-column">
               <span>${label}</span>
               <h3>${title}</h3>
-              <ul>${entries.map((entry) => `<li>${entry}</li>`).join("")}</ul>
+              <ul>${entries
+                .map(
+                  (entry) => `
+                    <li>
+                      ${
+                        entry.page
+                          ? `<button
+                              class="rules-inline-link"
+                              id="rules-ref-advancement-${entry.page}"
+                              type="button"
+                              data-rules-pages="${entry.page}"
+                            >
+                              <span>${entry.label}</span>
+                              <small>${rulesPagesLabel(entry.page)}</small>
+                            </button>`
+                          : entry.label
+                      }
+                    </li>`,
+                )
+                .join("")}</ul>
               <small>${localized("При достижении пронумерованной ячейки можно выбрать таблицу этого тира или ниже.", "Advancement tables are broken into tiers numbered 1-4; the table you choose must have a tier equal to or lower than the number shown in the experience box you just checked off.")}</small>
             </article>`,
         )
@@ -2703,6 +3228,7 @@ function renderAll() {
   renderEquipmentCatalog();
   renderGamePreview();
   calculateRating();
+  if (activeRoute() === "rules") renderRulesPage();
   applyStaticTranslations();
 }
 
@@ -2711,12 +3237,43 @@ document.querySelectorAll("[data-route]").forEach((button) => {
 });
 
 document.querySelectorAll("[data-reference-tab]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll("[data-reference-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
-    document.querySelectorAll(".reference-panel").forEach((panel) => {
-      panel.classList.toggle("is-active", panel.id === `reference-${button.dataset.referenceTab}`);
-    });
-  });
+  button.addEventListener("click", () => activateReferenceTab(button.dataset.referenceTab));
+});
+
+document.addEventListener("click", (event) => {
+  const rulesReference = event.target.closest("[data-rules-pages]");
+  if (rulesReference) {
+    openRulesFromReference(rulesReference);
+    return;
+  }
+  const rulesPage = event.target.closest("[data-rules-page]");
+  if (rulesPage) {
+    navigateRulesPage(rulesPage.dataset.rulesPage);
+    if (rulesPage.closest("#rulesToc")) focusRulesReaderOnCompactScreen();
+  }
+});
+
+document.querySelector("#rulesBackButton").addEventListener("click", returnFromRules);
+document.querySelector("#rulesReaderBackButton").addEventListener("click", returnFromRules);
+document.querySelector("#rulesPreviousPage").addEventListener("click", () => {
+  navigateRulesPage(currentRulesPage - 1);
+});
+document.querySelector("#rulesNextPage").addEventListener("click", () => {
+  navigateRulesPage(currentRulesPage + 1);
+});
+document.querySelector("#rulesPageForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  navigateRulesPage(document.querySelector("#rulesPageInput").value);
+});
+window.addEventListener("popstate", (event) => restoreRouteFromHistory(event.state || {}));
+window.addEventListener("hashchange", () => {
+  const locationRoute = routeFromLocation();
+  if (
+    locationRoute.route !== activeRoute() ||
+    (locationRoute.route === "rules" && locationRoute.page !== currentRulesPage)
+  ) {
+    restoreRouteFromHistory(history.state || {});
+  }
 });
 
 document.querySelector("#addModelButton").addEventListener("click", () => {
@@ -2987,5 +3544,6 @@ document.querySelector("#cardDialog").addEventListener("close", () => {
 bindFields();
 setupKeywordValidation();
 renderAll();
-routeTo(location.hash.slice(1) || "dossier");
+activateReferenceTab(currentReferenceTab);
+initializeRouting();
 validateAllKeywords();

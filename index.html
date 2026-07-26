@@ -9,7 +9,7 @@
     />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="stylesheet" href="styles.css?v=6" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -45,7 +45,7 @@
       </header>
 
       <aside class="rail" aria-label="Разделы билдера">
-        <div class="rail-index">INDEX / 01</div>
+        <div class="rail-index" id="railIndex">INDEX / 01</div>
         <nav class="primary-nav">
           <button class="nav-item is-active" type="button" data-route="dossier">
             <span>01</span>
@@ -72,12 +72,22 @@
             <b>Справочник</b>
             <small>Правила и таблицы</small>
           </button>
+          <button class="nav-item" type="button" data-route="rules">
+            <span>06</span>
+            <b>Правила</b>
+            <small>Оригинал и навигация</small>
+          </button>
         </nav>
 
         <div class="rail-footer">
           <span>Источник</span>
           <b>Index of the Untold</b>
-          <small>Campaign Mode · стр. 14–56</small>
+          <button
+            class="rail-rules-link"
+            id="rules-ref-source"
+            type="button"
+            data-rules-pages="14-56"
+          >Campaign Mode · стр. 14–56</button>
         </div>
       </aside>
 
@@ -102,7 +112,12 @@
                   <span class="kicker">Идентификация</span>
                   <h2>Команда и игрок</h2>
                 </div>
-                <span class="page-ref">стр. 15</span>
+                <button
+                  class="page-ref"
+                  id="rules-ref-dossier-crew"
+                  type="button"
+                  data-rules-pages="15"
+                >стр. 15</button>
               </div>
 
               <div class="form-grid">
@@ -200,7 +215,12 @@
                     <span class="kicker">Срок</span>
                     <h2>Ритм кампании</h2>
                   </div>
-                  <span class="page-ref">стр. 15, 18</span>
+                  <button
+                    class="page-ref"
+                    id="rules-ref-dossier-cadence"
+                    type="button"
+                    data-rules-pages="15,18"
+                  >стр. 15, 18</button>
                 </div>
                 <label class="range-field">
                   <span>Продолжительность</span>
@@ -249,7 +269,12 @@
                 <span class="kicker">Основа</span>
                 <h2>Архетип</h2>
               </div>
-              <span class="page-ref">стр. 17</span>
+              <button
+                class="page-ref"
+                id="rules-ref-leader-archetype"
+                type="button"
+                data-rules-pages="17"
+              >стр. 17</button>
             </div>
             <div class="archetype-grid" id="archetypeGrid"></div>
           </article>
@@ -261,7 +286,12 @@
                   <span class="kicker">Личное дело</span>
                   <h2>Облик и путь</h2>
                 </div>
-                <span class="page-ref">стр. 17–18</span>
+                <button
+                  class="page-ref"
+                  id="rules-ref-leader-profile"
+                  type="button"
+                  data-rules-pages="17-18"
+                >стр. 17–18</button>
               </div>
               <div class="form-grid">
                 <label class="field field-wide">
@@ -322,7 +352,12 @@
                   <span class="kicker">Заимствованные таланты</span>
                   <h2>Действия и способности</h2>
                 </div>
-                <span class="page-ref">стр. 17</span>
+                <button
+                  class="page-ref"
+                  id="rules-ref-leader-talents"
+                  type="button"
+                  data-rules-pages="17"
+                >стр. 17</button>
               </div>
               <div id="talentFields" class="talent-fields"></div>
               <div class="rule-note">
@@ -341,7 +376,12 @@
                 <span class="kicker">Стартовая карта команды</span>
                 <h2>Первый общий приём</h2>
               </div>
-              <span class="page-ref">стр. 15–16</span>
+              <button
+                class="page-ref"
+                id="rules-ref-crew-cards"
+                type="button"
+                data-rules-pages="15-16"
+              >стр. 15–16</button>
             </div>
             <div class="crew-card-grid" id="crewCardGrid"></div>
           </article>
@@ -402,7 +442,12 @@
                     <span class="kicker">Подготовка встречи</span>
                     <h2>Рейтинг кампании</h2>
                   </div>
-                  <span class="page-ref">стр. 19</span>
+                  <button
+                    class="page-ref"
+                    id="rules-ref-campaign-rating"
+                    type="button"
+                    data-rules-pages="19"
+                  >стр. 19</button>
                 </div>
                 <div class="rating-equation">
                   <label>
@@ -460,7 +505,12 @@
                   <span class="kicker">Новая запись</span>
                   <h2>Итог встречи</h2>
                 </div>
-                <span class="page-ref">стр. 20–35</span>
+                <button
+                  class="page-ref"
+                  id="rules-ref-aftermath"
+                  type="button"
+                  data-rules-pages="20-35"
+                >стр. 20–35</button>
               </div>
               <form id="gameForm" class="game-form">
                 <div class="form-grid">
@@ -540,7 +590,12 @@
                 <span class="kicker">Leadership Experience</span>
                 <h2>Трек развития лидера</h2>
               </div>
-              <span class="page-ref">стр. 31, 56</span>
+              <button
+                class="page-ref"
+                id="rules-ref-leadership-xp"
+                type="button"
+                data-rules-pages="31,56"
+              >стр. 31, 56</button>
             </div>
             <div id="xpTrack" class="xp-track" aria-label="Трек опыта лидера"></div>
             <div class="xp-legend">
@@ -574,6 +629,117 @@
           <div class="reference-panel" id="reference-injuries"></div>
           <div class="reference-panel" id="reference-equipment"></div>
           <div class="reference-panel" id="reference-advancement"></div>
+        </section>
+
+        <section class="route rules-route" id="route-rules" aria-labelledby="rulesTitle">
+          <div class="route-heading rules-heading">
+            <div>
+              <p class="eyebrow">Запись VI · Первоисточник</p>
+              <h1 id="rulesTitle">Правила кампании</h1>
+              <p class="lede">
+                Печатные страницы 14–56 из Index of the Untold — с оригинальной версткой,
+                таблицами и иллюстрациями. Используйте указатель или переходите сюда прямо
+                из ссылок в билдере.
+              </p>
+            </div>
+            <div class="folio">06</div>
+          </div>
+
+          <div class="rules-layout">
+            <aside class="rules-index-card" aria-label="Навигация по правилам">
+              <button class="rules-back" id="rulesBackButton" type="button">
+                <span aria-hidden="true">←</span>
+                <span id="rulesBackLabel" data-dynamic-i18n>Назад в справочник</span>
+              </button>
+              <div class="rules-source-stamp">
+                <span>Официальный оригинал</span>
+                <b>Index of the Untold</b>
+                <small>Campaign Mode · pp. 14–56 · EN</small>
+              </div>
+              <div class="rules-index-heading">
+                <span>Структура раздела</span>
+                <small>43 страницы</small>
+              </div>
+              <nav class="rules-toc" id="rulesToc" aria-label="Оглавление правил"></nav>
+            </aside>
+
+            <article class="rules-reader">
+              <div class="rules-reader-head">
+                <button class="rules-reader-back" id="rulesReaderBackButton" type="button">
+                  <span aria-hidden="true">←</span>
+                  <span id="rulesReaderBackLabel" data-dynamic-i18n>Назад в справочник</span>
+                </button>
+                <div>
+                  <span class="rules-reader-kicker" id="rulesPageCounter" data-dynamic-i18n>Страница 14 из 56</span>
+                  <h2 id="rulesPageTitle" data-dynamic-i18n>Introduction</h2>
+                </div>
+                <a
+                  class="rules-open-pdf"
+                  id="rulesOpenPdf"
+                  href="assets/rules/index-of-the-untold-campaign-mode.pdf"
+                  target="_blank"
+                  rel="noopener"
+                >Открыть PDF с закладками ↗</a>
+              </div>
+
+              <div class="rules-related" id="rulesRelated" hidden>
+                <span>Связанные страницы</span>
+                <div id="rulesRelatedPages"></div>
+              </div>
+
+              <div class="rules-toolbar" aria-label="Навигация по страницам PDF">
+                <button id="rulesPreviousPage" type="button" aria-label="Предыдущая страница">
+                  <span aria-hidden="true">←</span>
+                  <span>Предыдущая</span>
+                </button>
+                <form id="rulesPageForm">
+                  <label for="rulesPageInput">Страница</label>
+                  <input id="rulesPageInput" type="number" min="14" max="56" value="14" />
+                  <button type="submit">Перейти</button>
+                </form>
+                <button id="rulesNextPage" type="button" aria-label="Следующая страница">
+                  <span>Следующая</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+
+              <div class="rules-pdf-shell">
+                <figure class="rules-page-preview" id="rulesPagePreview">
+                  <div class="rules-page-preview-head">
+                    <span>Оригинальный PDF</span>
+                    <b id="rulesMobilePageLabel" data-dynamic-i18n>стр. 14</b>
+                  </div>
+                  <a
+                    class="rules-page-image-link"
+                    id="rulesPageImageLink"
+                    href="assets/rules/pages/page-14.jpg"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <img
+                      id="rulesPageImage"
+                      width="1000"
+                      height="1295"
+                      alt="Правила Campaign Mode, страница 14"
+                      decoding="async"
+                    />
+                  </a>
+                  <figcaption>
+                    Точная страница из оригинала; нажмите, чтобы открыть в полном размере.
+                  </figcaption>
+                </figure>
+                <p class="rules-pdf-fallback">
+                  Полный структурированный PDF с закладками:
+                  <a
+                    id="rulesFallbackLink"
+                    href="assets/rules/index-of-the-untold-campaign-mode.pdf"
+                    target="_blank"
+                    rel="noopener"
+                  >открыть в новой вкладке</a>.
+                </p>
+              </div>
+            </article>
+          </div>
         </section>
       </main>
     </div>
@@ -731,6 +897,6 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=6"></script>
   </body>
 </html>
