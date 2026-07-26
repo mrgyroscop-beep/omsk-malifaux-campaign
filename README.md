@@ -26,6 +26,10 @@ python -m http.server 4173
 - русская и английская версии единого интерфейса;
 - титульное досье кампании и недельный цикл;
 - пять архетипов лидера с корректными характеристиками и ограничениями;
+- поиск карточек моделей через BiggerHat с локальным кэшем;
+- автоматическое заполнение модели в арсенале и характеристики Henchman;
+- выбор Actions, Tactical Actions, Abilities и триггера Heavy Hitter с карточки;
+- сохранение полного снимка выбранной карточки внутри JSON досье;
 - выбор стартовой Crew Card;
 - стартовый арсенал на 25 SS и расчёт стартового скрипа;
 - недельный найм со скидкой 5 скрип на первую модель и налогом за non-versatile
@@ -36,12 +40,17 @@ python -m http.server 4173
 - краткие справочники по травмам, снаряжению и продвижениям;
 - автосохранение, импорт/экспорт JSON и печать.
 
-### Границы первой версии
+### Карточки моделей и офлайн-режим
 
-Эта версия построена только на **Index of the Untold**. Действия и способности
-моделей пока записываются вручную. Следующий этап — подключение `Stat Cards` и
-`Upgrade Cards`, чтобы автоматически фильтровать таланты по фракции, ключу и
-стоимости.
+Каталог карточек загружается из сторонней базы
+[BiggerHat](https://biggerhat.net/) при первом открытии селектора и сохраняется
+локально в браузере. Поиск после этого не создаёт новых запросов; полная карточка
+загружается только при выборе модели.
+
+Выбранная карточка и заимствованный талант сохраняются снимком внутри досье.
+Поэтому уже созданные арсеналы, просмотр карточек и экспортированные JSON работают
+без сети и не меняются вслед за внешней базой. Если BiggerHat недоступен, ручной
+ввод модели и таланта остаётся доступен.
 
 Английские формулировки правил перенесены из оригинальной книги дословно.
 Нетекстовые игровые пиктограммы при необходимости переданы понятными текстовыми
@@ -72,6 +81,10 @@ Then open `http://localhost:4173`.
 - Russian and English versions in one interface;
 - campaign dossier and weekly cycle;
 - all five Leader Archetypes with their correct stats and limits;
+- BiggerHat model-card search with a local browser cache;
+- automatic arsenal entry, including the Henchman characteristic;
+- card-based Action, Tactical Action, Ability, and Heavy Hitter trigger selection;
+- complete card snapshots stored inside the exported dossier JSON;
 - Starting Crew Card selection;
 - 25 SS starting arsenal and starting-scrip calculation;
 - weekly hiring with the 5-scrip first-hire discount and out-of-keyword tax;
@@ -81,12 +94,17 @@ Then open `http://localhost:4173`.
 - concise Injury, Equipment, and Advancement references;
 - browser autosave, JSON import/export, and print layout.
 
-### First-version scope
+### Model cards and offline use
 
-This version is based on **Index of the Untold** only. Model Actions and Abilities
-are entered manually. The natural next step is to add the `Stat Cards` and
-`Upgrade Cards` data so eligible talents can be filtered automatically by Faction,
-Keyword, and Cost.
+The card catalog is loaded from the third-party
+[BiggerHat](https://biggerhat.net/) database when a picker is first opened and is
+then cached locally in the browser. Further searches do not make API requests; a
+full card is fetched only when a model is selected.
+
+Every selected card and borrowed talent is stored as a snapshot inside the
+dossier. Existing arsenals, card views, and exported JSON therefore keep working
+offline and do not change when the external database changes. Manual model and
+talent entry remains available when BiggerHat cannot be reached.
 
 English rules wording is reproduced verbatim from the original rulebook.
 Non-text game symbols are rendered with accessible text labels where needed.

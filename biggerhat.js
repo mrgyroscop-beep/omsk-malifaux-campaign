@@ -1,0 +1,376 @@
+(() => {
+  "use strict";
+
+  const API_BASE = "https://biggerhat.net/api/v1";
+  const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
+  const DETAILS_KEY = "m4e-biggerhat-details-v1";
+  const PAGE_SIZE = 100;
+  const DETAIL_CACHE_LIMIT = 50;
+
+  let catalogMemory = null;
+  let catalogPromise = null;
+  let detailMemory = null;
+
+  function readStorage(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      return value ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      // The builder must keep working when storage is unavailable or full.
+      return false;
+    }
+  }
+
+  function compactText(value) {
+    return String(value ?? "").trim().replace(/\s+/g, " ");
+  }
+
+  function normalizeKeywords(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((keyword) =>
+        typeof keyword === "string"
+          ? { id: null, name: compactText(keyword), slug: compactText(keyword).toLowerCase() }
+          : {
+              id: keyword?.id ?? null,
+              name: compactText(keyword?.name),
+              slug: compactText(keyword?.slug || keyword?.name).toLowerCase(),
+            },
+      )
+      .filter((keyword) => keyword.name);
+  }
+
+  function preferredMiniature(miniatures) {
+    if (!Array.isArray(miniatures) || !miniatures.length) return null;
+    const miniature =
+      miniatures.find((item) => item?.version === "fourth_edition") || miniatures[0];
+    return {
+      id: miniature?.id ?? null,
+      displayName: compactText(miniature?.display_name),
+      frontImage: miniature?.front_image || null,
+      backImage: miniature?.back_image || null,
+      combinationImage: miniature?.combination_image || null,
+      version: miniature?.version || null,
+      versionLabel: miniature?.version_label || null,
+    };
+  }
+
+  function nullableNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function normalizeSummary(raw = {}) {
+    const name = compactText(raw.display_name || [raw.name, raw.title].filter(Boolean).join(", "));
+    const keywords = normalizeKeywords(raw.keywords);
+    const characteristics = Array.isArray(raw.characteristics)
+      ? raw.characteristics.map(compactText).filter(Boolean)
+      : [];
+
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      gameModeType: compactText(raw.game_mode_type || "standard").toLowerCase(),
+      name: compactText(raw.name),
+      title: compactText(raw.title),
+      displayName: name,
+      nicknames: Array.isArray(raw.nicknames)
+        ? raw.nicknames.map(compactText).filter(Boolean)
+        : compactText(raw.nicknames)
+          ? [compactText(raw.nicknames)]
+          : [],
+      faction: compactText(raw.faction).toLowerCase(),
+      factionLabel: compactText(raw.faction_label || raw.faction),
+      secondFaction: compactText(raw.second_faction).toLowerCase(),
+      secondFactionLabel: compactText(raw.second_faction_label || raw.second_faction),
+      station: compactText(raw.station).toLowerCase(),
+      stationLabel: compactText(raw.station_label || raw.station),
+      cost: nullableNumber(raw.cost),
+      health: nullableNumber(raw.health),
+      size: nullableNumber(raw.size),
+      base: nullableNumber(raw.base),
+      baseLabel: compactText(raw.base_label),
+      defense: nullableNumber(raw.defense),
+      defenseSuit: compactText(raw.defense_suit),
+      willpower: nullableNumber(raw.willpower),
+      willpowerSuit: compactText(raw.willpower_suit),
+      speed: nullableNumber(raw.speed),
+      count: nullableNumber(raw.count),
+      isUnhirable: Boolean(raw.is_unhirable),
+      isBeta: Boolean(raw.is_beta),
+      generatesStone: Boolean(raw.generates_stone),
+      keywords,
+      characteristics,
+      miniature: preferredMiniature(raw.miniatures),
+    };
+  }
+
+  function normalizeTrigger(raw = {}) {
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      name: compactText(raw.name),
+      suits: compactText(raw.suits),
+      stoneCost: nullableNumber(raw.stone_cost) || 0,
+      description: String(raw.description ?? "").trim(),
+    };
+  }
+
+  function normalizeAction(raw = {}) {
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      name: compactText(raw.name),
+      type: compactText(raw.type).toLowerCase(),
+      typeLabel: compactText(raw.type_label || raw.type),
+      isSignature: Boolean(raw.is_signature),
+      stoneCost: nullableNumber(raw.stone_cost) || 0,
+      range: compactText(raw.range),
+      rangeType: compactText(raw.range_type).toLowerCase(),
+      rangeTypeLabel: compactText(raw.range_type_label || raw.range_type),
+      stat: compactText(raw.stat),
+      statSuits: compactText(raw.stat_suits),
+      statModifier: compactText(raw.stat_modifier),
+      resistedBy: compactText(raw.resisted_by),
+      resistedByLabel: compactText(raw.resisted_by_label || raw.resisted_by),
+      targetNumber: compactText(raw.target_number),
+      targetSuits: compactText(raw.target_suits),
+      damage: compactText(raw.damage),
+      description: String(raw.description ?? "").trim(),
+      triggers: Array.isArray(raw.triggers) ? raw.triggers.map(normalizeTrigger) : [],
+    };
+  }
+
+  function normalizeAbility(raw = {}) {
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      name: compactText(raw.name),
+      suits: compactText(raw.suits),
+      defensiveAbilityType: compactText(raw.defensive_ability_type),
+      stoneCost: nullableNumber(raw.costs_stone) || 0,
+      description: String(raw.description ?? "").trim(),
+    };
+  }
+
+  function normalizeDetail(raw = {}) {
+    return {
+      ...normalizeSummary(raw),
+      actions: Array.isArray(raw.actions) ? raw.actions.map(normalizeAction) : [],
+      abilities: Array.isArray(raw.abilities) ? raw.abilities.map(normalizeAbility) : [],
+      fetchedAt: new Date().toISOString(),
+      source: {
+        provider: "BiggerHat",
+        apiUrl: raw.slug ? `${API_BASE}/characters/${encodeURIComponent(raw.slug)}` : API_BASE,
+      },
+    };
+  }
+
+  async function request(path, parameters = {}, options = {}) {
+    const url = new URL(`${API_BASE}/${path.replace(/^\/+/, "")}`);
+    Object.entries(parameters).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    });
+
+    const controller = new AbortController();
+    const abortFromOutside = () => controller.abort();
+    if (options.signal?.aborted) controller.abort();
+    options.signal?.addEventListener("abort", abortFromOutside, { once: true });
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const error = new Error(`BiggerHat responded with ${response.status}`);
+        error.status = response.status;
+        const retryAfter = Number(response.headers.get("Retry-After"));
+        error.retryAfter =
+          Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+        throw error;
+      }
+      return await response.json();
+    } finally {
+      clearTimeout(timeout);
+      options.signal?.removeEventListener("abort", abortFromOutside);
+    }
+  }
+
+  function getStoredCatalog() {
+    const stored = readStorage(CATALOG_KEY, null);
+    if (!stored || !Array.isArray(stored.items)) return null;
+    return stored;
+  }
+
+  async function fetchCatalog(onProgress) {
+    const first = await request("characters", {
+      page: 1,
+      per_page: PAGE_SIZE,
+      game_mode_type: "standard",
+    });
+    const lastPage = Math.max(1, Number(first?.meta?.last_page || 1));
+    const pages = [first];
+    onProgress?.(1, lastPage);
+
+    if (lastPage > 1) {
+      for (let page = 2; page <= lastPage; page += 1) {
+        const response = await request("characters", {
+          page,
+          per_page: PAGE_SIZE,
+          game_mode_type: "standard",
+        });
+        pages.push(response);
+        onProgress?.(page, lastPage);
+      }
+    }
+
+    const unique = new Map();
+    pages.forEach((page) => {
+      (page?.data || []).forEach((character) => {
+        const normalized = normalizeSummary(character);
+        if (normalized.slug && normalized.gameModeType === "standard") {
+          unique.set(normalized.slug, normalized);
+        }
+      });
+    });
+
+    const catalog = {
+      savedAt: new Date().toISOString(),
+      items: Array.from(unique.values()).sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, "en"),
+      ),
+    };
+    catalogMemory = catalog;
+    writeStorage(CATALOG_KEY, catalog);
+    return catalog;
+  }
+
+  async function loadCatalog(options = {}) {
+    const { force = false, onProgress } = options;
+    if (!force && catalogMemory) return catalogMemory;
+    if (!force) {
+      const stored = getStoredCatalog();
+      if (stored) {
+        catalogMemory = stored;
+        return stored;
+      }
+    }
+    if (catalogPromise) return catalogPromise;
+    catalogPromise = fetchCatalog(onProgress).finally(() => {
+      catalogPromise = null;
+    });
+    return catalogPromise;
+  }
+
+  function searchableText(character) {
+    return [
+      character.displayName,
+      character.name,
+      character.title,
+      character.factionLabel,
+      character.secondFactionLabel,
+      character.stationLabel,
+      ...(character.nicknames || []),
+      ...character.keywords.map((keyword) => keyword.name),
+    ]
+      .join(" ")
+      .toLocaleLowerCase("en");
+  }
+
+  async function searchCharacters(query, options = {}) {
+    const { force = false, onProgress, limit = 50 } = options;
+    const catalog = await loadCatalog({ force, onProgress });
+    const terms = compactText(query)
+      .toLocaleLowerCase("en")
+      .split(" ")
+      .filter(Boolean);
+    return catalog.items
+      .filter((character) => {
+        const haystack = searchableText(character);
+        return terms.every((term) => haystack.includes(term));
+      })
+      .slice(0, Math.max(1, limit));
+  }
+
+  function loadDetailMemory() {
+    if (detailMemory) return detailMemory;
+    const stored = readStorage(DETAILS_KEY, {});
+    detailMemory = stored && typeof stored === "object" ? stored : {};
+    return detailMemory;
+  }
+
+  function cacheDetail(detail) {
+    const cache = loadDetailMemory();
+    cache[detail.slug] = { savedAt: Date.now(), detail };
+    const entries = Object.entries(cache)
+      .sort(([, a], [, b]) => Number(b?.savedAt || 0) - Number(a?.savedAt || 0))
+      .slice(0, DETAIL_CACHE_LIMIT);
+    detailMemory = Object.fromEntries(entries);
+    writeStorage(DETAILS_KEY, detailMemory);
+  }
+
+  function getCachedCharacter(slug) {
+    return loadDetailMemory()[slug]?.detail || null;
+  }
+
+  async function getCharacter(slug, options = {}) {
+    const cleanSlug = compactText(slug);
+    if (!cleanSlug) throw new Error("A character slug is required");
+    if (!options.force) {
+      const cached = getCachedCharacter(cleanSlug);
+      if (cached) return cached;
+    }
+    const response = await request(
+      `characters/${encodeURIComponent(cleanSlug)}`,
+      {},
+      { signal: options.signal },
+    );
+    const detail = normalizeDetail(response?.data || {});
+    if (!detail.slug) throw new Error("BiggerHat returned an empty character");
+    cacheDetail(detail);
+    return detail;
+  }
+
+  function clearCatalogCache() {
+    catalogMemory = null;
+    try {
+      localStorage.removeItem(CATALOG_KEY);
+    } catch {
+      // Ignore unavailable storage.
+    }
+  }
+
+  function clearDetailCache() {
+    detailMemory = {};
+    try {
+      localStorage.removeItem(DETAILS_KEY);
+    } catch {
+      // Ignore unavailable storage.
+    }
+  }
+
+  window.BiggerHatCards = Object.freeze({
+    apiBase: API_BASE,
+    normalizeSummary,
+    normalizeDetail,
+    loadCatalog,
+    searchCharacters,
+    getCharacter,
+    getCachedCharacter,
+    clearCatalogCache,
+    clearDetailCache,
+  });
+})();

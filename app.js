@@ -145,6 +145,7 @@ const STATIC_TEXT_EN = {
   "Тип": "Type",
   "Другое": "Other",
   "Ключевые слова": "Keywords",
+  "Характеристика модели": "Model characteristic",
   "В выбранной фракции": "In the declared faction",
   "Вне ключа": "Out of keyword",
   "+1 скрип при найме": "+1 scrip when hired",
@@ -167,6 +168,22 @@ const STATIC_TEXT_EN = {
   "Например, Death Marshal": "For example, Death Marshal",
   "Через запятую": "Comma-separated",
   "Пользовательское снаряжение": "Custom equipment",
+  "Каталог карточек · BiggerHat": "Card catalog · BiggerHat",
+  "Найдите модель и заполните поля автоматически": "Find a model and fill in the fields automatically",
+  "Обновить каталог": "Refresh catalog",
+  "Поиск модели": "Model search",
+  "Название, ключевое слово или фракция": "Name, keyword, or faction",
+  "или заполните вручную": "or enter manually",
+  "Заимствованный талант": "Borrowed talent",
+  "Выбрать с карточки": "Choose from a card",
+  "Источник · BiggerHat": "Source · BiggerHat",
+  "Сначала выберите модель-источник": "First choose a source model",
+  "Поиск модели-источника": "Source model search",
+  "Выберите модель": "Choose a model",
+  "Здесь появятся подходящие действия или способности с её карточки.":
+    "Matching actions or abilities from its card will appear here.",
+  "Снимок карточки · BiggerHat": "Card snapshot · BiggerHat",
+  "Карточка модели": "Model card",
 };
 
 const UI_MESSAGES = {
@@ -261,11 +278,97 @@ const UI_MESSAGES = {
     en: "Create a new empty dossier? Current browser data will be deleted.",
   },
   dossierReset: { ru: "Открыто новое пустое досье.", en: "A new empty dossier is open." },
+  catalogLoading: { ru: "Загружаю каталог BiggerHat…", en: "Loading the BiggerHat catalog…" },
+  catalogProgress: {
+    ru: "Загружаю каталог BiggerHat: {loaded} из {total} страниц.",
+    en: "Loading the BiggerHat catalog: page {loaded} of {total}.",
+  },
+  catalogReady: {
+    ru: "В каталоге {n} карточек. Поиск больше не расходует лимит API.",
+    en: "The catalog contains {n} cards. Searching no longer uses the API limit.",
+  },
+  catalogUnavailable: {
+    ru: "BiggerHat сейчас недоступен. Можно заполнить модель вручную; сохранённые карточки продолжат работать.",
+    en: "BiggerHat is currently unavailable. You can enter the model manually; saved cards will keep working.",
+  },
+  catalogNoMatches: {
+    ru: "Подходящих карточек не найдено. Попробуйте другое имя или ручной ввод.",
+    en: "No matching cards found. Try another name or enter it manually.",
+  },
+  catalogSelecting: { ru: "Загружаю полную карточку…", en: "Loading the full card…" },
+  catalogSelected: { ru: "Карточка выбрана и сохранится в досье.", en: "The card is selected and will be saved in the dossier." },
+  cardDetached: {
+    ru: "Карточка откреплена: поля теперь заполняются вручную.",
+    en: "The card was detached; the fields are now manual.",
+  },
+  catalogRefreshed: { ru: "Каталог BiggerHat обновлён.", en: "The BiggerHat catalog has been refreshed." },
+  catalogRateLimited: {
+    ru: "BiggerHat исчерпал лимит запросов. Повторите через {seconds} сек.; ручной ввод работает.",
+    en: "The BiggerHat request limit was reached. Try again in {seconds}s; manual entry still works.",
+  },
+  cardAttached: { ru: "Карточка BiggerHat прикреплена", en: "BiggerHat card attached" },
+  cardCounts: {
+    ru: "{actions} действ. · {abilities} способн.",
+    en: "{actions} actions · {abilities} abilities",
+  },
+  openCard: { ru: "Карточка", en: "Card" },
+  chooseFromCard: { ru: "Выбрать", en: "Choose" },
+  changeCard: { ru: "Сменить", en: "Change" },
+  sourceCard: { ru: "Карточка источника", en: "Source card" },
+  exactEnglish: { ru: "Оригинальный текст · EN", en: "Original card text · EN" },
+  cardActions: { ru: "Действия", en: "Actions" },
+  cardAbilities: { ru: "Способности", en: "Abilities" },
+  cardNoActions: { ru: "На карточке нет действий.", en: "This card has no actions." },
+  cardNoAbilities: { ru: "На карточке нет способностей.", en: "This card has no abilities." },
+  talentPickerRule: {
+    ru: "{kind} · модель-источник Cost {limit} или меньше.",
+    en: "{kind} · source model Cost {limit} or less.",
+  },
+  talentChooseSource: {
+    ru: "Выберите модель-источник — покажу только подходящие записи.",
+    en: "Choose a source model to see only eligible entries.",
+  },
+  talentNoEntries: {
+    ru: "На этой карточке нет подходящих действий или способностей.",
+    en: "This card has no matching actions or abilities.",
+  },
+  talentEntrySelected: {
+    ru: "{name} зафиксирован в досье вместе с текстом карточки.",
+    en: "{name} has been saved in the dossier together with its card text.",
+  },
+  talentTrigger: { ru: "Выбранный триггер", en: "Chosen trigger" },
+  talentChooseTrigger: { ru: "Выберите триггер", en: "Choose a trigger" },
+  talentNeedsTrigger: {
+    ru: "У этой атаки нет триггеров, поэтому её нельзя выбрать для этого слота.",
+    en: "This attack has no triggers, so it cannot be chosen for this slot.",
+  },
+  affinityKeyword: { ru: "выбранный ключ", en: "chosen keyword" },
+  affinityFaction: { ru: "объявленная фракция", en: "declared faction" },
+  affinityVersatile: { ru: "Versatile", en: "Versatile" },
+  affinityOther: { ru: "вне ключа", en: "out of keyword" },
+  modelPickerHint: {
+    ru: "Показаны нанимаемые модели; карточки без Cost исключены.",
+    en: "Only hireable models are shown; cards without a Cost are excluded.",
+  },
+  cardLoadFailed: {
+    ru: "Не удалось открыть карточку. Попробуйте обновить каталог или используйте сохранённый снимок.",
+    en: "Could not open the card. Refresh the catalog or use a saved snapshot.",
+  },
+  storageFull: {
+    ru: "Браузер не смог сохранить изменения: локальное хранилище заполнено. Экспортируйте досье и очистите данные сайта.",
+    en: "The browser could not save the change because local storage is full. Export the dossier and clear this site's data.",
+  },
 };
 
 const LOCALE_KEY = "m4e-untold-locale";
+let storedLocale = null;
+try {
+  storedLocale = localStorage.getItem(LOCALE_KEY);
+} catch {
+  storedLocale = null;
+}
 let currentLocale =
-  localStorage.getItem(LOCALE_KEY) || (navigator.language?.toLowerCase().startsWith("en") ? "en" : "ru");
+  storedLocale || (navigator.language?.toLowerCase().startsWith("en") ? "en" : "ru");
 
 function localized(ru, en) {
   return currentLocale === "en" ? en : ru;
@@ -319,8 +422,8 @@ const archetypes = {
     taglineEn: "Attack Actions: Choose any one attack action from an ally of cost 6 or less.",
     stats: { Df: 6, Wp: 6, Sp: 6, Health: 14 },
     talents: [
-      { type: "Атака", typeEn: "Attack", limit: 6 },
-      { type: "Способность", typeEn: "Ability", limit: 6 },
+      { id: "attack-1", kind: "attack", type: "Атака", typeEn: "Attack", limit: 6 },
+      { id: "ability-1", kind: "ability", type: "Способность", typeEn: "Ability", limit: 6 },
     ],
     rule:
       "Атака и способность берутся у союзников стоимостью 6 или меньше. Затем сделайте нечитаемый обманом флип и бесплатно получите предмет с точно совпавшим BR; он не учитывается в CR и возвращается после аннигиляции.",
@@ -334,9 +437,9 @@ const archetypes = {
     taglineEn: "Attack Actions: Choose any one attack action from an ally of cost 7 or less.",
     stats: { Df: 5, Wp: 5, Sp: 6, Health: 14 },
     talents: [
-      { type: "Атака", typeEn: "Attack", limit: 7 },
-      { type: "Тактика", typeEn: "Tactical", limit: 7 },
-      { type: "Способность", typeEn: "Ability", limit: 7 },
+      { id: "attack-1", kind: "attack", type: "Атака", typeEn: "Attack", limit: 7 },
+      { id: "tactical-1", kind: "tactical", type: "Тактика", typeEn: "Tactical", limit: 7 },
+      { id: "ability-1", kind: "ability", type: "Способность", typeEn: "Ability", limit: 7 },
     ],
     rule: "Атака, тактика и способность берутся у союзников стоимостью 7 или меньше.",
     ruleEn:
@@ -349,8 +452,15 @@ const archetypes = {
     taglineEn: "Attack Actions: Choose any one attack action from an ally of cost 10 or less.",
     stats: { Df: 6, Wp: 4, Sp: 6, Health: 14 },
     talents: [
-      { type: "Атака + триггер", typeEn: "Attack + Trigger", limit: 10 },
-      { type: "Тактика", typeEn: "Tactical", limit: 5 },
+      {
+        id: "attack-1",
+        kind: "attack",
+        chooseTrigger: true,
+        type: "Атака + триггер",
+        typeEn: "Attack + Trigger",
+        limit: 10,
+      },
+      { id: "tactical-1", kind: "tactical", type: "Тактика", typeEn: "Tactical", limit: 5 },
     ],
     rule:
       "Атака берётся у союзника стоимостью 10 или меньше и сохраняет один выбранный триггер. Тактика — у союзника стоимостью 5 или меньше.",
@@ -364,10 +474,10 @@ const archetypes = {
     taglineEn: "Attack Actions: Choose any one attack action from an ally of cost 5 or less.",
     stats: { Df: 6, Wp: 5, Sp: 7, Health: 13 },
     talents: [
-      { type: "Атака", typeEn: "Attack", limit: 5 },
-      { type: "Тактика I", typeEn: "Tactical I", limit: 8 },
-      { type: "Тактика II", typeEn: "Tactical II", limit: 8 },
-      { type: "Способность", typeEn: "Ability", limit: 8 },
+      { id: "attack-1", kind: "attack", type: "Атака", typeEn: "Attack", limit: 5 },
+      { id: "tactical-1", kind: "tactical", type: "Тактика I", typeEn: "Tactical I", limit: 8 },
+      { id: "tactical-2", kind: "tactical", type: "Тактика II", typeEn: "Tactical II", limit: 8 },
+      { id: "ability-1", kind: "ability", type: "Способность", typeEn: "Ability", limit: 8 },
     ],
     rule:
       "Атака берётся у союзника стоимостью 5 или меньше; две тактики и способность — у союзников стоимостью 8 или меньше.",
@@ -381,10 +491,10 @@ const archetypes = {
     taglineEn: "Attack Actions: Choose any one attack action from an ally of cost 6 or less.",
     stats: { Df: 5, Wp: 5, Sp: 5, Health: 13 },
     talents: [
-      { type: "Атака", typeEn: "Attack", limit: 6 },
-      { type: "Тактика", typeEn: "Tactical", limit: 6 },
-      { type: "Способность I", typeEn: "Ability I", limit: 8 },
-      { type: "Способность II", typeEn: "Ability II", limit: 8 },
+      { id: "attack-1", kind: "attack", type: "Атака", typeEn: "Attack", limit: 6 },
+      { id: "tactical-1", kind: "tactical", type: "Тактика", typeEn: "Tactical", limit: 6 },
+      { id: "ability-1", kind: "ability", type: "Способность I", typeEn: "Ability I", limit: 8 },
+      { id: "ability-2", kind: "ability", type: "Способность II", typeEn: "Ability II", limit: 8 },
     ],
     rule:
       "Атака и тактика берутся у союзников стоимостью 6 или меньше; две способности — у союзников стоимостью 8 или меньше.",
@@ -573,7 +683,7 @@ const xpTiers = [
 ];
 
 const defaultState = {
-  version: 1,
+  version: 2,
   crew: {
     name: "",
     player: "",
@@ -606,21 +716,93 @@ const defaultState = {
 };
 
 let state = loadState();
+const cardCatalog = window.BiggerHatCards || null;
+let pendingModelCard = null;
+let activeTalentSlot = null;
+let selectedTalentSource = null;
+let activeCardView = null;
+let modelSearchRequest = 0;
+let talentSearchRequest = 0;
+let modelSelectionRequest = 0;
+let talentSourceRequest = 0;
+let modelDetailController = null;
+let talentDetailController = null;
+let storageWarningShown = false;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeStoredModel(model) {
+  const source = model && typeof model === "object" ? model : {};
+  const legacyType = String(source.type || "Other");
+  const type = ["Minion", "Peon", "Other"].includes(legacyType) ? legacyType : "Other";
+  return {
+    ...source,
+    id: source.id || uid(),
+    name: String(source.name || ""),
+    cost: Number(source.cost || 0),
+    type,
+    henchman: Boolean(source.henchman || legacyType === "Henchman"),
+    keywords: String(source.keywords || ""),
+    versatile: Boolean(source.versatile),
+    outOfKeyword: Boolean(source.outOfKeyword),
+    injuries: Math.max(0, Number(source.injuries || 0)),
+    cardSlug: source.cardSlug || source.cardSnapshot?.slug || null,
+    cardSnapshot:
+      source.cardSnapshot && typeof source.cardSnapshot === "object"
+        ? source.cardSnapshot
+        : null,
+  };
+}
+
+function normalizeStoredTalent(talent, slot, index) {
+  const source =
+    typeof talent === "string"
+      ? { name: talent }
+      : talent && typeof talent === "object"
+        ? talent
+        : {};
+  const hasSnapshot = source.snapshot && typeof source.snapshot === "object";
+  return {
+    ...source,
+    slotId: source.slotId || slot?.id || `legacy-${index + 1}`,
+    kind: source.kind || slot?.kind || "",
+    mode: source.mode || (hasSnapshot ? "biggerhat" : "manual"),
+    name: String(source.name || ""),
+    source: String(source.source || ""),
+    snapshot: hasSnapshot ? source.snapshot : null,
+  };
+}
+
 function mergeDefaults(saved) {
   const base = clone(defaultState);
   if (!saved || typeof saved !== "object") return base;
+  const savedLeader = saved.leader && typeof saved.leader === "object" ? saved.leader : {};
+  const slots = archetypes[savedLeader.archetype]?.talents || [];
+  const savedTalents = Array.isArray(savedLeader.talents) ? savedLeader.talents : [];
+  const savedArsenal = saved.arsenal && typeof saved.arsenal === "object" ? saved.arsenal : {};
   return {
     ...base,
     ...saved,
+    version: defaultState.version,
     crew: { ...base.crew, ...(saved.crew || {}) },
     campaign: { ...base.campaign, ...(saved.campaign || {}) },
-    leader: { ...base.leader, ...(saved.leader || {}) },
-    arsenal: { ...base.arsenal, ...(saved.arsenal || {}) },
+    leader: {
+      ...base.leader,
+      ...savedLeader,
+      talents: savedTalents.map((talent, index) =>
+        normalizeStoredTalent(talent, slots[index], index),
+      ),
+    },
+    arsenal: {
+      ...base.arsenal,
+      ...savedArsenal,
+      models: Array.isArray(savedArsenal.models)
+        ? savedArsenal.models.map(normalizeStoredModel)
+        : [],
+      equipment: Array.isArray(savedArsenal.equipment) ? savedArsenal.equipment : [],
+    },
     games: Array.isArray(saved.games) ? saved.games : [],
   };
 }
@@ -634,7 +816,16 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  } catch {
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      setTimeout(() => toast(message("storageFull")), 0);
+    }
+    return false;
+  }
 }
 
 function getAtPath(path) {
@@ -672,6 +863,359 @@ function plural(number, forms) {
 
 function normalizeText(value) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function debounce(callback, wait = 320) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => callback(...args), wait);
+  };
+}
+
+function canonical(value) {
+  return String(value ?? "")
+    .toLocaleLowerCase("en")
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function selectedCrewKeywords() {
+  return (state.crew.keywords || []).map(canonical).filter(Boolean);
+}
+
+function characterKeywordNames(character) {
+  return (character?.keywords || []).map((keyword) =>
+    typeof keyword === "string" ? keyword : keyword?.name,
+  ).filter(Boolean);
+}
+
+function characterMatchesFaction(character) {
+  const selected = canonical(state.crew.faction);
+  if (!selected) return false;
+  return [
+    character?.faction,
+    character?.factionLabel,
+    character?.secondFaction,
+    character?.secondFactionLabel,
+  ].some((value) => canonical(value) === selected);
+}
+
+function characterMatchesKeyword(character) {
+  const selected = selectedCrewKeywords();
+  if (!selected.length) return false;
+  const modelKeywords = characterKeywordNames(character).map(canonical);
+  return selected.some((keyword) => modelKeywords.includes(keyword));
+}
+
+function characterIsVersatile(character) {
+  return (character?.characteristics || []).some(
+    (characteristic) => canonical(characteristic) === "versatile",
+  );
+}
+
+function characterIsHenchman(character) {
+  return (character?.characteristics || []).some(
+    (characteristic) => canonical(characteristic) === "henchman",
+  );
+}
+
+function characterAffinity(character) {
+  if (characterMatchesKeyword(character)) {
+    return { rank: 0, label: message("affinityKeyword") };
+  }
+  if (characterMatchesFaction(character) && characterIsVersatile(character)) {
+    return { rank: 1, label: message("affinityVersatile") };
+  }
+  if (characterMatchesFaction(character)) {
+    return { rank: 2, label: message("affinityFaction") };
+  }
+  return { rank: 3, label: message("affinityOther") };
+}
+
+function sortCharactersForCrew(characters) {
+  return [...characters].sort((a, b) => {
+    const affinity = characterAffinity(a).rank - characterAffinity(b).rank;
+    if (affinity) return affinity;
+    const cost = Number(a.cost ?? 999) - Number(b.cost ?? 999);
+    if (cost) return cost;
+    return String(a.displayName).localeCompare(String(b.displayName), "en");
+  });
+}
+
+function isHireableCard(character) {
+  return Number.isFinite(Number(character?.cost)) && character?.cost !== null && !character?.isUnhirable;
+}
+
+function stationToModelType(character) {
+  const station = canonical(character?.stationLabel || character?.station);
+  const known = {
+    minion: "Minion",
+    peon: "Peon",
+  };
+  if (known[station]) return known[station];
+  const characteristics = new Set((character?.characteristics || []).map(canonical));
+  if (characteristics.has("minion")) return "Minion";
+  if (characteristics.has("peon")) return "Peon";
+  return "Other";
+}
+
+const CARD_SYMBOLS = {
+  stone: ["◆", "Soulstone"],
+  pulse: ["◎", "Pulse"],
+  aura: ["◌", "Aura"],
+  blast: ["◉", "Blast"],
+  melee: ["↕", "Melee"],
+  magic: ["✦", "Magic"],
+  missile: ["⌖", "Missile"],
+  missle: ["⌖", "Missile"],
+  projectile: ["⌖", "Projectile"],
+  ram: ["R", "Ram"],
+  mask: ["M", "Mask"],
+  crow: ["C", "Crow"],
+  tome: ["T", "Tome"],
+  fortitude: ["F", "Fortitude"],
+  warding: ["W", "Warding"],
+  signature: ["S", "Signature"],
+  cunning: ["C", "Cunning"],
+  "+": ["+", "Positive flip"],
+  "-": ["−", "Negative flip"],
+};
+
+function cardText(value) {
+  return escapeHtml(value)
+    .replace(/\{\{\{?([^{}]+)\}\}\}?/g, (match, rawToken) => {
+      const token = String(rawToken).trim().toLowerCase();
+      const symbol = CARD_SYMBOLS[token];
+      if (!symbol) return match;
+      return `<span class="card-symbol" title="${symbol[1]}" aria-label="${symbol[1]}">${symbol[0]}</span>`;
+    })
+    .replaceAll("\n", "<br>");
+}
+
+function plainCardText(value) {
+  return String(value ?? "").replace(/\{\{\{?([^{}]+)\}\}\}?/g, (match, rawToken) => {
+    const symbol = CARD_SYMBOLS[String(rawToken).trim().toLowerCase()];
+    return symbol ? symbol[0] : match;
+  });
+}
+
+function stoneMarker(value) {
+  const amount = Number(value || 0);
+  if (!amount) return "";
+  return amount > 1 ? `◆ ${amount}` : "◆";
+}
+
+function abilityMeta(ability) {
+  const defensiveType = String(ability.defensiveAbilityType || "")
+    .replaceAll("_", " ")
+    .replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+  return [defensiveType, ability.suits, stoneMarker(ability.stoneCost)]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function actionMeta(action) {
+  const pieces = [action.typeLabel || action.type].filter(Boolean);
+  if (action.isSignature) pieces.push("Signature");
+  if (action.range) {
+    pieces.push(`${action.rangeTypeLabel || action.rangeType || "Rg"} ${action.range}″`);
+  }
+  if (action.stat) {
+    const resist = action.resistedBy ? ` vs ${action.resistedBy}` : "";
+    const suits = action.statSuits ? ` ${action.statSuits}` : "";
+    const modifier =
+      action.statModifier === "positive"
+        ? " +"
+        : action.statModifier === "negative"
+          ? " −"
+          : action.statModifier
+            ? ` ${action.statModifier}`
+            : "";
+    pieces.push(`Stat ${action.stat}${suits}${modifier}${resist}`);
+  }
+  if (action.targetNumber) {
+    const suits = action.targetSuits ? ` ${action.targetSuits}` : "";
+    pieces.push(`TN ${action.targetNumber}${suits}`);
+  }
+  if (action.damage) pieces.push(`Dmg ${action.damage}`);
+  if (action.stoneCost) pieces.push(stoneMarker(action.stoneCost));
+  return pieces.join(" · ");
+}
+
+function cardRuleHtml(entry, kind, options = {}) {
+  const triggers =
+    kind === "action" && Array.isArray(entry.triggers)
+      ? entry.triggers
+      : options.selectedTrigger
+        ? [options.selectedTrigger]
+        : [];
+  const meta =
+    kind === "action"
+      ? actionMeta(entry)
+      : abilityMeta(entry);
+  return `
+    <article class="card-rule">
+      <div class="card-rule-title">
+        <h4>${escapeHtml(entry.name)}</h4>
+        <small>${cardText(meta || (kind === "action" ? entry.typeLabel : "Ability"))}</small>
+      </div>
+      ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
+      ${triggers
+        .map(
+          (trigger) => `
+            <div class="card-trigger">
+              <b>${cardText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}${trigger.stoneCost ? ` · ${stoneMarker(trigger.stoneCost)}` : ""}</b>
+              ${trigger.description ? `<p>${cardText(trigger.description)}</p>` : ""}
+            </div>`,
+        )
+        .join("")}
+    </article>`;
+}
+
+function modelCardHtml(card) {
+  const keywords = characterKeywordNames(card).join(", ");
+  const characteristics = (card.characteristics || []).join(", ");
+  const faction = [card.factionLabel, card.secondFactionLabel].filter(Boolean).join(" / ");
+  const actions = Array.isArray(card.actions) ? card.actions : [];
+  const abilities = Array.isArray(card.abilities) ? card.abilities : [];
+  const stats = [
+    ["Df", card.defense],
+    ["Wp", card.willpower],
+    ["Sp", card.speed],
+    ["Health", card.health],
+    ["Sz", card.size],
+    ["Base", card.baseLabel || (card.base ? `${card.base}mm` : null)],
+    ["Cost", card.cost],
+  ];
+  return `
+    <div class="card-record">
+      <header class="card-record-head">
+        <div>
+          <h3>${escapeHtml(card.displayName || card.name)}</h3>
+          <p>${escapeHtml(
+            [faction, card.stationLabel, keywords, characteristics].filter(Boolean).join(" · "),
+          )}</p>
+        </div>
+        <span class="source-seal">BiggerHat · M4E</span>
+      </header>
+      <div class="card-stat-strip">
+        ${stats
+          .map(
+            ([label, value]) =>
+              `<span><small>${label}</small><b>${escapeHtml(value ?? "—")}</b></span>`,
+          )
+          .join("")}
+      </div>
+      <section class="card-rule-section">
+        <div class="card-rule-heading">
+          <h3>${message("cardActions")}</h3>
+          <small>${message("exactEnglish")}</small>
+        </div>
+        <div class="card-rule-list">
+          ${actions.length
+            ? actions.map((action) => cardRuleHtml(action, "action")).join("")
+            : `<div class="empty-state compact-empty"><div><strong>${message("cardNoActions")}</strong></div></div>`}
+        </div>
+      </section>
+      <section class="card-rule-section">
+        <div class="card-rule-heading">
+          <h3>${message("cardAbilities")}</h3>
+          <small>${message("exactEnglish")}</small>
+        </div>
+        <div class="card-rule-list">
+          ${abilities.length
+            ? abilities.map((ability) => cardRuleHtml(ability, "ability")).join("")
+            : `<div class="empty-state compact-empty"><div><strong>${message("cardNoAbilities")}</strong></div></div>`}
+        </div>
+      </section>
+    </div>`;
+}
+
+function compactTalentSourceCard(card, entry, slot) {
+  const snapshot = {
+    id: card.id,
+    slug: card.slug,
+    gameModeType: card.gameModeType,
+    name: card.name,
+    title: card.title,
+    displayName: card.displayName,
+    faction: card.faction,
+    factionLabel: card.factionLabel,
+    secondFaction: card.secondFaction,
+    secondFactionLabel: card.secondFactionLabel,
+    station: card.station,
+    stationLabel: card.stationLabel,
+    cost: card.cost,
+    health: card.health,
+    size: card.size,
+    base: card.base,
+    baseLabel: card.baseLabel,
+    defense: card.defense,
+    defenseSuit: card.defenseSuit,
+    willpower: card.willpower,
+    willpowerSuit: card.willpowerSuit,
+    speed: card.speed,
+    keywords: clone(card.keywords || []),
+    characteristics: clone(card.characteristics || []),
+    miniature: card.miniature ? clone(card.miniature) : null,
+    fetchedAt: card.fetchedAt,
+    source: card.source ? clone(card.source) : null,
+    actions: [],
+    abilities: [],
+  };
+  if (slot.kind === "ability") snapshot.abilities = [clone(entry)];
+  else snapshot.actions = [clone(entry)];
+  return snapshot;
+}
+
+function setCatalogStatus(target, text) {
+  const element = document.querySelector(target);
+  if (element) element.textContent = text;
+}
+
+function catalogErrorMessage(error) {
+  if (error?.status === 429) {
+    return message("catalogRateLimited", { seconds: error.retryAfter || 60 });
+  }
+  return message("catalogUnavailable");
+}
+
+function catalogResultHtml(character) {
+  const affinity = characterAffinity(character);
+  const keywords = characterKeywordNames(character).join(", ") || message("noKeywords");
+  return `
+    <button class="catalog-result" type="button" role="option" aria-selected="false" data-catalog-slug="${escapeHtml(character.slug)}">
+      <b>${escapeHtml(character.displayName)}</b>
+      <em>${character.cost == null ? "—" : escapeHtml(character.cost)}</em>
+      <small>${escapeHtml(
+        [character.factionLabel, character.stationLabel, keywords, affinity.label]
+          .filter(Boolean)
+          .join(" · "),
+      )}</small>
+    </button>`;
+}
+
+function talentKindLabel(slot) {
+  if (!slot) return "";
+  return localized(slot.type, slot.typeEn);
+}
+
+function storedTalentInput(talent) {
+  if (!talent) return "";
+  if (talent.mode === "biggerhat" && talent.source) {
+    return [talent.name, talent.source].filter(Boolean).join(" · ");
+  }
+  return talent.name || "";
+}
+
+function selectedTalentDescription(talent) {
+  const entry = talent?.snapshot?.entry;
+  const trigger = talent?.snapshot?.selectedTrigger;
+  if (!entry) return "";
+  const description = String(entry.description || "").replace(/\s+/g, " ").trim();
+  const triggerName = trigger ? `${message("talentTrigger")}: ${trigger.name}` : "";
+  return [description, triggerName].filter(Boolean).join(" · ");
 }
 
 function applyStaticTranslations() {
@@ -814,11 +1358,43 @@ function renderArchetypes() {
 
   grid.querySelectorAll("[data-archetype]").forEach((button) => {
     button.addEventListener("click", () => {
+      const previous = new Map(
+        state.leader.talents
+          .filter((talent) => talent?.slotId)
+          .map((talent) => [talent.slotId, talent]),
+      );
       state.leader.archetype = button.dataset.archetype;
-      const count = archetypes[state.leader.archetype].talents.length;
-      state.leader.talents = Array.from({ length: count }, (_, index) => state.leader.talents[index] || {
-        name: "",
-        source: "",
+      const slots = archetypes[state.leader.archetype].talents;
+      state.leader.talents = slots.map((slot) => {
+        const saved = previous.get(slot.id);
+        if (!saved) return normalizeStoredTalent({}, slot, 0);
+        if (saved.mode === "biggerhat") {
+          const rawSourceCost = saved.snapshot?.sourceCard?.cost;
+          const hasSourceCost =
+            rawSourceCost !== null &&
+            rawSourceCost !== undefined &&
+            Number.isFinite(Number(rawSourceCost));
+          const sourceCost = hasSourceCost ? Number(rawSourceCost) : null;
+          const wrongKind = saved.kind && saved.kind !== slot.kind;
+          const tooExpensive = !hasSourceCost || sourceCost > slot.limit;
+          const missingTrigger = slot.chooseTrigger && !saved.snapshot?.selectedTrigger;
+          if (wrongKind || tooExpensive || missingTrigger) {
+            return normalizeStoredTalent({}, slot, 0);
+          }
+        }
+        const compatible = normalizeStoredTalent(saved, slot, 0);
+        compatible.slotId = slot.id;
+        compatible.kind = slot.kind;
+        if (!slot.chooseTrigger && compatible.snapshot?.selectedTrigger) {
+          compatible.snapshot = {
+            ...compatible.snapshot,
+            selectedTrigger: null,
+            entry: compatible.snapshot.entry
+              ? { ...compatible.snapshot.entry, triggers: [] }
+              : compatible.snapshot.entry,
+          };
+        }
+        return compatible;
       });
       saveState();
       renderArchetypes();
@@ -842,14 +1418,26 @@ function renderTalents() {
   document.querySelector("#archetypeRule").textContent = localized(data.rule, data.ruleEn);
   wrap.innerHTML = data.talents
     .map((talent, index) => {
-      const saved = state.leader.talents[index] || { name: "", source: "" };
+      const saved = state.leader.talents[index] || normalizeStoredTalent({}, talent, index);
+      const selectedDescription = selectedTalentDescription(saved);
       return `
         <div class="talent-row">
           <span class="talent-type">${localized(talent.type, talent.typeEn)}</span>
-          <label class="field">
+          <div class="field">
             <span>${message("talentSource")}</span>
-            <input data-talent-name="${index}" value="${escapeHtml(saved.name)}" placeholder="Peacebringer · Death Marshal" />
-          </label>
+            <span class="talent-input-line">
+              <input data-talent-name="${index}" value="${escapeHtml(storedTalentInput(saved))}" placeholder="Peacebringer · Death Marshal" aria-label="${message("talentSource")}" />
+              <button class="talent-pick-button" type="button" data-pick-talent="${index}">
+                ${saved.mode === "biggerhat" ? message("changeCard") : message("chooseFromCard")}
+              </button>
+            </span>
+            ${saved.mode === "biggerhat"
+              ? `<small class="talent-picked-summary">
+                  <span>${cardText(selectedDescription || message("cardAttached"))}</span>
+                  <button class="talent-card-button" type="button" data-view-talent-card="${index}">${message("sourceCard")}</button>
+                </small>`
+              : ""}
+          </div>
           <label class="field">
             <span>Cost ≤</span>
             <input value="${talent.limit}" readonly aria-label="${message("costLimit", { n: talent.limit })}" />
@@ -862,8 +1450,32 @@ function renderTalents() {
   wrap.querySelectorAll("[data-talent-name]").forEach((input) => {
     input.addEventListener("input", () => {
       const index = Number(input.dataset.talentName);
-      state.leader.talents[index] = { ...(state.leader.talents[index] || {}), name: input.value };
+      const slot = data.talents[index];
+      state.leader.talents[index] = normalizeStoredTalent(
+        {
+          slotId: slot.id,
+          kind: slot.kind,
+          mode: "manual",
+          name: input.value,
+          source: "",
+          snapshot: null,
+        },
+        slot,
+        index,
+      );
       saveState();
+    });
+  });
+
+  wrap.querySelectorAll("[data-pick-talent]").forEach((button) => {
+    button.addEventListener("click", () => openTalentPicker(Number(button.dataset.pickTalent)));
+  });
+
+  wrap.querySelectorAll("[data-view-talent-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const talent = state.leader.talents[Number(button.dataset.viewTalentCard)];
+      const card = talent?.snapshot?.sourceCard;
+      if (card) openCardDialog(card);
     });
   });
 }
@@ -919,7 +1531,19 @@ function renderArsenal() {
             <span class="model-cost">${model.cost}</span>
             <span class="model-main">
               <b>${escapeHtml(model.name)}</b>
-              <small>${escapeHtml(displayModelType(model.type))} · ${escapeHtml(model.keywords || message("noKeywords"))}</small>
+              <small>${escapeHtml(
+                [displayModelType(model.type), model.henchman ? "Henchman" : "", model.keywords || message("noKeywords")]
+                  .filter(Boolean)
+                  .join(" · "),
+              )}</small>
+              ${model.cardSnapshot || model.cardSlug
+                ? `<button class="model-card-link" type="button" data-view-model-card="${model.id}">
+                    ${message("openCard")} · ${message("cardCounts", {
+                      actions: model.cardSnapshot?.actions?.length || 0,
+                      abilities: model.cardSnapshot?.abilities?.length || 0,
+                    })}
+                  </button>`
+                : ""}
             </span>
             <span class="model-badge">${model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
             <span class="mini-stepper">
@@ -969,6 +1593,14 @@ function renderArsenal() {
   });
   list.querySelectorAll("[data-injury-minus]").forEach((button) => {
     button.addEventListener("click", () => changeInjury(button.dataset.injuryMinus, -1));
+  });
+  list.querySelectorAll("[data-view-model-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const model = state.arsenal.models.find(
+        (item) => item.id === button.dataset.viewModelCard,
+      );
+      if (model) openStoredModelCard(model);
+    });
   });
   equipmentWrap.querySelectorAll("[data-delete-equipment]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1204,6 +1836,493 @@ function renderEquipmentCatalog() {
   if (selectedValue) catalog.value = selectedValue;
 }
 
+function openCardDialog(card) {
+  if (!card) return;
+  activeCardView = card;
+  const dialog = document.querySelector("#cardDialog");
+  document.querySelector("#cardDialogTitle").textContent = card.displayName || card.name || message("openCard");
+  document.querySelector("#cardDialogContent").innerHTML = modelCardHtml(card);
+  if (!dialog.open) dialog.showModal();
+}
+
+async function openStoredModelCard(model) {
+  if (model.cardSnapshot) {
+    openCardDialog(model.cardSnapshot);
+    return;
+  }
+  if (!model.cardSlug || !cardCatalog) {
+    toast(message("cardLoadFailed"));
+    return;
+  }
+  const dialog = document.querySelector("#cardDialog");
+  activeCardView = null;
+  document.querySelector("#cardDialogTitle").textContent = model.name;
+  document.querySelector("#cardDialogContent").innerHTML =
+    `<div class="empty-state"><div><strong>${message("catalogSelecting")}</strong></div></div>`;
+  if (!dialog.open) dialog.showModal();
+  try {
+    const card = await cardCatalog.getCharacter(model.cardSlug);
+    model.cardSnapshot = card;
+    activeCardView = card;
+    saveState();
+    document.querySelector("#cardDialogTitle").textContent = card.displayName || model.name;
+    document.querySelector("#cardDialogContent").innerHTML = modelCardHtml(card);
+    renderArsenal();
+  } catch {
+    document.querySelector("#cardDialogContent").innerHTML =
+      `<div class="empty-state"><div><strong>${message("cardLoadFailed")}</strong></div></div>`;
+  }
+}
+
+function clearPendingModelCard(announce = false) {
+  pendingModelCard = null;
+  modelSelectionRequest += 1;
+  const selection = document.querySelector("#modelCardSelection");
+  selection.hidden = true;
+  selection.innerHTML = "";
+  document
+    .querySelectorAll("#modelSearchResults .catalog-result")
+    .forEach((button) => {
+      button.classList.remove("is-selected");
+      button.setAttribute("aria-selected", "false");
+    });
+  if (announce) {
+    setCatalogStatus("#modelCatalogStatus", message("cardDetached"));
+  }
+}
+
+function resetModelPicker(options = {}) {
+  modelSearchRequest += 1;
+  modelSelectionRequest += 1;
+  modelDetailController?.abort();
+  modelDetailController = null;
+  pendingModelCard = null;
+  const form = document.querySelector("#modelForm");
+  if (options.resetForm !== false) form.reset();
+  document.querySelector("#modelCardSearch").value = "";
+  document.querySelector("#modelSearchResults").innerHTML = "";
+  document.querySelector("#modelCardSelection").hidden = true;
+  document.querySelector("#modelCardSelection").innerHTML = "";
+  setCatalogStatus("#modelCatalogStatus", "");
+}
+
+function renderModelCardSelection(card) {
+  const selection = document.querySelector("#modelCardSelection");
+  selection.hidden = false;
+  selection.innerHTML = `
+    <b>${escapeHtml(card.displayName)}</b>
+    <small>${escapeHtml(
+      [
+        card.factionLabel,
+        card.stationLabel,
+        `Cost ${card.cost}`,
+        message("cardCounts", {
+          actions: card.actions?.length || 0,
+          abilities: card.abilities?.length || 0,
+        }),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    )}</small>
+    <button type="button" data-clear-model-card aria-label="${message("deleteItem")}">×</button>`;
+  selection
+    .querySelector("[data-clear-model-card]")
+    .addEventListener("click", () => clearPendingModelCard(true));
+}
+
+function fillModelFormFromCard(card) {
+  const form = document.querySelector("#modelForm");
+  form.elements.name.value = card.displayName;
+  form.elements.cost.value = card.cost;
+  form.elements.type.value = stationToModelType(card);
+  form.elements.keywords.value = characterKeywordNames(card).join(", ");
+  form.elements.henchman.checked = characterIsHenchman(card);
+  const versatileInFaction = characterIsVersatile(card) && characterMatchesFaction(card);
+  form.elements.versatile.checked = versatileInFaction;
+  const hasCrewKeywords = selectedCrewKeywords().length > 0;
+  form.elements.outOfKeyword.checked =
+    hasCrewKeywords && !characterMatchesKeyword(card) && !versatileInFaction;
+}
+
+async function selectModelCatalogCard(slug) {
+  if (!cardCatalog) return;
+  const request = ++modelSelectionRequest;
+  modelDetailController?.abort();
+  const controller = new AbortController();
+  modelDetailController = controller;
+  setCatalogStatus("#modelCatalogStatus", message("catalogSelecting"));
+  try {
+    const card = await cardCatalog.getCharacter(slug, { signal: controller.signal });
+    if (request !== modelSelectionRequest) return;
+    if (!isHireableCard(card)) throw new Error("This character cannot be hired");
+    pendingModelCard = card;
+    fillModelFormFromCard(card);
+    renderModelCardSelection(card);
+    document
+      .querySelectorAll("#modelSearchResults .catalog-result")
+      .forEach((button) => {
+        const selected = button.dataset.catalogSlug === slug;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-selected", String(selected));
+      });
+    setCatalogStatus("#modelCatalogStatus", message("catalogSelected"));
+  } catch (error) {
+    if (request !== modelSelectionRequest) return;
+    setCatalogStatus("#modelCatalogStatus", catalogErrorMessage(error));
+  } finally {
+    if (request === modelSelectionRequest) modelDetailController = null;
+  }
+}
+
+async function runModelCardSearch(force = false) {
+  const resultsWrap = document.querySelector("#modelSearchResults");
+  if (!cardCatalog) {
+    setCatalogStatus("#modelCatalogStatus", message("catalogUnavailable"));
+    return false;
+  }
+  const request = ++modelSearchRequest;
+  const query = document.querySelector("#modelCardSearch").value;
+  setCatalogStatus("#modelCatalogStatus", message("catalogLoading"));
+  try {
+    const found = await cardCatalog.searchCharacters(query, {
+      force,
+      limit: 1000,
+      onProgress: (loaded, total) => {
+        if (request !== modelSearchRequest) return;
+        setCatalogStatus(
+          "#modelCatalogStatus",
+          message("catalogProgress", { loaded, total }),
+        );
+      },
+    });
+    if (request !== modelSearchRequest) return false;
+    const eligible = sortCharactersForCrew(found.filter(isHireableCard));
+    const visible = eligible.slice(0, 20);
+    resultsWrap.innerHTML = visible.map(catalogResultHtml).join("");
+    if (!visible.length) {
+      setCatalogStatus("#modelCatalogStatus", message("catalogNoMatches"));
+    } else {
+      setCatalogStatus(
+        "#modelCatalogStatus",
+        `${message("catalogReady", { n: found.length })} ${message("modelPickerHint")}`,
+      );
+    }
+    resultsWrap.querySelectorAll("[data-catalog-slug]").forEach((button) => {
+      button.addEventListener("click", () =>
+        selectModelCatalogCard(button.dataset.catalogSlug),
+      );
+    });
+    return true;
+  } catch (error) {
+    if (request !== modelSearchRequest) return false;
+    resultsWrap.innerHTML = "";
+    setCatalogStatus("#modelCatalogStatus", catalogErrorMessage(error));
+    return false;
+  }
+}
+
+function emptyTalentEntryPanel() {
+  document.querySelector("#talentEntryPanel").innerHTML = `
+    <div class="empty-state compact-empty">
+      <div>
+        <strong>${message("talentChooseSource")}</strong>
+      </div>
+    </div>`;
+}
+
+function resetTalentPicker() {
+  talentSearchRequest += 1;
+  talentSourceRequest += 1;
+  talentDetailController?.abort();
+  talentDetailController = null;
+  activeTalentSlot = null;
+  selectedTalentSource = null;
+  document.querySelector("#talentCardSearch").value = "";
+  document.querySelector("#talentSearchResults").innerHTML = "";
+  setCatalogStatus("#talentCatalogStatus", "");
+  emptyTalentEntryPanel();
+}
+
+function openTalentPicker(index) {
+  const archetype = archetypes[state.leader.archetype];
+  const slot = archetype?.talents?.[index];
+  if (!slot) return;
+  talentSearchRequest += 1;
+  talentSourceRequest += 1;
+  activeTalentSlot = { index, slot };
+  selectedTalentSource = null;
+  document.querySelector("#talentCardSearch").value = "";
+  document.querySelector("#talentSearchResults").innerHTML = "";
+  document.querySelector("#talentPickerRule").textContent = message("talentPickerRule", {
+    kind: talentKindLabel(slot),
+    limit: slot.limit,
+  });
+  emptyTalentEntryPanel();
+  const dialog = document.querySelector("#talentDialog");
+  if (!dialog.open) dialog.showModal();
+  runTalentCardSearch();
+  document.querySelector("#talentCardSearch").focus();
+}
+
+async function runTalentCardSearch(force = false) {
+  const resultsWrap = document.querySelector("#talentSearchResults");
+  if (!activeTalentSlot || !cardCatalog) {
+    setCatalogStatus("#talentCatalogStatus", message("catalogUnavailable"));
+    return false;
+  }
+  const request = ++talentSearchRequest;
+  const query = document.querySelector("#talentCardSearch").value;
+  setCatalogStatus("#talentCatalogStatus", message("catalogLoading"));
+  try {
+    const found = await cardCatalog.searchCharacters(query, {
+      force,
+      limit: 1000,
+      onProgress: (loaded, total) => {
+        if (request !== talentSearchRequest) return;
+        setCatalogStatus(
+          "#talentCatalogStatus",
+          message("catalogProgress", { loaded, total }),
+        );
+      },
+    });
+    if (request !== talentSearchRequest) return false;
+    const arsenalSlugs = new Set(
+      state.arsenal.models.map((model) => model.cardSlug).filter(Boolean),
+    );
+    const eligible = sortCharactersForCrew(
+      found.filter(
+        (character) =>
+          isHireableCard(character) &&
+          Number(character.cost) <= activeTalentSlot.slot.limit,
+      ),
+    ).sort((a, b) => Number(arsenalSlugs.has(b.slug)) - Number(arsenalSlugs.has(a.slug)));
+    const visible = eligible.slice(0, 20);
+    resultsWrap.innerHTML = visible.map(catalogResultHtml).join("");
+    setCatalogStatus(
+      "#talentCatalogStatus",
+      visible.length
+        ? message("catalogReady", { n: eligible.length })
+        : message("catalogNoMatches"),
+    );
+    resultsWrap.querySelectorAll("[data-catalog-slug]").forEach((button) => {
+      button.addEventListener("click", () =>
+        selectTalentSourceCard(button.dataset.catalogSlug),
+      );
+    });
+    return true;
+  } catch (error) {
+    if (request !== talentSearchRequest) return false;
+    resultsWrap.innerHTML = "";
+    setCatalogStatus("#talentCatalogStatus", catalogErrorMessage(error));
+    return false;
+  }
+}
+
+function eligibleTalentEntries(card, slot) {
+  if (slot.kind === "ability") return Array.isArray(card.abilities) ? card.abilities : [];
+  return (card.actions || []).filter((action) => action.type === slot.kind);
+}
+
+function renderTalentEntries(card) {
+  const panel = document.querySelector("#talentEntryPanel");
+  if (!activeTalentSlot) return;
+  const { slot } = activeTalentSlot;
+  const entries = eligibleTalentEntries(card, slot);
+  if (!entries.length) {
+    panel.innerHTML = `
+      <div class="empty-state compact-empty">
+        <div><strong>${message("talentNoEntries")}</strong></div>
+      </div>`;
+    return;
+  }
+  panel.innerHTML = `
+    <div class="entry-source-heading">
+      <h3>${escapeHtml(card.displayName)}</h3>
+      <small>${escapeHtml(
+        [card.factionLabel, card.stationLabel, `Cost ${card.cost}`].filter(Boolean).join(" · "),
+      )}</small>
+    </div>
+    <div class="talent-entry-list">
+      ${entries
+        .map((entry) => {
+          const requiresTrigger = Boolean(slot.chooseTrigger);
+          const triggers = Array.isArray(entry.triggers) ? entry.triggers : [];
+          const unavailable = requiresTrigger && !triggers.length;
+          const kindLabel =
+            slot.kind === "ability" ? "Ability" : entry.typeLabel || talentKindLabel(slot);
+          return `
+            <article class="talent-entry-choice">
+              <h4>${escapeHtml(entry.name)}</h4>
+              <small>${escapeHtml(
+                slot.kind === "ability"
+                  ? [kindLabel, abilityMeta(entry)]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : actionMeta(entry) || kindLabel,
+              )}</small>
+              ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
+              ${requiresTrigger && triggers.length
+                ? `<div class="trigger-reference">
+                    ${triggers
+                      .map(
+                        (trigger) => `
+                          <div>
+                            <b>${cardText(
+                              [trigger.suits, trigger.name, stoneMarker(trigger.stoneCost)]
+                                .filter(Boolean)
+                                .join(" · "),
+                            )}</b>
+                            <span>${cardText(trigger.description)}</span>
+                          </div>`,
+                      )
+                      .join("")}
+                  </div>`
+                : ""}
+              <div class="entry-choice-actions">
+                ${requiresTrigger
+                  ? unavailable
+                    ? `<span class="talent-trigger-warning">${message("talentNeedsTrigger")}</span>`
+                    : `<label>
+                        ${message("talentChooseTrigger")}
+                        <select data-trigger-choice="${entry.id}">
+                          ${triggers
+                            .map(
+                              (trigger) =>
+                                `<option value="${trigger.id}">${escapeHtml(
+                                  [
+                                    plainCardText(trigger.suits),
+                                    trigger.name,
+                                    stoneMarker(trigger.stoneCost),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · "),
+                                )}</option>`,
+                            )
+                            .join("")}
+                        </select>
+                      </label>`
+                  : ""}
+                <button class="entry-select-button" type="button" data-select-talent-entry="${entry.id}" ${unavailable ? "disabled" : ""}>
+                  ${message("chooseFromCard")}
+                </button>
+              </div>
+            </article>`;
+        })
+        .join("")}
+    </div>`;
+  panel.querySelectorAll("[data-select-talent-entry]").forEach((button) => {
+    button.addEventListener("click", () =>
+      chooseTalentEntry(String(button.dataset.selectTalentEntry)),
+    );
+  });
+}
+
+async function selectTalentSourceCard(slug) {
+  if (!activeTalentSlot || !cardCatalog) return;
+  const request = ++talentSourceRequest;
+  talentDetailController?.abort();
+  const controller = new AbortController();
+  talentDetailController = controller;
+  setCatalogStatus("#talentCatalogStatus", message("catalogSelecting"));
+  try {
+    const card = await cardCatalog.getCharacter(slug, { signal: controller.signal });
+    if (request !== talentSourceRequest || !activeTalentSlot) return;
+    if (
+      !isHireableCard(card) ||
+      Number(card.cost) > Number(activeTalentSlot.slot.limit)
+    ) {
+      throw new Error("This source exceeds the slot limit");
+    }
+    selectedTalentSource = card;
+    renderTalentEntries(card);
+    document
+      .querySelectorAll("#talentSearchResults .catalog-result")
+      .forEach((button) => {
+        const selected = button.dataset.catalogSlug === slug;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-selected", String(selected));
+      });
+    setCatalogStatus("#talentCatalogStatus", message("catalogSelected"));
+  } catch (error) {
+    if (request !== talentSourceRequest) return;
+    setCatalogStatus("#talentCatalogStatus", catalogErrorMessage(error));
+  } finally {
+    if (request === talentSourceRequest) talentDetailController = null;
+  }
+}
+
+function chooseTalentEntry(entryId) {
+  if (!activeTalentSlot || !selectedTalentSource) return;
+  const { index, slot } = activeTalentSlot;
+  const entries = eligibleTalentEntries(selectedTalentSource, slot);
+  const entry = entries.find((item) => String(item.id) === String(entryId));
+  if (!entry) return;
+  let selectedTrigger = null;
+  if (slot.chooseTrigger) {
+    const select = document.querySelector(`[data-trigger-choice="${CSS.escape(String(entry.id))}"]`);
+    selectedTrigger = entry.triggers?.find(
+      (trigger) => String(trigger.id) === String(select?.value),
+    );
+    if (!selectedTrigger) {
+      toast(message("talentNeedsTrigger"));
+      return;
+    }
+  }
+
+  const entrySnapshot = clone(entry);
+  if (slot.kind !== "ability") {
+    entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
+  }
+  const talentsBefore = clone(state.leader.talents);
+  state.leader.talents[index] = {
+    slotId: slot.id,
+    kind: slot.kind,
+    mode: "biggerhat",
+    cardId: selectedTalentSource.id,
+    cardSlug: selectedTalentSource.slug,
+    entryId: entry.id,
+    name: entry.name,
+    source: selectedTalentSource.displayName,
+    snapshot: {
+      sourceCard: compactTalentSourceCard(selectedTalentSource, entry, slot),
+      entry: entrySnapshot,
+      selectedTrigger: selectedTrigger ? clone(selectedTrigger) : null,
+    },
+  };
+  if (!saveState()) {
+    state.leader.talents = talentsBefore;
+    renderTalents();
+    return;
+  }
+  document.querySelector("#talentDialog").close();
+  renderTalents();
+  toast(message("talentEntrySelected", { name: entry.name }));
+}
+
+async function refreshCardCatalog(button) {
+  if (!cardCatalog) {
+    toast(message("catalogUnavailable"));
+    return;
+  }
+  button.classList.add("is-loading");
+  const dialog = button.closest("dialog");
+  const success =
+    dialog?.id === "talentDialog"
+      ? await runTalentCardSearch(true)
+      : await runModelCardSearch(true);
+  button.classList.remove("is-loading");
+  if (success) {
+    cardCatalog.clearDetailCache();
+    if (dialog?.id === "talentDialog") {
+      selectedTalentSource = null;
+      emptyTalentEntryPanel();
+    } else if (pendingModelCard) {
+      clearPendingModelCard(true);
+    }
+    toast(message("catalogRefreshed"));
+  }
+}
+
 function renderAll() {
   renderChrome();
   renderDossier();
@@ -1233,7 +2352,28 @@ document.querySelectorAll("[data-reference-tab]").forEach((button) => {
 });
 
 document.querySelector("#addModelButton").addEventListener("click", () => {
+  resetModelPicker();
   document.querySelector("#modelDialog").showModal();
+  runModelCardSearch();
+  document.querySelector("#modelCardSearch").focus();
+});
+
+document
+  .querySelector("#modelCardSearch")
+  .addEventListener("input", debounce(() => runModelCardSearch(), 280));
+document
+  .querySelector("#talentCardSearch")
+  .addEventListener("input", debounce(() => runTalentCardSearch(), 280));
+document.querySelector("#modelForm").addEventListener("input", (event) => {
+  if (
+    pendingModelCard &&
+    ["name", "cost", "type", "keywords", "henchman"].includes(event.target.name)
+  ) {
+    clearPendingModelCard(true);
+  }
+});
+document.querySelectorAll("[data-refresh-catalog]").forEach((button) => {
+  button.addEventListener("click", () => refreshCardCatalog(button));
 });
 
 document.querySelector("#modelForm").addEventListener("submit", (event) => {
@@ -1245,10 +2385,14 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     name: data.get("name").trim(),
     cost: Number(data.get("cost")),
     type: data.get("type"),
+    henchman: data.get("henchman") === "on",
     keywords: data.get("keywords").trim(),
     versatile: data.get("versatile") === "on",
     outOfKeyword: data.get("outOfKeyword") === "on",
     injuries: 0,
+    cardId: pendingModelCard?.id ?? null,
+    cardSlug: pendingModelCard?.slug ?? null,
+    cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,
   };
   if (state.campaign.week === 1 && state.games.length > 0) {
     toast(message("startingArsenalLocked"));
@@ -1259,6 +2403,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     toast(message("startingLimit"));
     return;
   }
+  const arsenalBefore = clone(state.arsenal);
   if (state.campaign.week > 1) {
     const alreadyHired = state.arsenal.models.some((item) => item.addedWeek === state.campaign.week);
     const keywordTax = model.outOfKeyword && !model.versatile ? 1 : 0;
@@ -1278,9 +2423,13 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   if (state.campaign.week === 1) {
     state.arsenal.scrip = Math.min(3, Math.max(0, 25 - projected));
   }
-  saveState();
-  form.reset();
+  if (!saveState()) {
+    state.arsenal = arsenalBefore;
+    renderArsenal();
+    return;
+  }
   document.querySelector("#modelDialog").close();
+  resetModelPicker();
   renderArsenal();
   toast(
     state.campaign.week > 1
@@ -1379,6 +2528,12 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
   try {
     state = mergeDefaults(JSON.parse(await file.text()));
     saveState();
+    ["modelDialog", "talentDialog", "cardDialog"].forEach((id) => {
+      const dialog = document.querySelector(`#${id}`);
+      if (dialog.open) dialog.close();
+    });
+    resetModelPicker();
+    resetTalentPicker();
     document.querySelectorAll("[data-bind]").forEach((input) => {
       input.value = getAtPath(input.dataset.bind) ?? "";
     });
@@ -1399,6 +2554,12 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
+  ["modelDialog", "talentDialog", "cardDialog"].forEach((id) => {
+    const dialog = document.querySelector(`#${id}`);
+    if (dialog.open) dialog.close();
+  });
+  resetModelPicker();
+  resetTalentPicker();
   document.querySelectorAll("[data-bind]").forEach((input) => {
     input.value = getAtPath(input.dataset.bind) ?? "";
   });
@@ -1415,12 +2576,40 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
     const nextLocale = button.dataset.locale;
     if (!["ru", "en"].includes(nextLocale) || nextLocale === currentLocale) return;
     currentLocale = nextLocale;
-    localStorage.setItem(LOCALE_KEY, currentLocale);
+    try {
+      localStorage.setItem(LOCALE_KEY, currentLocale);
+    } catch {
+      // The language switch still works for the current session.
+    }
     renderAll();
+    if (document.querySelector("#modelDialog").open) {
+      if (pendingModelCard) renderModelCardSelection(pendingModelCard);
+      runModelCardSearch();
+    }
+    if (document.querySelector("#talentDialog").open && activeTalentSlot) {
+      document.querySelector("#talentPickerRule").textContent = message("talentPickerRule", {
+        kind: talentKindLabel(activeTalentSlot.slot),
+        limit: activeTalentSlot.slot.limit,
+      });
+      if (selectedTalentSource) renderTalentEntries(selectedTalentSource);
+      runTalentCardSearch();
+    }
+    if (document.querySelector("#cardDialog").open && activeCardView) {
+      document.querySelector("#cardDialogTitle").textContent =
+        activeCardView.displayName || activeCardView.name || message("openCard");
+      document.querySelector("#cardDialogContent").innerHTML = modelCardHtml(activeCardView);
+    }
   });
 });
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
-  button.addEventListener("click", () => document.querySelector(`#${button.dataset.closeDialog}`).close());
+  button.addEventListener("click", () => {
+    document.querySelector(`#${button.dataset.closeDialog}`).close();
+  });
+});
+document.querySelector("#modelDialog").addEventListener("close", () => resetModelPicker());
+document.querySelector("#talentDialog").addEventListener("close", () => resetTalentPicker());
+document.querySelector("#cardDialog").addEventListener("close", () => {
+  activeCardView = null;
 });
 
 bindFields();

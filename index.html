@@ -9,7 +9,7 @@
     />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=3" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -541,6 +541,30 @@
           </div>
           <button class="modal-close" type="button" data-close-dialog="modelDialog" aria-label="Закрыть">×</button>
         </div>
+        <section class="catalog-block" aria-labelledby="modelCatalogTitle">
+          <div class="catalog-heading">
+            <div>
+              <span class="catalog-overline">Каталог карточек · BiggerHat</span>
+              <b id="modelCatalogTitle">Найдите модель и заполните поля автоматически</b>
+            </div>
+            <button class="catalog-refresh" type="button" data-refresh-catalog aria-label="Обновить каталог">↻</button>
+          </div>
+          <label class="catalog-search">
+            <span class="sr-only">Поиск модели</span>
+            <input
+              id="modelCardSearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Название, ключевое слово или фракция"
+              aria-controls="modelSearchResults"
+            />
+            <span aria-hidden="true">⌕</span>
+          </label>
+          <p class="catalog-status" id="modelCatalogStatus" aria-live="polite"></p>
+          <div class="catalog-results" id="modelSearchResults" role="listbox"></div>
+          <div class="catalog-selection" id="modelCardSelection" hidden></div>
+        </section>
+        <div class="manual-divider"><span>или заполните вручную</span></div>
         <div class="form-grid">
           <label class="field field-wide">
             <span>Название</span>
@@ -554,8 +578,6 @@
             <span>Тип</span>
             <select name="type">
               <option value="Minion">Minion</option>
-              <option value="Enforcer">Enforcer</option>
-              <option value="Henchman">Henchman</option>
               <option value="Peon">Peon</option>
               <option value="Other">Другое</option>
             </select>
@@ -567,6 +589,10 @@
         </div>
         <div class="toggle-grid modal-toggles">
           <label class="check-tile">
+            <input name="henchman" type="checkbox" />
+            <span><b>Henchman</b><small>Характеристика модели</small></span>
+          </label>
+          <label class="check-tile">
             <input name="versatile" type="checkbox" />
             <span><b>Versatile</b><small>В выбранной фракции</small></span>
           </label>
@@ -577,6 +603,62 @@
         </div>
         <button class="button button-red button-wide" value="default">Добавить в арсенал</button>
       </form>
+    </dialog>
+
+    <dialog id="talentDialog" class="modal modal-wide">
+      <div class="modal-panel">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Заимствованный талант</span>
+            <h2>Выбрать с карточки</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="talentDialog" aria-label="Закрыть">×</button>
+        </div>
+        <p class="talent-picker-rule" id="talentPickerRule"></p>
+        <section class="catalog-block" aria-labelledby="talentCatalogTitle">
+          <div class="catalog-heading">
+            <div>
+              <span class="catalog-overline">Источник · BiggerHat</span>
+              <b id="talentCatalogTitle">Сначала выберите модель-источник</b>
+            </div>
+            <button class="catalog-refresh" type="button" data-refresh-catalog aria-label="Обновить каталог">↻</button>
+          </div>
+          <label class="catalog-search">
+            <span class="sr-only">Поиск модели-источника</span>
+            <input
+              id="talentCardSearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Название, ключевое слово или фракция"
+              aria-controls="talentSearchResults"
+            />
+            <span aria-hidden="true">⌕</span>
+          </label>
+          <p class="catalog-status" id="talentCatalogStatus" aria-live="polite"></p>
+          <div class="catalog-results" id="talentSearchResults" role="listbox"></div>
+        </section>
+        <div class="talent-entry-panel" id="talentEntryPanel">
+          <div class="empty-state compact-empty">
+            <div>
+              <strong>Выберите модель</strong>
+              <p>Здесь появятся подходящие действия или способности с её карточки.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="cardDialog" class="modal modal-wide card-dialog">
+      <div class="modal-panel">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Снимок карточки · BiggerHat</span>
+            <h2 id="cardDialogTitle">Карточка модели</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="cardDialog" aria-label="Закрыть">×</button>
+        </div>
+        <div id="cardDialogContent"></div>
+      </div>
     </dialog>
 
     <dialog id="equipmentDialog" class="modal">
@@ -602,6 +684,7 @@
 
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
-    <script src="app.js"></script>
+    <script src="biggerhat.js?v=1"></script>
+    <script src="app.js?v=3"></script>
   </body>
 </html>
