@@ -9,7 +9,7 @@
     />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="stylesheet" href="styles.css?v=4" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -128,14 +128,60 @@
                     <option>Explorer's Society</option>
                   </select>
                 </label>
-                <label class="field">
-                  <span>Первый ключ</span>
-                  <input id="keywordOne" data-bind="crew.keywords.0" placeholder="Marshal" />
-                </label>
-                <label class="field">
-                  <span>Второй ключ</span>
-                  <input id="keywordTwo" data-bind="crew.keywords.1" placeholder="Witch Hunter" />
-                </label>
+                <div class="field keyword-field" data-keyword-field="0">
+                  <label class="field-caption" for="keywordOne">Первый ключ</label>
+                  <div class="keyword-input-shell">
+                    <input
+                      id="keywordOne"
+                      data-bind="crew.keywords.0"
+                      data-keyword-index="0"
+                      placeholder="Marshal"
+                      autocomplete="off"
+                      spellcheck="false"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-controls="keywordOneSuggestions"
+                      aria-describedby="keywordOneStatus"
+                      aria-expanded="false"
+                    />
+                    <span class="keyword-validation-mark" aria-hidden="true"></span>
+                    <div
+                      class="keyword-suggestions"
+                      id="keywordOneSuggestions"
+                      role="listbox"
+                      aria-label="Существующие ключевые слова"
+                      hidden
+                    ></div>
+                  </div>
+                  <small class="keyword-status" id="keywordOneStatus" aria-live="polite"></small>
+                </div>
+                <div class="field keyword-field" data-keyword-field="1">
+                  <label class="field-caption" for="keywordTwo">Второй ключ</label>
+                  <div class="keyword-input-shell">
+                    <input
+                      id="keywordTwo"
+                      data-bind="crew.keywords.1"
+                      data-keyword-index="1"
+                      placeholder="Witch Hunter"
+                      autocomplete="off"
+                      spellcheck="false"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-controls="keywordTwoSuggestions"
+                      aria-describedby="keywordTwoStatus"
+                      aria-expanded="false"
+                    />
+                    <span class="keyword-validation-mark" aria-hidden="true"></span>
+                    <div
+                      class="keyword-suggestions"
+                      id="keywordTwoSuggestions"
+                      role="listbox"
+                      aria-label="Существующие ключевые слова"
+                      hidden
+                    ></div>
+                  </div>
+                  <small class="keyword-status" id="keywordTwoStatus" aria-live="polite"></small>
+                </div>
               </div>
 
               <div class="rule-note">
@@ -684,7 +730,7 @@
 
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
-    <script src="biggerhat.js?v=1"></script>
-    <script src="app.js?v=3"></script>
+    <script src="biggerhat.js?v=2"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

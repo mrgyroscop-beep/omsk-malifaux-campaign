@@ -500,6 +500,7 @@ h1 {
 }
 
 .field > span,
+.field > .field-caption,
 .range-field > span,
 .choice-fieldset legend,
 .rating-equation label span {
@@ -535,6 +536,176 @@ h1 {
 .rating-equation input:focus {
   border-color: var(--red);
   box-shadow: 0 2px 0 rgba(156, 40, 36, 0.12);
+}
+
+.keyword-field {
+  position: relative;
+  align-content: start;
+}
+
+.keyword-field:focus-within {
+  z-index: 30;
+}
+
+.keyword-input-shell {
+  position: relative;
+}
+
+.keyword-input-shell input {
+  padding-right: 34px;
+}
+
+.keyword-validation-mark {
+  position: absolute;
+  right: 3px;
+  bottom: 12px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 50%;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.keyword-status {
+  min-height: 14px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.is-keyword-valid input,
+.is-keyword-valid input:focus {
+  border-color: var(--sage);
+  box-shadow: 0 2px 0 rgba(100, 112, 94, 0.14);
+}
+
+.is-keyword-valid .keyword-validation-mark,
+.is-keyword-valid .keyword-status {
+  color: var(--sage);
+}
+
+.is-keyword-valid .keyword-validation-mark {
+  border-color: rgba(100, 112, 94, 0.45);
+}
+
+.is-keyword-invalid input,
+.is-keyword-invalid input:focus {
+  border-color: var(--red);
+  box-shadow: 0 2px 0 rgba(156, 40, 36, 0.16);
+}
+
+.is-keyword-invalid .keyword-validation-mark,
+.is-keyword-invalid .keyword-status {
+  color: var(--red);
+}
+
+.is-keyword-invalid .keyword-validation-mark {
+  border-color: rgba(156, 40, 36, 0.45);
+}
+
+.is-keyword-unavailable input,
+.is-keyword-unavailable input:focus {
+  border-color: var(--brass-deep);
+}
+
+.is-keyword-unavailable .keyword-validation-mark,
+.is-keyword-unavailable .keyword-status {
+  color: var(--brass-deep);
+}
+
+.is-keyword-unavailable .keyword-validation-mark {
+  border-color: rgba(127, 105, 56, 0.42);
+}
+
+.is-keyword-checking .keyword-validation-mark {
+  animation: keywordPulse 900ms ease-in-out infinite alternate;
+}
+
+.keyword-suggestions {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  z-index: 31;
+  display: grid;
+  max-height: min(260px, 40dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(43, 45, 41, 0.72);
+  background: var(--paper-bright);
+  box-shadow:
+    0 18px 38px rgba(13, 14, 12, 0.24),
+    inset 0 0 0 3px rgba(181, 151, 83, 0.1);
+}
+
+.keyword-suggestions[hidden] {
+  display: none;
+}
+
+.keyword-suggestion {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 12px;
+  color: var(--ink-soft);
+  border: 0;
+  border-bottom: 1px solid rgba(40, 37, 31, 0.14);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.keyword-suggestion:last-child {
+  border-bottom: 0;
+}
+
+.keyword-suggestion:hover,
+.keyword-suggestion.is-active {
+  color: var(--paper-bright);
+  background: var(--ink-soft);
+}
+
+.keyword-suggestion b {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.keyword-suggestion small {
+  flex: 0 0 auto;
+  color: var(--brass-deep);
+  font-size: 8px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.keyword-suggestion:hover small,
+.keyword-suggestion.is-active small {
+  color: var(--brass);
+}
+
+@keyframes keywordPulse {
+  from {
+    opacity: 0.36;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-keyword-checking .keyword-validation-mark {
+    animation: none;
+  }
 }
 
 .rule-note {
@@ -2300,6 +2471,8 @@ h1 {
   .button,
   .reference-tabs,
   .modal,
+  .keyword-suggestions,
+  .keyword-status,
   .toast-region {
     display: none !important;
   }

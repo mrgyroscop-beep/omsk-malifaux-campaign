@@ -27,6 +27,7 @@ python -m http.server 4173
 - титульное досье кампании и недельный цикл;
 - пять архетипов лидера с корректными характеристиками и ограничениями;
 - поиск карточек моделей через BiggerHat с локальным кэшем;
+- свободный ввод двух ключевых слов с подсказками и проверкой по каталогу BiggerHat;
 - автоматическое заполнение модели в арсенале и характеристики Henchman;
 - выбор Actions, Tactical Actions, Abilities и триггера Heavy Hitter с карточки;
 - сохранение полного снимка выбранной карточки внутри JSON досье;
@@ -82,6 +83,7 @@ Then open `http://localhost:4173`.
 - campaign dossier and weekly cycle;
 - all five Leader Archetypes with their correct stats and limits;
 - BiggerHat model-card search with a local browser cache;
+- free entry, autocomplete, and BiggerHat validation for both campaign keywords;
 - automatic arsenal entry, including the Henchman characteristic;
 - card-based Action, Tactical Action, Ability, and Heavy Hitter trigger selection;
 - complete card snapshots stored inside the exported dossier JSON;

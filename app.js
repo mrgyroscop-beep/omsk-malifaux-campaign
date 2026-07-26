@@ -33,6 +33,7 @@ const STATIC_TEXT_EN = {
   "Выберите фракцию": "Choose a faction",
   "Первый ключ": "First keyword",
   "Второй ключ": "Second keyword",
+  "Существующие ключевые слова": "Existing keywords",
   "Минимум один ключ должен принадлежать выбранной фракции. Модели одного выбранного ключа навсегда получают второй ключ в этой кампании.":
     "Each player chooses two keywords, at least one of which contains a model belonging to their declared faction. You may hire models from either of these keywords without penalty. Models added to your arsenal from one of these keywords permanently gain the second keyword for the duration of the campaign.",
   "Срок": "Duration",
@@ -193,6 +194,26 @@ const UI_MESSAGES = {
   dossierComplete: { ru: "Титульный лист заполнен", en: "Cover sheet complete" },
   dossierTakingShape: { ru: "Досье уже обретает форму", en: "The dossier is taking shape" },
   dossierNeedsDetails: { ru: "Нужны основные сведения", en: "Essential details needed" },
+  keywordHint: {
+    ru: "Свободный ввод · проверка по BiggerHat",
+    en: "Free entry · validated with BiggerHat",
+  },
+  keywordChecking: {
+    ru: "Проверяю по каталогу BiggerHat…",
+    en: "Checking the BiggerHat catalog…",
+  },
+  keywordValid: {
+    ru: "Ключ «{name}» найден.",
+    en: "Keyword “{name}” found.",
+  },
+  keywordInvalid: {
+    ru: "Такого ключа нет в каталоге BiggerHat.",
+    en: "This keyword is not in the BiggerHat catalog.",
+  },
+  keywordUnavailable: {
+    ru: "Сейчас проверить нельзя. Значение сохранено без подтверждения.",
+    en: "Validation is unavailable. The value was saved without confirmation.",
+  },
   chooseArchetypeTitle: { ru: "Сначала выберите архетип", en: "Choose an archetype first" },
   chooseArchetypeBody: {
     ru: "Ограничения талантов зависят от его специализации.",
@@ -728,6 +749,12 @@ let talentSourceRequest = 0;
 let modelDetailController = null;
 let talentDetailController = null;
 let storageWarningShown = false;
+let keywordValidation = [0, 1].map((index) => ({
+  status: state.crew.keywords?.[index] ? "pending" : "empty",
+  match: null,
+}));
+let keywordSuggestions = [0, 1].map(() => ({ items: [], activeIndex: -1 }));
+let keywordValidationRequest = [0, 0];
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -779,6 +806,13 @@ function mergeDefaults(saved) {
   const base = clone(defaultState);
   if (!saved || typeof saved !== "object") return base;
   const savedLeader = saved.leader && typeof saved.leader === "object" ? saved.leader : {};
+  const savedCrew =
+    saved.crew && typeof saved.crew === "object" && !Array.isArray(saved.crew)
+      ? saved.crew
+      : {};
+  const savedKeywords = Array.isArray(savedCrew.keywords)
+    ? savedCrew.keywords
+    : base.crew.keywords;
   const slots = archetypes[savedLeader.archetype]?.talents || [];
   const savedTalents = Array.isArray(savedLeader.talents) ? savedLeader.talents : [];
   const savedArsenal = saved.arsenal && typeof saved.arsenal === "object" ? saved.arsenal : {};
@@ -786,7 +820,11 @@ function mergeDefaults(saved) {
     ...base,
     ...saved,
     version: defaultState.version,
-    crew: { ...base.crew, ...(saved.crew || {}) },
+    crew: {
+      ...base.crew,
+      ...savedCrew,
+      keywords: [0, 1].map((index) => String(savedKeywords[index] ?? "")),
+    },
     campaign: { ...base.campaign, ...(saved.campaign || {}) },
     leader: {
       ...base.leader,
@@ -880,8 +918,337 @@ function canonical(value) {
     .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+function exactKeywordKey(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
+}
+
+function resetKeywordValidationState() {
+  keywordValidation = [0, 1].map((index) => ({
+    status: state.crew.keywords?.[index] ? "pending" : "empty",
+    match: null,
+  }));
+  keywordSuggestions = [0, 1].map(() => ({ items: [], activeIndex: -1 }));
+  keywordValidationRequest = keywordValidationRequest.map((request) => request + 1);
+}
+
+function keywordField(index) {
+  return document.querySelector(`[data-keyword-field="${index}"]`);
+}
+
+function keywordInput(index) {
+  return document.querySelector(`[data-keyword-index="${index}"]`);
+}
+
+function keywordStatusText(index) {
+  const validation = keywordValidation[index];
+  if (validation.status === "checking" || validation.status === "pending") {
+    return message("keywordChecking");
+  }
+  if (validation.status === "valid") {
+    return message("keywordValid", { name: validation.match?.name || state.crew.keywords[index] });
+  }
+  if (validation.status === "invalid") return message("keywordInvalid");
+  if (validation.status === "unavailable") return message("keywordUnavailable");
+  return message("keywordHint");
+}
+
+function renderKeywordValidation(index) {
+  const field = keywordField(index);
+  const input = keywordInput(index);
+  const status = document.querySelector(`#${input?.id}Status`);
+  if (!field || !input || !status) return;
+  const validation = keywordValidation[index];
+  const stateClass = ["valid", "invalid", "unavailable", "checking"].includes(
+    validation.status,
+  )
+    ? validation.status
+    : "";
+  field.classList.remove(
+    "is-keyword-valid",
+    "is-keyword-invalid",
+    "is-keyword-unavailable",
+    "is-keyword-checking",
+  );
+  if (stateClass) field.classList.add(`is-keyword-${stateClass}`);
+  const mark = field.querySelector(".keyword-validation-mark");
+  mark.textContent =
+    validation.status === "valid"
+      ? "✓"
+      : validation.status === "invalid"
+        ? "×"
+        : validation.status === "unavailable"
+          ? "?"
+          : validation.status === "checking" || validation.status === "pending"
+            ? "…"
+            : "";
+  status.textContent = keywordStatusText(index);
+  input.setAttribute("aria-busy", String(["checking", "pending"].includes(validation.status)));
+  input.setAttribute("aria-invalid", String(validation.status === "invalid"));
+  input.setCustomValidity(validation.status === "invalid" ? message("keywordInvalid") : "");
+}
+
+function closeKeywordSuggestions(index) {
+  const input = keywordInput(index);
+  const wrap = document.querySelector(`#${input?.getAttribute("aria-controls")}`);
+  if (!input || !wrap) return;
+  wrap.hidden = true;
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+  keywordSuggestions[index].activeIndex = -1;
+}
+
+function applyKeywordChoice(index, keyword) {
+  const input = keywordInput(index);
+  if (!input) return;
+  input.value = keyword.name;
+  state.crew.keywords[index] = keyword.name;
+  keywordValidationRequest[index] += 1;
+  keywordValidation[index] = { status: "valid", match: keyword };
+  keywordSuggestions[index] = { items: [], activeIndex: -1 };
+  saveState();
+  renderKeywordValidation(index);
+  renderDossier();
+  closeKeywordSuggestions(index);
+  input.focus();
+}
+
+function renderKeywordSuggestions(index) {
+  const input = keywordInput(index);
+  const wrap = document.querySelector(`#${input?.getAttribute("aria-controls")}`);
+  if (!input || !wrap) return;
+  const suggestionState = keywordSuggestions[index];
+  const hasFocus = document.activeElement === input;
+  if (!hasFocus || !suggestionState.items.length) {
+    closeKeywordSuggestions(index);
+    return;
+  }
+  wrap.innerHTML = suggestionState.items
+    .map(
+      (keyword, suggestionIndex) => `
+        <button
+          id="keyword-option-${index}-${suggestionIndex}"
+          class="keyword-suggestion ${suggestionState.activeIndex === suggestionIndex ? "is-active" : ""}"
+          type="button"
+          role="option"
+          tabindex="-1"
+          aria-selected="${suggestionState.activeIndex === suggestionIndex}"
+          data-keyword-suggestion="${suggestionIndex}"
+        >
+          <b>${escapeHtml(keyword.name)}</b>
+          <small>BiggerHat</small>
+        </button>`,
+    )
+    .join("");
+  wrap.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  if (suggestionState.activeIndex >= 0) {
+    const activeId = `keyword-option-${index}-${suggestionState.activeIndex}`;
+    input.setAttribute("aria-activedescendant", activeId);
+    document.querySelector(`#${activeId}`)?.scrollIntoView({ block: "nearest" });
+  } else {
+    input.removeAttribute("aria-activedescendant");
+  }
+  wrap.querySelectorAll("[data-keyword-suggestion]").forEach((button) => {
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", () => {
+      const keyword = suggestionState.items[Number(button.dataset.keywordSuggestion)];
+      if (keyword) applyKeywordChoice(index, keyword);
+    });
+  });
+}
+
+function rankKeywordSuggestions(items, query) {
+  const needle = canonical(query);
+  if (!needle) return items.slice(0, 10);
+  return items
+    .map((keyword) => {
+      const name = canonical(keyword.name);
+      const slug = canonical(keyword.slug);
+      const score =
+        name === needle || slug === needle
+          ? 0
+          : name.startsWith(needle) || slug.startsWith(needle)
+            ? 1
+            : name.includes(needle) || slug.includes(needle)
+              ? 2
+              : 3;
+      return { keyword, score };
+    })
+    .filter((item) => item.score < 3)
+    .sort(
+      (a, b) =>
+        a.score - b.score ||
+        a.keyword.name.localeCompare(b.keyword.name, "en"),
+    )
+    .slice(0, 10)
+    .map((item) => item.keyword);
+}
+
+async function validateKeyword(index, options = {}) {
+  const input = keywordInput(index);
+  if (!input) return;
+  const rawValue = input.value.trim();
+  const request = ++keywordValidationRequest[index];
+  const shouldShowSuggestions = Boolean(options.showSuggestions);
+
+  if (!rawValue && !options.loadForEmpty) {
+    keywordValidation[index] = { status: "empty", match: null };
+    keywordSuggestions[index] = { items: [], activeIndex: -1 };
+    renderKeywordValidation(index);
+    closeKeywordSuggestions(index);
+    renderDossier();
+    return;
+  }
+
+  if (rawValue) {
+    keywordValidation[index] = { status: "checking", match: null };
+    renderKeywordValidation(index);
+    renderDossier();
+  } else {
+    keywordValidation[index] = { status: "checking", match: null };
+    renderKeywordValidation(index);
+  }
+
+  if (!cardCatalog?.loadKeywords) {
+    keywordValidation[index] = {
+      status: rawValue ? "unavailable" : "empty",
+      match: null,
+    };
+    renderKeywordValidation(index);
+    closeKeywordSuggestions(index);
+    renderDossier();
+    return;
+  }
+
+  try {
+    const catalog = await cardCatalog.loadKeywords();
+    if (request !== keywordValidationRequest[index]) return;
+    const items = Array.isArray(catalog?.items) ? catalog.items : [];
+    const exact = rawValue
+      ? items.find(
+          (keyword) =>
+            exactKeywordKey(keyword.name) === exactKeywordKey(rawValue),
+        )
+      : null;
+    keywordValidation[index] = rawValue
+      ? { status: exact ? "valid" : "invalid", match: exact || null }
+      : { status: "empty", match: null };
+    keywordSuggestions[index] = {
+      items: rankKeywordSuggestions(items, rawValue),
+      activeIndex: -1,
+    };
+    renderKeywordValidation(index);
+    if (shouldShowSuggestions && document.activeElement === input) {
+      renderKeywordSuggestions(index);
+    } else {
+      closeKeywordSuggestions(index);
+    }
+    renderDossier();
+  } catch {
+    if (request !== keywordValidationRequest[index]) return;
+    keywordSuggestions[index] = { items: [], activeIndex: -1 };
+    if (rawValue) {
+      keywordValidation[index] = { status: "unavailable", match: null };
+    } else {
+      keywordValidation[index] = { status: "empty", match: null };
+    }
+    renderKeywordValidation(index);
+    closeKeywordSuggestions(index);
+    renderDossier();
+  }
+}
+
+function keywordCountsAsComplete(index) {
+  const value = state.crew.keywords?.[index];
+  if (!String(value || "").trim()) return false;
+  return ["valid", "unavailable"].includes(keywordValidation[index]?.status);
+}
+
+function validateAllKeywords() {
+  [0, 1].forEach((index) => {
+    if (String(state.crew.keywords?.[index] || "").trim()) {
+      validateKeyword(index);
+    } else {
+      keywordValidation[index] = { status: "empty", match: null };
+      renderKeywordValidation(index);
+    }
+  });
+}
+
+function setupKeywordValidation() {
+  const schedules = [0, 1].map((index) =>
+    debounce(
+      () =>
+        validateKeyword(index, {
+          showSuggestions: true,
+          loadForEmpty: document.activeElement === keywordInput(index),
+        }),
+      180,
+    ),
+  );
+  [0, 1].forEach((index) => {
+    const input = keywordInput(index);
+    if (!input) return;
+    let isComposing = false;
+    input.addEventListener("compositionstart", () => {
+      isComposing = true;
+    });
+    input.addEventListener("compositionend", () => {
+      isComposing = false;
+      schedules[index]();
+    });
+    input.addEventListener("input", (event) => {
+      keywordValidationRequest[index] += 1;
+      keywordValidation[index] = {
+        status: input.value.trim() ? "pending" : "empty",
+        match: null,
+      };
+      renderKeywordValidation(index);
+      renderDossier();
+      if (isComposing || event.isComposing) return;
+      schedules[index]();
+    });
+    input.addEventListener("focus", () => {
+      [0, 1].filter((otherIndex) => otherIndex !== index).forEach(closeKeywordSuggestions);
+      validateKeyword(index, {
+        showSuggestions: true,
+        loadForEmpty: true,
+      });
+    });
+    input.addEventListener("blur", () => {
+      setTimeout(() => closeKeywordSuggestions(index), 120);
+    });
+    input.addEventListener("keydown", (event) => {
+      const suggestionState = keywordSuggestions[index];
+      if (event.key === "Escape") {
+        closeKeywordSuggestions(index);
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+      if (!suggestionState.items.length) return;
+      if (event.key === "Enter" && suggestionState.activeIndex >= 0) {
+        event.preventDefault();
+        applyKeywordChoice(index, suggestionState.items[suggestionState.activeIndex]);
+        return;
+      }
+      if (event.key === "Enter") return;
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      suggestionState.activeIndex =
+        (suggestionState.activeIndex + direction + suggestionState.items.length) %
+        suggestionState.items.length;
+      renderKeywordSuggestions(index);
+    });
+    renderKeywordValidation(index);
+  });
+}
+
 function selectedCrewKeywords() {
-  return (state.crew.keywords || []).map(canonical).filter(Boolean);
+  return (state.crew.keywords || [])
+    .map((keyword, index) =>
+      keywordValidation[index]?.status === "invalid" ? "" : canonical(keyword),
+    )
+    .filter(Boolean);
 }
 
 function characterKeywordNames(character) {
@@ -1321,8 +1688,8 @@ function renderDossier() {
     state.crew.name,
     state.crew.player,
     state.crew.faction,
-    state.crew.keywords[0],
-    state.crew.keywords[1],
+    keywordCountsAsComplete(0),
+    keywordCountsAsComplete(1),
     state.campaign.meetingDay,
   ];
   const done = checks.filter(Boolean).length;
@@ -2326,6 +2693,7 @@ async function refreshCardCatalog(button) {
 function renderAll() {
   renderChrome();
   renderDossier();
+  [0, 1].forEach(renderKeywordValidation);
   renderArchetypes();
   renderTalents();
   renderCrewCards();
@@ -2540,7 +2908,9 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
     document.querySelectorAll("[data-path-choice]").forEach((input) => {
       input.checked = state.leader.path === input.value;
     });
+    resetKeywordValidationState();
     renderAll();
+    validateAllKeywords();
     toast(message("dossierImported"));
   } catch {
     toast(message("importFailed"));
@@ -2567,7 +2937,9 @@ document.querySelector("#resetButton").addEventListener("click", () => {
     input.checked = state.leader.path === input.value;
   });
   document.querySelector("#gameForm").reset();
+  resetKeywordValidationState();
   renderAll();
+  validateAllKeywords();
   routeTo("dossier");
   toast(message("dossierReset"));
 });
@@ -2613,5 +2985,7 @@ document.querySelector("#cardDialog").addEventListener("close", () => {
 });
 
 bindFields();
+setupKeywordValidation();
 renderAll();
 routeTo(location.hash.slice(1) || "dossier");
+validateAllKeywords();

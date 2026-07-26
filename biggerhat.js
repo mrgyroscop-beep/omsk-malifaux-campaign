@@ -4,12 +4,16 @@
   const API_BASE = "https://biggerhat.net/api/v1";
   const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
   const DETAILS_KEY = "m4e-biggerhat-details-v1";
+  const KEYWORDS_KEY = "m4e-biggerhat-keywords-v1";
   const PAGE_SIZE = 100;
   const DETAIL_CACHE_LIMIT = 50;
+  const KEYWORDS_CACHE_TTL = 24 * 60 * 60 * 1000;
 
   let catalogMemory = null;
   let catalogPromise = null;
   let detailMemory = null;
+  let keywordsMemory = null;
+  let keywordsPromise = null;
 
   function readStorage(key, fallback) {
     try {
@@ -47,6 +51,20 @@
             },
       )
       .filter((keyword) => keyword.name);
+  }
+
+  function normalizeKeyword(raw = {}) {
+    const id = Number(raw.id);
+    return {
+      id: Number.isInteger(id) && id > 0 ? id : null,
+      slug: compactText(raw.slug).toLowerCase(),
+      gameModeType: compactText(raw.game_mode_type ?? raw.gameModeType).toLowerCase(),
+      gameModeTypeLabel: compactText(
+        raw.game_mode_type_label ?? raw.gameModeTypeLabel,
+      ),
+      name: compactText(raw.name),
+      description: raw.description == null ? null : String(raw.description).trim(),
+    };
   }
 
   function preferredMiniature(miniatures) {
@@ -305,6 +323,106 @@
       .slice(0, Math.max(1, limit));
   }
 
+  function getStoredKeywords() {
+    const stored = readStorage(KEYWORDS_KEY, null);
+    if (!stored || !Array.isArray(stored.items)) return null;
+    const items = stored.items
+      .map(normalizeKeyword)
+      .filter(
+        (keyword) =>
+          keyword.id &&
+          keyword.name &&
+          keyword.slug &&
+          keyword.gameModeType === "standard",
+      );
+    if (!items.length) return null;
+    return { ...stored, items };
+  }
+
+  function keywordCacheIsFresh(keywords) {
+    const savedAt = Date.parse(keywords?.savedAt || "");
+    return Number.isFinite(savedAt) && Date.now() - savedAt < KEYWORDS_CACHE_TTL;
+  }
+
+  async function fetchKeywords() {
+    const first = await request("keywords", {
+      page: 1,
+      per_page: PAGE_SIZE,
+      game_mode_type: "standard",
+    });
+    const lastPage = Math.max(1, Number(first?.meta?.last_page || 1));
+    const pages = [first];
+    for (let page = 2; page <= lastPage; page += 1) {
+      pages.push(
+        await request("keywords", {
+          page,
+          per_page: PAGE_SIZE,
+          game_mode_type: "standard",
+        }),
+      );
+    }
+
+    const unique = new Map();
+    pages.forEach((page) => {
+      (page?.data || []).forEach((keyword) => {
+        const normalized = normalizeKeyword(keyword);
+        if (
+          normalized.id &&
+          normalized.name &&
+          normalized.slug &&
+          normalized.gameModeType === "standard"
+        ) {
+          unique.set(normalized.slug, normalized);
+        }
+      });
+    });
+    if (!unique.size) throw new Error("BiggerHat returned an empty keyword catalog");
+
+    const keywords = {
+      savedAt: new Date().toISOString(),
+      items: Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name, "en")),
+    };
+    keywordsMemory = keywords;
+    writeStorage(KEYWORDS_KEY, keywords);
+    return keywords;
+  }
+
+  async function loadKeywords(options = {}) {
+    if (!options.force && keywordsMemory && keywordCacheIsFresh(keywordsMemory)) {
+      return keywordsMemory;
+    }
+    const stored = options.force ? null : getStoredKeywords();
+    if (stored && keywordCacheIsFresh(stored)) {
+      keywordsMemory = stored;
+      return stored;
+    }
+    if (keywordsPromise) return keywordsPromise;
+    keywordsPromise = fetchKeywords()
+      .catch((error) => {
+        if (!stored) throw error;
+        keywordsMemory = stored;
+        return stored;
+      })
+      .finally(() => {
+        keywordsPromise = null;
+      });
+    return keywordsPromise;
+  }
+
+  async function searchKeywords(query, options = {}) {
+    const keywords = await loadKeywords({ force: options.force });
+    const terms = compactText(query)
+      .toLocaleLowerCase("en")
+      .split(" ")
+      .filter(Boolean);
+    return keywords.items
+      .filter((keyword) => {
+        const haystack = `${keyword.name} ${keyword.slug}`.toLocaleLowerCase("en");
+        return terms.every((term) => haystack.includes(term));
+      })
+      .slice(0, Math.max(1, options.limit || 12));
+  }
+
   function loadDetailMemory() {
     if (detailMemory) return detailMemory;
     const stored = readStorage(DETAILS_KEY, {});
@@ -366,8 +484,11 @@
     apiBase: API_BASE,
     normalizeSummary,
     normalizeDetail,
+    normalizeKeyword,
     loadCatalog,
     searchCharacters,
+    loadKeywords,
+    searchKeywords,
     getCharacter,
     getCachedCharacter,
     clearCatalogCache,
