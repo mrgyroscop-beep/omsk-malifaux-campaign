@@ -1881,9 +1881,12 @@ function activateReferenceTab(tab = "flow") {
     const active = item.dataset.referenceTab === currentReferenceTab;
     item.classList.toggle("is-active", active);
     item.setAttribute("aria-selected", String(active));
+    item.tabIndex = active ? 0 : -1;
   });
   document.querySelectorAll(".reference-panel").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.id === `reference-${currentReferenceTab}`);
+    const active = panel.id === `reference-${currentReferenceTab}`;
+    panel.classList.toggle("is-active", active);
+    panel.hidden = !active;
   });
 }
 
@@ -1893,10 +1896,13 @@ function activateRoute(route) {
     section.classList.toggle("is-active", section.id === `route-${target}`);
   });
   document.querySelectorAll("[data-route]").forEach((button) => {
-    button.classList.toggle(
-      "is-active",
-      button.classList.contains("nav-item") && button.dataset.route === target,
-    );
+    const isActiveNav =
+      button.classList.contains("nav-item") && button.dataset.route === target;
+    button.classList.toggle("is-active", isActiveNav);
+    if (button.classList.contains("nav-item")) {
+      if (isActiveNav) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    }
   });
   const railIndex = document.querySelector("#railIndex");
   if (railIndex) railIndex.textContent = `INDEX / ${ROUTE_META[target].index}`;
@@ -2076,7 +2082,7 @@ function routeTo(route) {
       `#${target}`,
     );
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 function openRulesFromReference(trigger) {
@@ -2151,7 +2157,7 @@ function restoreRouteFromHistory(state = {}) {
     currentRulesOrigin = state.origin || null;
     activateRoute("rules");
     renderRulesPage();
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({ top: 0, behavior: "instant" });
     return;
   }
 
@@ -2163,12 +2169,17 @@ function restoreRouteFromHistory(state = {}) {
     if (state.focusId) {
       document.querySelector(`#${CSS.escape(state.focusId)}`)?.focus({ preventScroll: true });
     }
-    window.scrollTo({ top: Math.max(0, Number(state.scrollY || 0)), behavior: "auto" });
+    window.scrollTo({ top: Math.max(0, Number(state.scrollY || 0)), behavior: "instant" });
   });
 }
 
 function initializeRouting() {
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const resetInitialScroll = () =>
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  resetInitialScroll();
+  requestAnimationFrame(resetInitialScroll);
+  window.addEventListener("load", resetInitialScroll, { once: true });
   const locationRoute = routeFromLocation();
   if (locationRoute.route === "rules") {
     currentRulesPage = normalizeRulesPage(locationRoute.page || history.state?.page);
@@ -3302,8 +3313,69 @@ document.querySelectorAll("[data-route]").forEach((button) => {
   button.addEventListener("click", () => routeTo(button.dataset.route));
 });
 
+const brandMark = document.querySelector(".brand-mark");
+const brandQuote = document.querySelector("#brandQuote");
+let brandQuoteHideTimer;
+let brandQuoteClearTimer;
+
+brandMark.addEventListener("click", () => {
+  clearTimeout(brandQuoteHideTimer);
+  clearTimeout(brandQuoteClearTimer);
+  brandQuote.textContent = "А беляши треугольные!";
+  brandQuote.classList.add("is-visible");
+
+  brandQuoteHideTimer = window.setTimeout(() => {
+    brandQuote.classList.remove("is-visible");
+    brandQuoteClearTimer = window.setTimeout(() => {
+      if (!brandQuote.classList.contains("is-visible")) brandQuote.textContent = "";
+    }, 180);
+  }, 2000);
+});
+
+const utilityMenu = document.querySelector(".top-actions");
+const utilityMenuButton = document.querySelector("#utilityMenuButton");
+const utilityMenuPanel = document.querySelector("#utilityMenuPanel");
+
+function setUtilityMenu(open) {
+  utilityMenu.classList.toggle("is-open", open);
+  utilityMenuButton.setAttribute("aria-expanded", String(open));
+}
+
+utilityMenuButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setUtilityMenu(!utilityMenu.classList.contains("is-open"));
+});
+
+utilityMenuPanel.addEventListener("click", (event) => {
+  if (event.target.closest("button")) setUtilityMenu(false);
+});
+
+document.addEventListener("click", (event) => {
+  if (!utilityMenu.contains(event.target)) setUtilityMenu(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setUtilityMenu(false);
+});
+
 document.querySelectorAll("[data-reference-tab]").forEach((button) => {
   button.addEventListener("click", () => activateReferenceTab(button.dataset.referenceTab));
+});
+
+document.querySelector(".reference-tabs").addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll("[data-reference-tab]")];
+  const currentIndex = tabs.indexOf(document.activeElement);
+  if (currentIndex < 0) return;
+  event.preventDefault();
+  const nextIndex =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tabs.length - 1
+        : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[nextIndex].focus();
+  activateReferenceTab(tabs[nextIndex].dataset.referenceTab);
 });
 
 document.addEventListener("click", (event) => {

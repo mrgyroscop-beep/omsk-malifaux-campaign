@@ -10,13 +10,23 @@
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="dossier-theme.css?v=11" />
   </head>
-  <body>
+  <body class="theme-dossier">
     <div class="noise" aria-hidden="true"></div>
     <div class="app-shell">
       <header class="topbar">
         <button class="brand" type="button" data-route="dossier" aria-label="Открыть досье">
-          <span class="brand-mark" aria-hidden="true">M</span>
+          <span class="brand-mark" aria-hidden="true">
+            <img src="assets/bird-emblem.png" alt="" width="592" height="511" draggable="false" />
+          </span>
+          <span
+            class="brand-quote"
+            id="brandQuote"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></span>
           <span>
             <strong>Неписаный реестр</strong>
             <small>M4E · Campaign Builder</small>
@@ -36,10 +46,22 @@
             <span>/</span>
             <button type="button" data-locale="en" aria-label="English">EN</button>
           </div>
-          <button class="button button-ghost" id="resetButton" type="button">Новое</button>
-          <button class="button button-ghost" id="importButton" type="button">Импорт</button>
-          <button class="button button-ghost" id="exportButton" type="button">Экспорт</button>
-          <button class="button button-ink" id="printButton" type="button">Печать</button>
+          <button
+            class="utility-menu-toggle"
+            id="utilityMenuButton"
+            type="button"
+            aria-expanded="false"
+            aria-controls="utilityMenuPanel"
+            aria-label="Служебные действия / Utilities"
+          >
+            <span></span><span></span><span></span>
+          </button>
+          <div class="utility-menu-panel" id="utilityMenuPanel">
+            <button class="button button-ghost" id="resetButton" type="button">Новое</button>
+            <button class="button button-ghost" id="importButton" type="button">Импорт</button>
+            <button class="button button-ghost" id="exportButton" type="button">Экспорт</button>
+            <button class="button button-ink" id="printButton" type="button">Печать</button>
+          </div>
           <input id="importFile" type="file" accept="application/json" hidden />
         </div>
       </header>
@@ -92,6 +114,8 @@
       </aside>
 
       <main class="workspace">
+        <span class="binder-punches" aria-hidden="true"></span>
+        <span class="coffee-stain" aria-hidden="true"></span>
         <section class="route is-active" id="route-dossier" aria-labelledby="dossierTitle">
           <div class="route-heading">
             <div>
@@ -619,16 +643,16 @@
           </div>
 
           <div class="reference-tabs" role="tablist">
-            <button class="is-active" type="button" data-reference-tab="flow">Цикл кампании</button>
-            <button type="button" data-reference-tab="injuries">Травмы</button>
-            <button type="button" data-reference-tab="equipment">Снаряжение</button>
-            <button type="button" data-reference-tab="advancement">Продвижение</button>
+            <button class="is-active" id="reference-tab-flow" type="button" role="tab" aria-controls="reference-flow" aria-selected="true" data-reference-tab="flow">Цикл кампании</button>
+            <button id="reference-tab-injuries" type="button" role="tab" aria-controls="reference-injuries" aria-selected="false" data-reference-tab="injuries">Травмы</button>
+            <button id="reference-tab-equipment" type="button" role="tab" aria-controls="reference-equipment" aria-selected="false" data-reference-tab="equipment">Снаряжение</button>
+            <button id="reference-tab-advancement" type="button" role="tab" aria-controls="reference-advancement" aria-selected="false" data-reference-tab="advancement">Продвижение</button>
           </div>
 
-          <div class="reference-panel is-active" id="reference-flow"></div>
-          <div class="reference-panel" id="reference-injuries"></div>
-          <div class="reference-panel" id="reference-equipment"></div>
-          <div class="reference-panel" id="reference-advancement"></div>
+          <div class="reference-panel is-active" id="reference-flow" role="tabpanel" aria-labelledby="reference-tab-flow" tabindex="0"></div>
+          <div class="reference-panel" id="reference-injuries" role="tabpanel" aria-labelledby="reference-tab-injuries" tabindex="0"></div>
+          <div class="reference-panel" id="reference-equipment" role="tabpanel" aria-labelledby="reference-tab-equipment" tabindex="0"></div>
+          <div class="reference-panel" id="reference-advancement" role="tabpanel" aria-labelledby="reference-tab-advancement" tabindex="0"></div>
         </section>
 
         <section class="route rules-route" id="route-rules" aria-labelledby="rulesTitle">
@@ -897,6 +921,6 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=10"></script>
   </body>
 </html>
