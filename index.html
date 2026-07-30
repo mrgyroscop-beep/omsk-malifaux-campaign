@@ -7,10 +7,14 @@
       name="description"
       content="Локальный билдер кампании Malifaux Fourth Edition по Index of the Untold."
     />
+    <meta
+      name="chat-api-url"
+      content="https://omsk-malifaux-campaign-chat.mrgyroscop.workers.dev/api/chat"
+    />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=6" />
-    <link rel="stylesheet" href="dossier-theme.css?v=13" />
+    <link rel="stylesheet" href="dossier-theme.css?v=14" />
   </head>
   <body class="theme-dossier">
     <div class="noise" aria-hidden="true"></div>
@@ -60,6 +64,15 @@
             <button class="button button-ghost" id="resetButton" type="button">Новое</button>
             <button class="button button-ghost" id="importButton" type="button">Импорт</button>
             <button class="button button-ghost" id="exportButton" type="button">Экспорт</button>
+            <button
+              class="button button-ghost archivist-button"
+              id="openChatButton"
+              type="button"
+              aria-label="Открыть помощника по правилам"
+            >
+              <span class="archivist-button-sigil" aria-hidden="true">?</span>
+              <span class="archivist-button-label">Архивариус</span>
+            </button>
             <a
               class="button button-ghost feedback-link"
               href="https://forms.gle/wsZyZQyGNRYg8pEJ9"
@@ -798,6 +811,61 @@
     </div>
 
     <dialog
+      id="chatDialog"
+      class="modal modal-wide archivist-dialog"
+      aria-labelledby="chatDialogTitle"
+    >
+      <div class="modal-panel archivist-dialog-panel">
+        <div class="modal-heading archivist-dialog-head">
+          <div>
+            <span class="kicker">Полевой архив · Index of the Untold</span>
+            <h2 id="chatDialogTitle">Спросить архивариуса</h2>
+          </div>
+          <div class="archivist-dialog-actions">
+            <button class="archivist-clear" id="clearChatButton" type="button">Очистить</button>
+            <button
+              class="modal-close"
+              type="button"
+              data-close-dialog="chatDialog"
+              aria-label="Закрыть"
+            >×</button>
+          </div>
+        </div>
+
+        <div class="archivist-status">
+          <span><i aria-hidden="true"></i>Правила кампании</span>
+          <small>Печатные страницы 14–56</small>
+        </div>
+
+        <div
+          class="archivist-transcript"
+          id="chatTranscript"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        ></div>
+
+        <form class="archivist-form" id="chatForm">
+          <label for="chatInput">Вопрос архивариусу</label>
+          <textarea
+            id="chatInput"
+            name="message"
+            maxlength="3000"
+            rows="3"
+            placeholder="Например: сколько Barter-флипов получает победитель?"
+            required
+          ></textarea>
+          <div class="archivist-compose-footer">
+            <small>Данные досье не отправляются</small>
+            <button class="button button-red" id="chatSubmitButton" type="submit">
+              Отправить
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <dialog
       id="flowchartDialog"
       class="modal flowchart-dialog"
       aria-labelledby="flowchartDialogTitle"
@@ -996,6 +1064,6 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>

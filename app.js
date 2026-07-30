@@ -7,6 +7,8 @@ const STATIC_TEXT_EN = {
   "Новое": "New",
   "Импорт": "Import",
   "Экспорт": "Export",
+  "Архивариус": "Archivist",
+  "Открыть помощника по правилам": "Open the rules assistant",
   "Обратная связь": "Feedback",
   "Печать": "Print",
   "Досье": "Dossier",
@@ -232,6 +234,16 @@ const STATIC_TEXT_EN = {
     "Matching actions or abilities from its card will appear here.",
   "Снимок карточки · BiggerHat": "Card snapshot · BiggerHat",
   "Карточка модели": "Model card",
+  "Полевой архив · Index of the Untold": "Field archive · Index of the Untold",
+  "Спросить архивариуса": "Ask the archivist",
+  "Очистить": "Clear",
+  "Правила кампании": "Campaign rules",
+  "Печатные страницы 14–56": "Printed pages 14–56",
+  "Вопрос архивариусу": "Question for the archivist",
+  "Например: сколько Barter-флипов получает победитель?":
+    "For example: how many Barter Flips does the winner receive?",
+  "Данные досье не отправляются": "Dossier data is not sent",
+  "Отправить": "Send",
 };
 
 const UI_MESSAGES = {
@@ -435,6 +447,38 @@ const UI_MESSAGES = {
     ru: "Браузер не смог сохранить изменения: локальное хранилище заполнено. Экспортируйте досье и очистите данные сайта.",
     en: "The browser could not save the change because local storage is full. Export the dossier and clear this site's data.",
   },
+  chatWelcome: {
+    ru: "Задайте вопрос о Campaign Mode. Я найду подходящие страницы Index of the Untold и укажу источники.",
+    en: "Ask about Campaign Mode. I will find the relevant Index of the Untold pages and cite the sources.",
+  },
+  chatAssistantLabel: { ru: "Архивариус", en: "Archivist" },
+  chatUserLabel: { ru: "Вы", en: "You" },
+  chatSourcePage: { ru: "стр. {page}", en: "p. {page}" },
+  chatUnavailableLocal: {
+    ru: "Архивариус доступен в опубликованной версии сайта. Для локальной проверки откройте билдер через localhost.",
+    en: "The archivist is available on the published site. To test locally, serve the builder from localhost.",
+  },
+  chatUnavailable: {
+    ru: "Архивариус пока не настроен. Попробуйте позже.",
+    en: "The archivist is not configured yet. Please try again later.",
+  },
+  chatRateLimited: {
+    ru: "Слишком много вопросов подряд. Подождите минуту и попробуйте снова.",
+    en: "Too many questions in a short time. Wait a minute and try again.",
+  },
+  chatUpstreamRateLimited: {
+    ru: "DeepSeek временно ограничил запросы. Попробуйте немного позже.",
+    en: "DeepSeek is temporarily rate-limiting requests. Please try again shortly.",
+  },
+  chatRequestFailed: {
+    ru: "Не удалось получить ответ архивариуса. Проверьте соединение и попробуйте снова.",
+    en: "The archivist could not answer. Check the connection and try again.",
+  },
+  chatTimeout: {
+    ru: "Архивариус слишком долго искал ответ. Попробуйте ещё раз.",
+    en: "The archivist took too long to answer. Please try again.",
+  },
+  chatCleared: { ru: "Переписка с архивариусом очищена.", en: "The archivist conversation was cleared." },
 };
 
 const LOCALE_KEY = "m4e-untold-locale";
@@ -3377,6 +3421,298 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") setUtilityMenu(false);
 });
 
+const CHAT_HISTORY_KEY = "m4e-archivist-history-v1";
+const CHAT_SESSION_KEY = "m4e-archivist-session-v1";
+const CHAT_HISTORY_LIMIT = 8;
+const chatDialog = document.querySelector("#chatDialog");
+const chatForm = document.querySelector("#chatForm");
+const chatInput = document.querySelector("#chatInput");
+const chatSubmitButton = document.querySelector("#chatSubmitButton");
+const chatTranscript = document.querySelector("#chatTranscript");
+const clearChatButton = document.querySelector("#clearChatButton");
+let chatBusy = false;
+let chatHistory = loadChatHistory();
+
+function chatApiUrl() {
+  return document.querySelector('meta[name="chat-api-url"]')?.content.trim() || "";
+}
+
+function loadChatHistory() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    if (!Array.isArray(value)) return [];
+    return value
+      .slice(-CHAT_HISTORY_LIMIT)
+      .filter(
+        (item) =>
+          item &&
+          ["user", "assistant"].includes(item.role) &&
+          typeof item.content === "string",
+      )
+      .map((item) => ({
+        role: item.role,
+        content: item.content.slice(0, 6000),
+        error: Boolean(item.error),
+        sources: Array.isArray(item.sources)
+          ? item.sources
+              .map(Number)
+              .filter((page) => page >= RULES_MIN_PAGE && page <= RULES_MAX_PAGE)
+              .slice(0, 6)
+          : [],
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveChatHistory() {
+  try {
+    sessionStorage.setItem(
+      CHAT_HISTORY_KEY,
+      JSON.stringify(chatHistory.slice(-CHAT_HISTORY_LIMIT)),
+    );
+  } catch {
+    // Chat still works for the current open dialog when session storage is unavailable.
+  }
+}
+
+function chatSessionId() {
+  try {
+    let value = sessionStorage.getItem(CHAT_SESSION_KEY);
+    if (!value) {
+      value =
+        typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(CHAT_SESSION_KEY, value);
+    }
+    return value;
+  } catch {
+    return "anonymous";
+  }
+}
+
+function chatMessageNode(entry, options = {}) {
+  const article = document.createElement("article");
+  article.className = `archivist-message is-${entry.role}`;
+  if (options.loading) article.classList.add("is-loading");
+  if (options.error) article.classList.add("is-error");
+
+  const label = document.createElement("span");
+  label.className = "archivist-message-label";
+  label.textContent =
+    entry.role === "user" ? message("chatUserLabel") : message("chatAssistantLabel");
+  article.append(label);
+
+  if (options.loading) {
+    const loading = document.createElement("span");
+    loading.className = "archivist-loading";
+    loading.setAttribute("aria-label", localized("Ищу ответ", "Searching for an answer"));
+    loading.innerHTML = "<i></i><i></i><i></i>";
+    article.append(loading);
+    return article;
+  }
+
+  const text = document.createElement("p");
+  text.className = "archivist-message-text";
+  text.textContent = entry.content;
+  article.append(text);
+
+  const sources = [...new Set(entry.sources || [])]
+    .map(Number)
+    .filter((page) => page >= RULES_MIN_PAGE && page <= RULES_MAX_PAGE);
+
+  if (sources.length) {
+    const sourceList = document.createElement("div");
+    sourceList.className = "archivist-sources";
+    sources.forEach((page) => {
+      const button = document.createElement("button");
+      button.className = "archivist-source";
+      button.type = "button";
+      button.dataset.rulesPages = String(page);
+      button.textContent = message("chatSourcePage", { page });
+      sourceList.append(button);
+    });
+    article.append(sourceList);
+  }
+
+  return article;
+}
+
+function scrollChatToEnd() {
+  requestAnimationFrame(() => {
+    chatTranscript.scrollTop = chatTranscript.scrollHeight;
+  });
+}
+
+function renderChatTranscript() {
+  chatTranscript.replaceChildren();
+
+  if (!chatHistory.length) {
+    chatTranscript.append(
+      chatMessageNode({
+        role: "assistant",
+        content: message("chatWelcome"),
+        sources: [],
+      }),
+    );
+  } else {
+    chatHistory.forEach((entry) =>
+      chatTranscript.append(chatMessageNode(entry, { error: entry.error })),
+    );
+  }
+
+  if (chatBusy) {
+    chatTranscript.append(
+      chatMessageNode(
+        { role: "assistant", content: "", sources: [] },
+        { loading: true },
+      ),
+    );
+  }
+
+  scrollChatToEnd();
+}
+
+function appendChatMessage(entry, options = {}) {
+  chatHistory.push({
+    role: entry.role,
+    content: entry.content,
+    sources: entry.sources || [],
+    error: Boolean(options.error),
+  });
+  chatHistory = chatHistory.slice(-CHAT_HISTORY_LIMIT);
+  saveChatHistory();
+  renderChatTranscript();
+}
+
+function setChatBusy(value) {
+  chatBusy = value;
+  chatForm.classList.toggle("is-busy", value);
+  chatInput.disabled = value;
+  chatSubmitButton.disabled = value;
+  clearChatButton.disabled = value;
+  renderChatTranscript();
+}
+
+function chatErrorMessage(code) {
+  if (code === "rate_limited") return message("chatRateLimited");
+  if (code === "upstream_rate_limited") return message("chatUpstreamRateLimited");
+  if (code === "not_configured") return message("chatUnavailable");
+  return message("chatRequestFailed");
+}
+
+async function submitChatQuestion(event) {
+  event.preventDefault();
+  if (chatBusy) return;
+
+  const question = chatInput.value.trim();
+  if (!question) return;
+
+  const requestHistory = chatHistory
+    .slice(-CHAT_HISTORY_LIMIT)
+    .map(({ role, content }) => ({ role, content }));
+
+  appendChatMessage({ role: "user", content: question, sources: [] });
+  chatInput.value = "";
+
+  const endpoint = chatApiUrl();
+  if (!endpoint || location.protocol === "file:") {
+    appendChatMessage(
+      {
+        role: "assistant",
+        content:
+          location.protocol === "file:"
+            ? message("chatUnavailableLocal")
+            : message("chatUnavailable"),
+        sources: [],
+      },
+      { error: true },
+    );
+    return;
+  }
+
+  setChatBusy(true);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 50000);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: question,
+        history: requestHistory,
+        locale: currentLocale,
+        section: activeRoute(),
+        sessionId: chatSessionId(),
+      }),
+      signal: controller.signal,
+    });
+
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch {
+      payload = {};
+    }
+
+    if (!response.ok || typeof payload.answer !== "string") {
+      const error = new Error("Chat request failed");
+      error.code = payload.error || "request_failed";
+      throw error;
+    }
+
+    appendChatMessage({
+      role: "assistant",
+      content: payload.answer.trim(),
+      sources: Array.isArray(payload.sources) ? payload.sources : [],
+    });
+  } catch (error) {
+    appendChatMessage(
+      {
+        role: "assistant",
+        content:
+          error?.name === "AbortError"
+            ? message("chatTimeout")
+            : chatErrorMessage(error?.code),
+        sources: [],
+      },
+      { error: true },
+    );
+  } finally {
+    window.clearTimeout(timeout);
+    setChatBusy(false);
+    chatInput.focus();
+  }
+}
+
+document.querySelector("#openChatButton").addEventListener("click", () => {
+  setUtilityMenu(false);
+  renderChatTranscript();
+  if (!chatDialog.open) chatDialog.showModal();
+  requestAnimationFrame(() => chatInput.focus());
+});
+
+chatForm.addEventListener("submit", submitChatQuestion);
+chatInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  chatForm.requestSubmit();
+});
+
+clearChatButton.addEventListener("click", () => {
+  chatHistory = [];
+  saveChatHistory();
+  renderChatTranscript();
+  toast(message("chatCleared"));
+  chatInput.focus();
+});
+
+chatTranscript.addEventListener("click", (event) => {
+  if (event.target.closest("[data-rules-pages]")) chatDialog.close();
+});
+
 document.querySelectorAll("[data-reference-tab]").forEach((button) => {
   button.addEventListener("click", () => activateReferenceTab(button.dataset.referenceTab));
 });
@@ -3678,6 +4014,7 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
       // The language switch still works for the current session.
     }
     renderAll();
+    renderChatTranscript();
     if (document.querySelector("#modelDialog").open) {
       if (pendingModelCard) renderModelCardSelection(pendingModelCard);
       runModelCardSearch();
@@ -3711,6 +4048,7 @@ document.querySelector("#cardDialog").addEventListener("close", () => {
 bindFields();
 setupKeywordValidation();
 renderAll();
+renderChatTranscript();
 activateReferenceTab(currentReferenceTab);
 initializeRouting();
 validateAllKeywords();

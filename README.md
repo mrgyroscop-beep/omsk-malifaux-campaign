@@ -41,6 +41,8 @@ python -m http.server 4173
 - краткие справочники по травмам и продвижениям, а также полный каталог из 82 предметов снаряжения;
 - раздел «Правила» с точными страницами 14–56 оригинальной книги, иллюстрациями и
   двуязычным оглавлением;
+- «Архивариус» с ответами по Campaign Mode, поиском по оригинальному тексту и
+  кликабельными ссылками на использованные страницы;
 - кликабельные номера страниц во всех разделах и возврат к исходному месту;
 - автосохранение, импорт/экспорт JSON и печать.
 
@@ -60,6 +62,19 @@ python -m http.server 4173
 
 Сам документ правил остаётся официальным английским оригиналом без обратного
 перевода с русского. Переключатель RU / EN меняет интерфейс и оглавление.
+
+### Архивариус
+
+Окно «Архивариус» отправляет вопрос через отдельный Cloudflare Worker. Ключ
+DeepSeek хранится только в Secret-хранилище Cloudflare и никогда не попадает в
+HTML, JavaScript или сетевые запросы браузера. Worker ищет подходящие фрагменты
+печатных страниц 14–56 и требует от модели отвечать только по найденному
+контексту. Источники ответа открываются непосредственно в разделе «Правила».
+
+История диалога хранится только в `sessionStorage` текущей вкладки. Содержимое
+досье, имена игроков и данные арсенала не отправляются. Чат работает на
+опубликованном сайте и через `localhost`; небезопасный источник `file://`
+намеренно не поддерживается.
 
 ### Карточки моделей и офлайн-режим
 
@@ -116,6 +131,8 @@ Then open `http://localhost:4173`.
 - concise Injury and Advancement references plus the complete 82-item Equipment catalog;
 - a Rules section containing exact original pages 14–56, illustrations, and a
   bilingual table of contents;
+- an Archivist assistant grounded in the original Campaign Mode text with
+  clickable source-page citations;
 - clickable page references throughout the builder with contextual back navigation;
 - browser autosave, JSON import/export, and print layout.
 
@@ -133,6 +150,18 @@ source, while the complete PDF remains available separately.
 
 The rules document is the official English source, not a translation back from
 Russian. The RU / EN switch changes the interface and table of contents.
+
+### Archivist
+
+The Archivist sends questions through a separate Cloudflare Worker. The DeepSeek
+key stays in Cloudflare Secrets and is never embedded in browser code or browser
+network requests. The Worker retrieves relevant text from printed pages 14–56
+and instructs the model to answer only from that context. Every returned source
+opens directly in the Rules section.
+
+Conversation history stays in the current tab's `sessionStorage`. Dossier,
+player, and arsenal data is not sent. Chat works on the published site and
+through `localhost`; the unsafe `file://` origin is intentionally unsupported.
 
 ### Model cards and offline use
 
