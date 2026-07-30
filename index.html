@@ -61,12 +61,6 @@
               </div>
               <div class="fate-flip-head-actions">
                 <button
-                  id="fateShuffleButton"
-                  type="button"
-                  aria-label="Перемешать Fate Deck"
-                  title="Перемешать Fate Deck"
-                >↻</button>
-                <button
                   id="fateFlipCloseButton"
                   type="button"
                   aria-label="Закрыть карту"
@@ -82,6 +76,10 @@
             <p class="fate-flip-result" id="fateFlipResult" role="status" aria-live="polite">
               Нажмите «Флип», чтобы открыть верхнюю карту.
             </p>
+            <button class="fate-shuffle-button" id="fateShuffleButton" type="button">
+              <span aria-hidden="true">↻</span>
+              <span id="fateShuffleButtonLabel">Вернуть и перетасовать</span>
+            </button>
             <small class="fate-deck-note" id="fateDeckNote">
               54 карты · без повторов до перемешивания
             </small>
@@ -1115,7 +1113,7 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=16"></script>
     <script src="print.js?v=1"></script>
   </body>
 </html>

@@ -3387,6 +3387,7 @@ const fateFlipButton = document.querySelector("#fateFlipButton");
 const fateFlipButtonLabel = document.querySelector("#fateFlipButtonLabel");
 const fateFlipPopover = document.querySelector("#fateFlipPopover");
 const fateShuffleButton = document.querySelector("#fateShuffleButton");
+const fateShuffleButtonLabel = document.querySelector("#fateShuffleButtonLabel");
 const fateFlipCloseButton = document.querySelector("#fateFlipCloseButton");
 const fateCard = document.querySelector("#fateCard");
 const fateFlipResult = document.querySelector("#fateFlipResult");
@@ -3395,6 +3396,7 @@ const fateDeckNote = document.querySelector("#fateDeckNote");
 
 let fateDeck = [];
 let currentFateCard = null;
+let fateDeckWasManuallyShuffled = false;
 
 function buildFateDeck() {
   const cards = FATE_SUITS.flatMap((suit) =>
@@ -3433,13 +3435,20 @@ function shuffleFateDeck(cards) {
   return shuffled;
 }
 
-function resetFateDeck() {
+function resetFateDeck(manual = false) {
   fateDeck = shuffleFateDeck(buildFateDeck());
   currentFateCard = null;
+  fateDeckWasManuallyShuffled = manual;
 }
 
 function fateCardResult(card) {
   if (!card) {
+    if (fateDeckWasManuallyShuffled) {
+      return localized(
+        "Все снятые карты возвращены. В колоде снова 54 карты.",
+        "All revealed cards returned. The deck contains 54 cards again.",
+      );
+    }
     return localized(
       "Нажмите «Флип», чтобы открыть верхнюю карту.",
       "Select Flip to reveal the top card.",
@@ -3532,9 +3541,19 @@ function renderFateFlip(animate = false) {
   );
   fateShuffleButton.setAttribute(
     "aria-label",
-    localized("Перемешать Fate Deck", "Shuffle the Fate Deck"),
+    localized(
+      "Вернуть снятые карты и перетасовать Fate Deck",
+      "Return revealed cards and shuffle the Fate Deck",
+    ),
   );
-  fateShuffleButton.title = localized("Перемешать Fate Deck", "Shuffle the Fate Deck");
+  fateShuffleButton.title = localized(
+    "Вернуть снятые карты и перетасовать Fate Deck",
+    "Return revealed cards and shuffle the Fate Deck",
+  );
+  fateShuffleButtonLabel.textContent = localized(
+    "Вернуть и перетасовать",
+    "Return & shuffle",
+  );
   fateFlipCloseButton.setAttribute("aria-label", localized("Закрыть карту", "Close card"));
   fateFlipCloseButton.title = localized("Закрыть", "Close");
   fateDeckRemaining.textContent = localized(
@@ -3558,6 +3577,7 @@ function setFateFlipOpen(open) {
 function drawFateCard() {
   if (!fateDeck.length) resetFateDeck();
   currentFateCard = fateDeck.pop();
+  fateDeckWasManuallyShuffled = false;
   renderFateFlip(true);
   setFateFlipOpen(true);
 }
@@ -3569,8 +3589,9 @@ fateFlipButton.addEventListener("click", (event) => {
 
 fateShuffleButton.addEventListener("click", (event) => {
   event.stopPropagation();
-  resetFateDeck();
-  drawFateCard();
+  resetFateDeck(true);
+  renderFateFlip();
+  setFateFlipOpen(true);
 });
 
 fateFlipCloseButton.addEventListener("click", (event) => {
