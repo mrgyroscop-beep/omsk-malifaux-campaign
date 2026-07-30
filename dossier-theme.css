@@ -559,6 +559,182 @@ body.theme-dossier {
   text-align: center;
 }
 
+.theme-dossier .fate-draw-again-button {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 7px 0 9px;
+  padding: 7px 12px 6px;
+  color: #fff0d4;
+  border: 1px solid rgba(167, 54, 46, 0.82);
+  border-radius: 3px;
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.055), transparent 36%),
+    #7e2925;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 218, 174, 0.08),
+    0 5px 14px rgba(0, 0, 0, 0.22);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 160ms ease;
+}
+
+.theme-dossier .fate-draw-again-button > span:first-child {
+  width: 19px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  color: var(--dossier-brass);
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: rgba(16, 17, 14, 0.5);
+  font-family: var(--display);
+  font-size: 12px;
+  line-height: 1;
+  transform: rotate(-4deg);
+  transition: transform 180ms ease;
+}
+
+.theme-dossier .fate-draw-again-button:hover {
+  border-color: #d58c65;
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.08), transparent 36%),
+    #96332d;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 218, 174, 0.13),
+    0 7px 17px rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+
+.theme-dossier .fate-draw-again-button:hover > span:first-child {
+  transform: translateY(-2px) rotate(3deg);
+}
+
+.theme-dossier .fate-history {
+  margin: 0 0 9px;
+}
+
+.theme-dossier .fate-history > header {
+  min-height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px 4px;
+  color: rgba(232, 221, 196, 0.58);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-history > header b {
+  min-width: 20px;
+  padding: 2px 5px 1px;
+  color: #1a1b17;
+  border-radius: 8px;
+  background: var(--dossier-brass);
+  font-size: 8px;
+  line-height: 1;
+  text-align: center;
+}
+
+.theme-dossier .fate-history-list {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 5px 5px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border: 1px solid rgba(185, 154, 89, 0.2);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(120deg, transparent 0 12px, rgba(255, 255, 255, 0.012) 13px 14px),
+    #10110e;
+  scrollbar-color: rgba(185, 154, 89, 0.55) transparent;
+  scrollbar-width: thin;
+}
+
+.theme-dossier .fate-history-list.is-empty {
+  justify-content: center;
+}
+
+.theme-dossier .fate-history-empty {
+  color: rgba(232, 221, 196, 0.36);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-history-card {
+  position: relative;
+  width: 31px;
+  height: 35px;
+  flex: 0 0 31px;
+  display: grid;
+  grid-template-rows: 1fr 13px;
+  place-items: center;
+  overflow: hidden;
+  color: #26241f;
+  border: 1px solid #c8b992;
+  border-radius: 3px;
+  background: #e8dcc0;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.38);
+  font-family: var(--display);
+}
+
+.theme-dossier .fate-history-card b {
+  align-self: end;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.theme-dossier .fate-history-card > span:last-child {
+  align-self: start;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.theme-dossier .fate-history-card.is-red,
+.theme-dossier .fate-history-card.is-red-joker {
+  color: #a82f2d;
+}
+
+.theme-dossier .fate-history-card.is-red-joker {
+  color: #fff1d2;
+  border-color: #c58552;
+  background: #922f29;
+}
+
+.theme-dossier .fate-history-card.is-black-joker {
+  color: #eee2c7;
+  border-color: #787361;
+  background: #1c1d1a;
+}
+
+.theme-dossier .fate-history-suit svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
 .theme-dossier .fate-shuffle-button {
   width: 100%;
   min-height: 34px;
@@ -2237,6 +2413,7 @@ body.theme-dossier {
 .theme-dossier .button:focus-visible,
 .theme-dossier .brand:focus-visible,
 .theme-dossier .fate-flip-button:focus-visible,
+.theme-dossier .fate-draw-again-button:focus-visible,
 .theme-dossier .fate-shuffle-button:focus-visible,
 .theme-dossier .fate-flip-head-actions button:focus-visible,
 .theme-dossier .flowchart-card:focus-visible,

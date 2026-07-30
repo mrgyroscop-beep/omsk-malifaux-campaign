@@ -76,6 +76,22 @@
             <p class="fate-flip-result" id="fateFlipResult" role="status" aria-live="polite">
               Нажмите «Флип», чтобы открыть верхнюю карту.
             </p>
+            <button class="fate-draw-again-button" id="fateDrawAgainButton" type="button">
+              <span aria-hidden="true">F</span>
+              <span id="fateDrawAgainButtonLabel">Флипнуть ещё</span>
+            </button>
+            <section class="fate-history" aria-labelledby="fateHistoryLabel">
+              <header>
+                <span id="fateHistoryLabel">Снятые карты</span>
+                <b id="fateHistoryCount">0</b>
+              </header>
+              <div
+                class="fate-history-list"
+                id="fateHistoryList"
+                role="list"
+                aria-label="Снятые карты Fate Deck"
+              ></div>
+            </section>
             <button class="fate-shuffle-button" id="fateShuffleButton" type="button">
               <span aria-hidden="true">↻</span>
               <span id="fateShuffleButtonLabel">Вернуть и перетасовать</span>
@@ -1113,7 +1129,7 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
     <script src="print.js?v=1"></script>
   </body>
 </html>

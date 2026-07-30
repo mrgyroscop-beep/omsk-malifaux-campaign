@@ -3386,6 +3386,8 @@ const fateFlipRoot = document.querySelector(".brand-cluster");
 const fateFlipButton = document.querySelector("#fateFlipButton");
 const fateFlipButtonLabel = document.querySelector("#fateFlipButtonLabel");
 const fateFlipPopover = document.querySelector("#fateFlipPopover");
+const fateDrawAgainButton = document.querySelector("#fateDrawAgainButton");
+const fateDrawAgainButtonLabel = document.querySelector("#fateDrawAgainButtonLabel");
 const fateShuffleButton = document.querySelector("#fateShuffleButton");
 const fateShuffleButtonLabel = document.querySelector("#fateShuffleButtonLabel");
 const fateFlipCloseButton = document.querySelector("#fateFlipCloseButton");
@@ -3393,9 +3395,13 @@ const fateCard = document.querySelector("#fateCard");
 const fateFlipResult = document.querySelector("#fateFlipResult");
 const fateDeckRemaining = document.querySelector("#fateDeckRemaining");
 const fateDeckNote = document.querySelector("#fateDeckNote");
+const fateHistoryLabel = document.querySelector("#fateHistoryLabel");
+const fateHistoryCount = document.querySelector("#fateHistoryCount");
+const fateHistoryList = document.querySelector("#fateHistoryList");
 
 let fateDeck = [];
 let currentFateCard = null;
+let flippedFateCards = [];
 let fateDeckWasManuallyShuffled = false;
 
 function buildFateDeck() {
@@ -3438,6 +3444,7 @@ function shuffleFateDeck(cards) {
 function resetFateDeck(manual = false) {
   fateDeck = shuffleFateDeck(buildFateDeck());
   currentFateCard = null;
+  flippedFateCards = [];
   fateDeckWasManuallyShuffled = manual;
 }
 
@@ -3532,6 +3539,52 @@ function renderFateCard(animate = false) {
   }
 }
 
+function fateHistoryCardHtml(card) {
+  if (card.kind === "red-joker") {
+    return `
+      <span class="fate-history-card is-red-joker" role="listitem">
+        <b>14</b><span>RJ</span>
+      </span>`;
+  }
+  if (card.kind === "black-joker") {
+    return `
+      <span class="fate-history-card is-black-joker" role="listitem">
+        <b>0</b><span>BJ</span>
+      </span>`;
+  }
+  return `
+    <span class="fate-history-card is-${card.suit.tone}" role="listitem">
+      <b>${card.value}</b>
+      <span class="fate-history-suit">${FATE_SUIT_ICONS[card.suit.id]}</span>
+    </span>`;
+}
+
+function renderFateHistory(scrollToLatest = false) {
+  fateHistoryLabel.textContent = localized("Снятые карты", "Revealed cards");
+  fateHistoryCount.textContent = flippedFateCards.length;
+  fateHistoryList.setAttribute(
+    "aria-label",
+    localized("Снятые карты Fate Deck", "Revealed Fate Deck cards"),
+  );
+
+  if (!flippedFateCards.length) {
+    fateHistoryList.classList.add("is-empty");
+    fateHistoryList.innerHTML = `<span class="fate-history-empty">${localized(
+      "Здесь появится история флипов",
+      "Flip history will appear here",
+    )}</span>`;
+    return;
+  }
+
+  fateHistoryList.classList.remove("is-empty");
+  fateHistoryList.innerHTML = flippedFateCards.map(fateHistoryCardHtml).join("");
+  if (scrollToLatest) {
+    requestAnimationFrame(() => {
+      fateHistoryList.scrollLeft = fateHistoryList.scrollWidth;
+    });
+  }
+}
+
 function renderFateFlip(animate = false) {
   if (!fateDeck.length && !currentFateCard) resetFateDeck();
   fateFlipButtonLabel.textContent = localized("Флип", "Flip");
@@ -3539,6 +3592,11 @@ function renderFateFlip(animate = false) {
     "aria-label",
     localized("Флипнуть карту Fate Deck", "Flip a Fate Deck card"),
   );
+  fateDrawAgainButton.setAttribute(
+    "aria-label",
+    localized("Флипнуть следующую карту Fate Deck", "Flip the next Fate Deck card"),
+  );
+  fateDrawAgainButtonLabel.textContent = localized("Флипнуть ещё", "Flip again");
   fateShuffleButton.setAttribute(
     "aria-label",
     localized(
@@ -3566,6 +3624,7 @@ function renderFateFlip(animate = false) {
   );
   fateFlipResult.textContent = fateCardResult(currentFateCard);
   renderFateCard(animate);
+  renderFateHistory(animate);
 }
 
 function setFateFlipOpen(open) {
@@ -3577,12 +3636,18 @@ function setFateFlipOpen(open) {
 function drawFateCard() {
   if (!fateDeck.length) resetFateDeck();
   currentFateCard = fateDeck.pop();
+  flippedFateCards.push(currentFateCard);
   fateDeckWasManuallyShuffled = false;
   renderFateFlip(true);
   setFateFlipOpen(true);
 }
 
 fateFlipButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  drawFateCard();
+});
+
+fateDrawAgainButton.addEventListener("click", (event) => {
   event.stopPropagation();
   drawFateCard();
 });
