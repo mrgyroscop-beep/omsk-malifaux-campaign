@@ -203,6 +203,8 @@ const STATIC_TEXT_EN = {
   "Добавить в арсенал": "Add to arsenal",
   "Добавить снаряжение": "Add equipment",
   "Из таблицы книги": "From the book table",
+  "Получено бесплатно по правилу или эффекту": "Received for free from a rule or effect",
+  "CC не списывается": "CC is not deducted",
   "Или своё название": "Or enter a custom name",
   "Добавить": "Add",
   "Открыть досье": "Open dossier",
@@ -361,10 +363,55 @@ const UI_MESSAGES = {
   },
   hired: { ru: "{name} нанят за {cost} скрип.", en: "{name} hired for {cost} scrip." },
   addedToStarting: { ru: "{name} добавлен в стартовый арсенал.", en: "{name} added to the starting arsenal." },
-  equipmentAdded: { ru: "{name} добавлен в хранилище.", en: "{name} added to storage." },
+  equipmentNeedsScrip: {
+    ru: "Для покупки нужно {cost} скрип, доступно {available}.",
+    en: "This purchase costs {cost} scrip; only {available} is available.",
+  },
+  equipmentPurchasePreview: {
+    ru: "CC {cost} · доступно {available} · останется {remaining}",
+    en: "CC {cost} · {available} available · {remaining} remaining",
+  },
+  equipmentFreePreview: {
+    ru: "Бесплатное получение · скрип не списывается",
+    en: "Free acquisition · no scrip is deducted",
+  },
+  equipmentCustomPreview: {
+    ru: "Пользовательская запись · без автоматического списания",
+    en: "Custom entry · no automatic deduction",
+  },
+  equipmentPurchaseButton: {
+    ru: "Купить за {cost} скрип",
+    en: "Buy for {cost} scrip",
+  },
+  equipmentFreeButton: { ru: "Добавить бесплатно", en: "Add for free" },
+  equipmentPurchased: {
+    ru: "{name} куплен за {cost} скрип.",
+    en: "{name} purchased for {cost} scrip.",
+  },
+  equipmentAddedFree: {
+    ru: "{name} добавлен без списания скрипов.",
+    en: "{name} added without deducting scrip.",
+  },
+  equipmentPaidTag: {
+    ru: "куплено за {cost} скрип",
+    en: "purchased for {cost} scrip",
+  },
+  equipmentFreeTag: { ru: "получено бесплатно", en: "received for free" },
   gameSaved: {
     ru: "Запись сохранена: +{scrip} скрип, +{xp} XP.",
     en: "Entry saved: +{scrip} scrip, +{xp} XP.",
+  },
+  deleteGameAria: {
+    ru: "Удалить игру против {opponent}",
+    en: "Delete game against {opponent}",
+  },
+  deleteGameConfirm: {
+    ru: "Удалить игру против «{opponent}» из истории и отменить её награды (+{scrip} скрип, +{xp} XP)?",
+    en: "Delete the game against “{opponent}” from history and reverse its rewards (+{scrip} scrip, +{xp} XP)?",
+  },
+  gameDeleted: {
+    ru: "Игра удалена: −{scrip} скрип, −{xp} XP.",
+    en: "Game removed: −{scrip} scrip, −{xp} XP.",
   },
   backupExported: { ru: "Резервная копия экспортирована.", en: "Backup exported." },
   dossierImported: { ru: "Досье импортировано.", en: "Dossier imported." },
@@ -593,6 +640,14 @@ function displayBr(br) {
     return br.replace(/^(\d+) R\/M$/, "$1 of Ram or Mask").replace(/^(\d+) C\/T$/, "$1 of Crow or Tome");
   }
   return br;
+}
+
+function equipmentAcquisitionLabel(item) {
+  if (item.acquisition === "purchase" && item.scripPaid > 0) {
+    return message("equipmentPaidTag", { cost: item.scripPaid });
+  }
+  if (item.acquisition === "free") return message("equipmentFreeTag");
+  return "";
 }
 
 function displayFlip(flip) {
@@ -1261,6 +1316,12 @@ function normalizeStoredTalent(talent, slot, index) {
 
 function normalizeStoredEquipment(item) {
   const source = item && typeof item === "object" ? item : {};
+  const scripPaid = safeNumber(source.scripPaid, 0, 0, 1_000);
+  const acquisition = ["purchase", "free", "custom", "legacy"].includes(source.acquisition)
+    ? source.acquisition
+    : scripPaid > 0
+      ? "purchase"
+      : "legacy";
   return {
     id: safeIdentifier(source.id, "equipment"),
     name: safeText(source.name, 300),
@@ -1269,11 +1330,14 @@ function normalizeStoredEquipment(item) {
       source.cc === null || source.cc === undefined
         ? null
         : safeNumber(source.cc, 0, 0, 1_000),
+    scripPaid,
+    acquisition,
   };
 }
 
 function normalizeStoredGame(game) {
   const source = game && typeof game === "object" ? game : {};
+  const xp = safeNumber(source.xp, 0, 0, 100);
   return {
     id: safeIdentifier(source.id, "game"),
     week: safeInteger(source.week, 1, 1, 99),
@@ -1288,7 +1352,11 @@ function normalizeStoredGame(game) {
     gap: safeNumber(source.gap, 0, -1_000, 1_000),
     hand: safeNumber(source.hand, 0, 0, 100),
     scrip: safeNumber(source.scrip, 0, -1_000, 10_000),
-    xp: safeNumber(source.xp, 0, 0, 100),
+    xp,
+    creditedXp:
+      source.creditedXp === null || source.creditedXp === undefined
+        ? null
+        : Math.min(xp, safeNumber(source.creditedXp, 0, 0, 100)),
   };
 }
 
@@ -2778,6 +2846,18 @@ function arsenalTotals() {
   return { cost, injuriesCount };
 }
 
+function purchasedEquipmentScrip() {
+  return state.arsenal.equipment.reduce(
+    (sum, item) => sum + Math.max(0, Number(item.scripPaid) || 0),
+    0,
+  );
+}
+
+function startingScripBalance(modelCost) {
+  const startingScrip = Math.min(3, Math.max(0, 25 - Number(modelCost || 0)));
+  return startingScrip - purchasedEquipmentScrip();
+}
+
 function renderArsenal() {
   const { cost, injuriesCount } = arsenalTotals();
   document.querySelector("#arsenalCost").textContent = cost;
@@ -2836,12 +2916,15 @@ function renderArsenal() {
   } else {
     equipmentWrap.innerHTML = state.arsenal.equipment
       .map(
-        (item) => `
+        (item) => {
+          const acquisition = equipmentAcquisitionLabel(item);
+          return `
           <div class="equipment-item">
             <b>${escapeHtml(item.name)}</b>
             <button class="row-delete" type="button" data-delete-equipment="${escapeHtml(item.id)}" aria-label="${message("deleteItem")}">×</button>
-            <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}</small>
-          </div>`,
+            <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}${acquisition ? ` · ${escapeHtml(acquisition)}` : ""}</small>
+          </div>`;
+        },
       )
       .join("");
   }
@@ -2852,7 +2935,7 @@ function renderArsenal() {
       state.arsenal.models = state.arsenal.models.filter((model) => model.id !== button.dataset.deleteModel);
       if (removed?.scripPaid) state.arsenal.scrip += removed.scripPaid;
       if (state.campaign.week === 1 && state.games.length === 0) {
-        state.arsenal.scrip = Math.min(3, Math.max(0, 25 - arsenalTotals().cost));
+        state.arsenal.scrip = startingScripBalance(arsenalTotals().cost);
       }
       saveState();
       renderArsenal();
@@ -2918,13 +3001,27 @@ function renderGamePreview() {
   const hand = withdrewEarly ? 0 : schemes + (withdrewLate ? 0 : 1);
   const scrip = withdrewEarly ? 0 : Math.ceil(vp / 3) + (won ? 1 : 0) + gap;
   const xp = withdrewEarly ? 0 : 1 + (lost ? 1 : 0) + (pathGoal ? 1 : 0);
+  const creditedXp = Math.min(xp, Math.max(0, xpTiers.length - state.leader.xp));
 
   document.querySelector("#previewHand").textContent = hand;
   document.querySelector("#previewScrip").textContent = message("scripAmount", { n: scrip });
-  document.querySelector("#previewXp").textContent = `${xp} XP`;
+  document.querySelector("#previewXp").textContent = `${creditedXp} XP`;
   document.querySelector("#pathGoalLabel").textContent =
     state.leader.path === "Strategist" ? message("strategistGoal") : message("bruiserGoal");
-  return { vp, schemes, won, lost, pathGoal, withdrewEarly, withdrewLate, gap, hand, scrip, xp };
+  return {
+    vp,
+    schemes,
+    won,
+    lost,
+    pathGoal,
+    withdrewEarly,
+    withdrewLate,
+    gap,
+    hand,
+    scrip,
+    xp,
+    creditedXp,
+  };
 }
 
 function renderChronicle() {
@@ -2939,18 +3036,65 @@ function renderChronicle() {
     log.innerHTML = [...state.games]
       .reverse()
       .map(
-        (game, reverseIndex) => `
+        (game, reverseIndex) => {
+          const originalIndex = state.games.length - reverseIndex - 1;
+          const opponent = game.opponent || message("unknownOpponent");
+          const creditedXp =
+            game.creditedXp === null || game.creditedXp === undefined
+              ? game.xp
+              : game.creditedXp;
+          return `
           <div class="game-entry">
             <span class="game-entry-number">${String(state.games.length - reverseIndex).padStart(2, "0")}</span>
             <span>
-              <b>${escapeHtml(game.opponent || message("unknownOpponent"))}</b>
+              <b>${escapeHtml(opponent)}</b>
               <p>${message("week", { n: escapeHtml(game.week) })} · ${escapeHtml(game.vp)} VP · ${game.won ? message("resultWin") : game.lost ? message("resultLoss") : message("resultDraw")}</p>
             </span>
-            <span class="game-entry-gain">+${escapeHtml(game.scrip)} ${localized("скрип", "scrip")}<br>+${escapeHtml(game.xp)} XP</span>
-          </div>`,
+            <span class="game-entry-actions">
+              <span class="game-entry-gain">+${escapeHtml(game.scrip)} ${localized("скрип", "scrip")}<br>+${escapeHtml(creditedXp)} XP</span>
+              <button
+                class="row-delete"
+                type="button"
+                data-delete-game-index="${originalIndex}"
+                aria-label="${escapeHtml(message("deleteGameAria", { opponent }))}"
+              >×</button>
+            </span>
+          </div>`;
+        },
       )
       .join("");
   }
+  log.querySelectorAll("[data-delete-game-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.deleteGameIndex);
+      const game = state.games[index];
+      if (!game) return;
+      const scrip = Math.max(0, Number(game.scrip) || 0);
+      const storedXp = Math.max(0, Number(game.xp) || 0);
+      const xp =
+        game.creditedXp === null || game.creditedXp === undefined
+          ? Math.min(storedXp, state.leader.xp)
+          : Math.min(Math.max(0, Number(game.creditedXp) || 0), state.leader.xp);
+      const opponent = game.opponent || message("unknownOpponent");
+      if (!window.confirm(message("deleteGameConfirm", { opponent, scrip, xp }))) return;
+
+      const gamesBefore = clone(state.games);
+      const scripBefore = state.arsenal.scrip;
+      const xpBefore = state.leader.xp;
+      state.games.splice(index, 1);
+      state.arsenal.scrip -= scrip;
+      state.leader.xp = Math.max(0, state.leader.xp - xp);
+      if (!saveState()) {
+        state.games = gamesBefore;
+        state.arsenal.scrip = scripBefore;
+        state.leader.xp = xpBefore;
+        renderAll();
+        return;
+      }
+      renderAll();
+      toast(message("gameDeleted", { scrip, xp }));
+    });
+  });
   renderXpTrack();
 }
 
@@ -3146,6 +3290,45 @@ function renderEquipmentCatalog() {
     )
     .join("");
   if (selectedValue) catalog.value = selectedValue;
+}
+
+function renderEquipmentPurchasePreview() {
+  const form = document.querySelector("#equipmentForm");
+  const preview = document.querySelector("#equipmentPurchasePreview");
+  const submit = document.querySelector("#equipmentSubmit");
+  if (!form || !preview || !submit) return;
+  const data = new FormData(form);
+  const customName = String(data.get("customName") || "").trim();
+  const selected = equipment[Number(data.get("catalog"))];
+  const receivedFree = data.get("freeAcquisition") === "on";
+  const available = Number(state.arsenal.scrip) || 0;
+  const cost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
+
+  preview.classList.remove("is-insufficient", "is-free");
+  if (customName) {
+    preview.classList.add("is-free");
+    preview.textContent = message("equipmentCustomPreview");
+    submit.textContent = message("equipmentFreeButton");
+    submit.disabled = false;
+    return;
+  }
+  if (receivedFree) {
+    preview.classList.add("is-free");
+    preview.textContent = message("equipmentFreePreview");
+    submit.textContent = message("equipmentFreeButton");
+    submit.disabled = false;
+    return;
+  }
+
+  const remaining = available - cost;
+  preview.textContent = message("equipmentPurchasePreview", {
+    cost,
+    available,
+    remaining,
+  });
+  preview.classList.toggle("is-insufficient", cost > available);
+  submit.textContent = message("equipmentPurchaseButton", { cost });
+  submit.disabled = !selected || (cost > 0 && cost > available);
 }
 
 function openCardDialog(card) {
@@ -3967,6 +4150,7 @@ function renderAll() {
   renderChronicle();
   renderReference();
   renderEquipmentCatalog();
+  renderEquipmentPurchasePreview();
   renderGamePreview();
   calculateRating();
   renderFateFlip();
@@ -4485,7 +4669,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   }
   state.arsenal.models.push(model);
   if (state.campaign.week === 1) {
-    state.arsenal.scrip = Math.min(3, Math.max(0, 25 - projected));
+    state.arsenal.scrip = startingScripBalance(projected);
   }
   if (!saveState()) {
     state.arsenal = arsenalBefore;
@@ -4502,25 +4686,57 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   );
 });
 
+const equipmentForm = document.querySelector("#equipmentForm");
 document.querySelector("#addEquipmentButton").addEventListener("click", () => {
+  equipmentForm.reset();
+  renderEquipmentPurchasePreview();
   document.querySelector("#equipmentDialog").showModal();
 });
 
-document.querySelector("#equipmentForm").addEventListener("submit", (event) => {
+equipmentForm.addEventListener("input", renderEquipmentPurchasePreview);
+equipmentForm.addEventListener("change", renderEquipmentPurchasePreview);
+equipmentForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
   const customName = data.get("customName").trim();
   const selected = equipment[Number(data.get("catalog"))];
+  const receivedFree = data.get("freeAcquisition") === "on";
+  const purchaseCost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
+  const available = Number(state.arsenal.scrip) || 0;
+  if (!customName && !selected) return;
+  if (purchaseCost > 0 && purchaseCost > available) {
+    toast(message("equipmentNeedsScrip", { cost: purchaseCost, available }));
+    renderEquipmentPurchasePreview();
+    return;
+  }
+  const arsenalBefore = clone(state.arsenal);
   const item = customName
-    ? { id: uid(), name: customName }
-    : { id: uid(), name: selected[0], br: selected[1], cc: selected[2] };
+    ? { id: uid(), name: customName, scripPaid: 0, acquisition: "custom" }
+    : {
+        id: uid(),
+        name: selected[0],
+        br: selected[1],
+        cc: selected[2],
+        scripPaid: purchaseCost,
+        acquisition: receivedFree ? "free" : "purchase",
+      };
+  state.arsenal.scrip = available - purchaseCost;
   state.arsenal.equipment.push(item);
-  saveState();
+  if (!saveState()) {
+    state.arsenal = arsenalBefore;
+    renderArsenal();
+    renderEquipmentPurchasePreview();
+    return;
+  }
   form.reset();
   document.querySelector("#equipmentDialog").close();
   renderArsenal();
-  toast(message("equipmentAdded", { name: item.name }));
+  toast(
+    purchaseCost > 0
+      ? message("equipmentPurchased", { name: item.name, cost: purchaseCost })
+      : message("equipmentAddedFree", { name: item.name }),
+  );
 });
 
 ["ratingEquipment", "ratingAdvances", "ratingInjuries"].forEach((id) => {
@@ -4564,14 +4780,14 @@ document.querySelector("#gameForm").addEventListener("submit", (event) => {
     ...calculation,
   });
   state.arsenal.scrip += calculation.scrip;
-  state.leader.xp = Math.min(xpTiers.length, state.leader.xp + calculation.xp);
+  state.leader.xp += calculation.creditedXp;
   saveState();
   event.currentTarget.reset();
   event.currentTarget.elements.vp.value = 0;
   event.currentTarget.elements.ratingGap.value = 0;
   event.currentTarget.elements.schemes.value = 0;
   renderAll();
-  toast(message("gameSaved", { scrip: calculation.scrip, xp: calculation.xp }));
+  toast(message("gameSaved", { scrip: calculation.scrip, xp: calculation.creditedXp }));
 });
 
 document.querySelector("#exportButton").addEventListener("click", () => {

@@ -1189,11 +1189,25 @@
           <span>Из таблицы книги</span>
           <select name="catalog" id="equipmentCatalog"></select>
         </label>
+        <div
+          class="equipment-purchase-preview"
+          id="equipmentPurchasePreview"
+          data-dynamic-i18n
+          aria-live="polite"
+        ></div>
+        <label class="check-tile equipment-free-choice">
+          <input name="freeAcquisition" type="checkbox" />
+          <span class="equipment-choice-mark" aria-hidden="true">✓</span>
+          <span>
+            <b>Получено бесплатно по правилу или эффекту</b>
+            <small>CC не списывается</small>
+          </span>
+        </label>
         <label class="field">
           <span>Или своё название</span>
           <input name="customName" placeholder="Пользовательское снаряжение" />
         </label>
-        <button class="button button-red button-wide" value="default">Добавить</button>
+        <button class="button button-red button-wide" id="equipmentSubmit" value="default">Добавить</button>
       </form>
     </dialog>
 
@@ -1212,7 +1226,7 @@
       defer
     ></script>
     <script src="biggerhat.js?v=3"></script>
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
     <script src="cloud.js?v=1"></script>
     <script src="print.js?v=1"></script>
   </body>
