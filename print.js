@@ -1,0 +1,446 @@
+(() => {
+  const STORAGE_KEY = "m4e-untold-campaign-v1";
+
+  function escapePrintHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function currentPrintState() {
+    try {
+      if (typeof state === "object" && state) return state;
+    } catch {
+      // Fall back to the exported local state below.
+    }
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function isEnglishPrint() {
+    try {
+      return typeof currentLocale === "string" && currentLocale === "en";
+    } catch {
+      return localStorage.getItem("m4e-untold-locale") === "en";
+    }
+  }
+
+  function printText(ru, en) {
+    return isEnglishPrint() ? en : ru;
+  }
+
+  function richPrintText(value) {
+    try {
+      if (typeof cardText === "function") return cardText(value);
+    } catch {
+      // Plain escaped text is still safe and readable in a printed export.
+    }
+    return escapePrintHtml(value)
+      .replaceAll("{{+}}", "+")
+      .replaceAll("{{-}}", "−")
+      .replace(/\{\{\{?([^{}]+)\}\}\}?/g, "$1");
+  }
+
+  function printArchetype(key) {
+    try {
+      return archetypes[key] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function printCrewCard(id) {
+    try {
+      return crewCards.find((card) => card.id === id) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function talentSlot(archetype, talent, index) {
+    const slots = archetype?.talents || [];
+    return (
+      slots.find((slot) => slot.id === talent?.slotId) ||
+      slots[index] || {
+        kind: talent?.kind || "",
+        type: talent?.kind || printText("Талант", "Talent"),
+        typeEn: talent?.kind || "Talent",
+      }
+    );
+  }
+
+  function printActionMeta(action) {
+    if (!action) return "";
+    const pieces = [];
+    if (action.range) {
+      pieces.push(
+        `${escapePrintHtml(action.rangeTypeLabel || action.rangeType || "Rg")} ${escapePrintHtml(action.range)}″`,
+      );
+    }
+    if (action.stat) {
+      const suits = action.statSuits ? ` ${action.statSuits}` : "";
+      const modifier =
+        action.statModifier === "positive"
+          ? " +"
+          : action.statModifier === "negative"
+            ? " −"
+            : action.statModifier
+              ? ` ${action.statModifier}`
+              : "";
+      const resist = action.resistedBy ? ` vs ${action.resistedBy}` : "";
+      pieces.push(
+        `Stat ${escapePrintHtml(action.stat)}${escapePrintHtml(suits)}${escapePrintHtml(modifier)}${escapePrintHtml(resist)}`,
+      );
+    }
+    if (action.targetNumber) {
+      const suits = action.targetSuits ? ` ${action.targetSuits}` : "";
+      pieces.push(`TN ${escapePrintHtml(action.targetNumber)}${escapePrintHtml(suits)}`);
+    }
+    if (action.damage) pieces.push(`Dmg ${escapePrintHtml(action.damage)}`);
+    if (action.stoneCost) pieces.push(`${escapePrintHtml(action.stoneCost)} SS`);
+    if (action.isSignature) pieces.push("Signature");
+    return pieces.join(" · ");
+  }
+
+  function renderTalent(talent, slot) {
+    const entry = talent?.snapshot?.entry || null;
+    const trigger = talent?.snapshot?.selectedTrigger || null;
+    const name = entry?.name || talent?.name || printText("Не выбрано", "Not selected");
+    const source = talent?.source || "";
+    const kind = isEnglishPrint() ? slot.typeEn || slot.type : slot.type || slot.typeEn;
+    const meta = slot.kind === "ability" ? "" : printActionMeta(entry);
+    const description = entry?.description || "";
+    return `
+      <article class="print-talent">
+        <div class="print-talent-heading">
+          <span class="print-kicker">${escapePrintHtml(kind)}</span>
+          <div>
+            <h3>${escapePrintHtml(name)}</h3>
+            ${source ? `<small>${printText("Источник", "Source")}: ${escapePrintHtml(source)}</small>` : ""}
+          </div>
+        </div>
+        ${meta ? `<p class="print-action-meta">${meta}</p>` : ""}
+        ${description ? `<p class="print-rule-text">${richPrintText(description)}</p>` : ""}
+        ${
+          trigger
+            ? `<div class="print-trigger">
+                <b>${printText("Триггер", "Trigger")}: ${richPrintText(
+                  [trigger.suits, trigger.name].filter(Boolean).join(" · "),
+                )}${trigger.stoneCost ? ` · ${escapePrintHtml(trigger.stoneCost)} SS` : ""}</b>
+                ${trigger.description ? `<p>${richPrintText(trigger.description)}</p>` : ""}
+              </div>`
+            : ""
+        }
+      </article>`;
+  }
+
+  function renderCrewCard(card) {
+    if (!card) return "";
+    const text = isEnglishPrint() ? card.textEn || card.text : card.text || card.textEn;
+    return `
+      <section class="print-crew-card">
+        <div>
+          <span class="print-kicker">${printText("Карта команды", "Crew card")}</span>
+          <h3>${escapePrintHtml(card.name)}</h3>
+        </div>
+        <p>${richPrintText(text)}</p>
+      </section>`;
+  }
+
+  function renderModels(models) {
+    if (!models.length) {
+      return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
+    }
+    return `
+      <table class="print-table print-model-table">
+        <thead>
+          <tr>
+            <th>${printText("Стоимость", "Cost")}</th>
+            <th>${printText("Модель", "Model")}</th>
+            <th>${printText("Станция и характеристики", "Station & characteristics")}</th>
+            <th>${printText("Ключи", "Keywords")}</th>
+            <th>${printText("Травмы", "Injuries")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${models
+            .map((model) => {
+              const traits = [
+                model.type,
+                model.henchman ? "Henchman" : "",
+                model.versatile ? "Versatile" : "",
+              ].filter(Boolean);
+              return `
+                <tr>
+                  <td class="print-cost">${escapePrintHtml(model.cost ?? "—")}</td>
+                  <td><b>${escapePrintHtml(model.name || "—")}</b></td>
+                  <td>${escapePrintHtml(traits.join(" · ") || "—")}</td>
+                  <td>${escapePrintHtml(model.keywords || "—")}</td>
+                  <td>${escapePrintHtml(model.injuries || 0)}</td>
+                </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>`;
+  }
+
+  function renderEquipment(items) {
+    if (!items.length) {
+      return `<p class="print-empty">${printText("Снаряжение отсутствует.", "No equipment.")}</p>`;
+    }
+    return `
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>${printText("Предмет", "Item")}</th>
+            <th>BR</th>
+            <th>CC</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items
+            .map(
+              (item) => `
+                <tr>
+                  <td><b>${escapePrintHtml(item.name || "—")}</b></td>
+                  <td>${escapePrintHtml(item.br || "—")}</td>
+                  <td>${escapePrintHtml(item.cc ?? "—")}</td>
+                </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>`;
+  }
+
+  function renderGames(games) {
+    if (!games.length) return "";
+    return `
+      <section class="print-section print-history">
+        <div class="print-section-heading">
+          <span class="print-kicker">${printText("Хроника", "Chronicle")}</span>
+          <h2>${printText("История кампании", "Campaign history")}</h2>
+        </div>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>${printText("Неделя", "Week")}</th>
+              <th>${printText("Соперник", "Opponent")}</th>
+              <th>${printText("Результат", "Result")}</th>
+              <th>VP</th>
+              <th>${printText("Награда", "Reward")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${games
+              .map((game) => {
+                const result = game.won
+                  ? printText("Победа", "Win")
+                  : game.lost
+                    ? printText("Поражение", "Loss")
+                    : printText("Ничья", "Draw");
+                return `
+                  <tr>
+                    <td>${escapePrintHtml(game.week ?? "—")}</td>
+                    <td>${escapePrintHtml(game.opponent || "—")}</td>
+                    <td>${result}</td>
+                    <td>${escapePrintHtml(game.vp ?? 0)}</td>
+                    <td>+${escapePrintHtml(game.scrip ?? 0)} ${printText("скрип", "scrip")} · +${escapePrintHtml(game.xp ?? 0)} XP</td>
+                  </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </section>`;
+  }
+
+  function renderAdvances(advances) {
+    if (!advances.length) return "";
+    return `
+      <section class="print-section print-advances">
+        <div class="print-section-heading">
+          <span class="print-kicker">XP</span>
+          <h2>${printText("Продвижения лидера", "Leader advancements")}</h2>
+        </div>
+        <ul>
+          ${advances
+            .map((advance) => {
+              const label =
+                typeof advance === "string"
+                  ? advance
+                  : advance?.name || advance?.label || JSON.stringify(advance);
+              return `<li>${escapePrintHtml(label)}</li>`;
+            })
+            .join("")}
+        </ul>
+      </section>`;
+  }
+
+  function renderPrintDossier() {
+    const data = currentPrintState();
+    const crew = data.crew || {};
+    const campaign = data.campaign || {};
+    const leader = data.leader || {};
+    const arsenal = data.arsenal || {};
+    const models = Array.isArray(arsenal.models) ? arsenal.models : [];
+    const equipment = Array.isArray(arsenal.equipment) ? arsenal.equipment : [];
+    const games = Array.isArray(data.games) ? data.games : [];
+    const advances = Array.isArray(leader.advances) ? leader.advances : [];
+    const archetype = printArchetype(leader.archetype);
+    const talents = Array.isArray(leader.talents) ? leader.talents : [];
+    const stats = archetype?.stats || {};
+    const keywords = Array.isArray(crew.keywords) ? crew.keywords.filter(Boolean) : [];
+    const characteristics = Array.isArray(leader.characteristics)
+      ? leader.characteristics.filter(Boolean)
+      : [];
+    const totalCost = models.reduce((sum, model) => sum + Number(model.cost || 0), 0);
+    const totalInjuries = models.reduce(
+      (sum, model) => sum + Number(model.injuries || 0),
+      0,
+    );
+    const archetypeName = archetype
+      ? isEnglishPrint()
+        ? archetype.labelEn
+        : archetype.label
+      : leader.archetype || "—";
+    const crewCard = printCrewCard(leader.crewCard);
+    const existing = document.querySelector("#printDossier");
+    if (existing) existing.remove();
+
+    const dossier = document.createElement("main");
+    dossier.id = "printDossier";
+    dossier.className = "print-dossier";
+    dossier.hidden = true;
+    dossier.setAttribute("aria-hidden", "true");
+    dossier.innerHTML = `
+      <section class="print-page print-leader-page">
+        <header class="print-cover">
+          <div>
+            <span class="print-overline">M4E · ${printText("Кампанийное досье", "Campaign dossier")}</span>
+            <h1>${escapePrintHtml(crew.name || printText("Без названия", "Untitled crew"))}</h1>
+            <p>${[
+              crew.player,
+              crew.faction,
+              keywords.join(" + "),
+            ]
+              .filter(Boolean)
+              .map(escapePrintHtml)
+              .join(" · ")}</p>
+          </div>
+          <div class="print-week-stamp">
+            <small>${printText("Неделя", "Week")}</small>
+            <b>${escapePrintHtml(campaign.week || 1)}</b>
+            <span>${escapePrintHtml(campaign.length || "—")} ${printText("нед.", "weeks")}</span>
+          </div>
+        </header>
+
+        <section class="print-leader">
+          <div class="print-leader-heading">
+            <div>
+              <span class="print-kicker">${printText("Лидер", "Leader")}</span>
+              <h2>${escapePrintHtml(leader.name || printText("Без имени", "Unnamed"))}</h2>
+              <p>${[
+                archetypeName,
+                characteristics.join(" · "),
+                leader.path,
+              ]
+                .filter(Boolean)
+                .map(escapePrintHtml)
+                .join(" · ")}</p>
+            </div>
+            <div class="print-leader-details">
+              <span><small>Sz</small><b>${escapePrintHtml(leader.size ?? "—")}</b></span>
+              <span><small>Base</small><b>${escapePrintHtml(leader.base ? `${leader.base}mm` : "—")}</b></span>
+              <span><small>XP</small><b>${escapePrintHtml(leader.xp || 0)}</b></span>
+            </div>
+          </div>
+          <div class="print-stat-strip">
+            ${[
+              ["Df", stats.Df],
+              ["Wp", stats.Wp],
+              ["Sp", stats.Sp],
+              ["Health", stats.Health],
+            ]
+              .map(
+                ([label, value]) =>
+                  `<span><small>${label}</small><b>${escapePrintHtml(value ?? "—")}</b></span>`,
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="print-section print-talents">
+          <div class="print-section-heading">
+            <span class="print-kicker">${printText("Заимствованные таланты", "Borrowed talents")}</span>
+            <h2>${printText("Действия и способности", "Actions & abilities")}</h2>
+          </div>
+          <div class="print-talent-list">
+            ${talents
+              .map((talent, index) =>
+                renderTalent(talent, talentSlot(archetype, talent, index)),
+              )
+              .join("")}
+          </div>
+        </section>
+
+        ${renderCrewCard(crewCard)}
+        <footer class="print-footer">
+          <span>${printText("Лист лидера", "Leader sheet")}</span>
+          <b>01</b>
+        </footer>
+      </section>
+
+      <section class="print-page print-arsenal-page">
+        <header class="print-page-heading">
+          <div>
+            <span class="print-overline">M4E · ${printText("Кампанийное досье", "Campaign dossier")}</span>
+            <h1>${printText("Арсенал команды", "Crew arsenal")}</h1>
+            <p>${escapePrintHtml(crew.name || "—")}</p>
+          </div>
+          <div class="print-summary">
+            <span><small>${printText("Модели", "Models")}</small><b>${models.length}</b></span>
+            <span><small>${printText("Стоимость", "Cost")}</small><b>${totalCost}</b></span>
+            <span><small>${printText("Скрип", "Scrip")}</small><b>${escapePrintHtml(arsenal.scrip || 0)}</b></span>
+            <span><small>${printText("Травмы", "Injuries")}</small><b>${totalInjuries}</b></span>
+          </div>
+        </header>
+
+        <section class="print-section">
+          <div class="print-section-heading">
+            <span class="print-kicker">${printText("Состав", "Roster")}</span>
+            <h2>${printText("Модели в арсенале", "Models in the arsenal")}</h2>
+          </div>
+          ${renderModels(models)}
+        </section>
+
+        <section class="print-section print-equipment">
+          <div class="print-section-heading">
+            <span class="print-kicker">${printText("Хранилище", "Storage")}</span>
+            <h2>${printText("Снаряжение", "Equipment")}</h2>
+          </div>
+          ${renderEquipment(equipment)}
+        </section>
+
+        ${renderAdvances(advances)}
+        ${renderGames(games)}
+        <footer class="print-footer">
+          <span>${printText("Арсенал и хроника", "Arsenal & chronicle")}</span>
+          <b>02</b>
+        </footer>
+      </section>`;
+    document.body.append(dossier);
+  }
+
+  window.renderPrintDossier = renderPrintDossier;
+  window.addEventListener("beforeprint", renderPrintDossier);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderPrintDossier, { once: true });
+  } else {
+    renderPrintDossier();
+  }
+})();

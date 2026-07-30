@@ -3979,7 +3979,10 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
   }
 });
 
-document.querySelector("#printButton").addEventListener("click", () => window.print());
+document.querySelector("#printButton").addEventListener("click", () => {
+  window.renderPrintDossier?.();
+  window.print();
+});
 document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);

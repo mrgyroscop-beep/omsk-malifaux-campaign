@@ -1,0 +1,416 @@
+@page {
+  size: A4 portrait;
+  margin: 9mm;
+}
+
+#printDossier {
+  display: none;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body.theme-dossier {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    color: #28241e;
+    background: #fff;
+  }
+
+  body.theme-dossier > :not(#printDossier) {
+    display: none !important;
+  }
+
+  #printDossier,
+  #printDossier[hidden] {
+    display: block !important;
+  }
+
+  .print-dossier {
+    --print-ink: #28241e;
+    --print-muted: #6f675a;
+    --print-red: #9f3028;
+    --print-brass: #9c793d;
+    --print-line: #cfc4af;
+    --print-paper: #faf7ef;
+    font-family: "Source Sans 3", "Trebuchet MS", sans-serif;
+    font-size: 9pt;
+    line-height: 1.34;
+    color: var(--print-ink);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-dossier *,
+  .print-dossier *::before,
+  .print-dossier *::after {
+    box-sizing: border-box;
+  }
+
+  .print-page {
+    position: relative;
+    min-height: 277mm;
+    padding: 0 0 10mm;
+  }
+
+  .print-page + .print-page {
+    break-before: page;
+  }
+
+  .print-cover,
+  .print-page-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9mm;
+    align-items: start;
+    margin-bottom: 6mm;
+    padding: 0 0 5mm;
+    border-bottom: 1.5pt solid var(--print-ink);
+  }
+
+  .print-overline,
+  .print-kicker {
+    display: block;
+    margin-bottom: 1.4mm;
+    color: var(--print-red);
+    font-size: 6.7pt;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .print-cover h1,
+  .print-page-heading h1,
+  .print-leader h2,
+  .print-section-heading h2,
+  .print-crew-card h3,
+  .print-talent h3 {
+    margin: 0;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .print-cover h1,
+  .print-page-heading h1 {
+    font-size: 27pt;
+    letter-spacing: 0.015em;
+  }
+
+  .print-cover p,
+  .print-page-heading p,
+  .print-leader-heading p {
+    margin: 1.8mm 0 0;
+    color: var(--print-muted);
+  }
+
+  .print-week-stamp {
+    min-width: 25mm;
+    padding: 2.5mm 3mm;
+    border: 1.2pt solid var(--print-red);
+    text-align: center;
+    transform: rotate(-1deg);
+  }
+
+  .print-week-stamp small,
+  .print-week-stamp span {
+    display: block;
+    color: var(--print-muted);
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .print-week-stamp b {
+    display: block;
+    margin: 0.5mm 0;
+    color: var(--print-red);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 24pt;
+    line-height: 0.9;
+  }
+
+  .print-leader {
+    margin-bottom: 5mm;
+    padding: 4mm;
+    border: 1pt solid var(--print-line);
+    background: linear-gradient(135deg, rgba(156, 121, 61, 0.08), transparent 48%);
+    break-inside: avoid;
+  }
+
+  .print-leader-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5mm;
+    align-items: end;
+  }
+
+  .print-leader h2 {
+    font-size: 24pt;
+  }
+
+  .print-leader-details,
+  .print-summary,
+  .print-stat-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15mm, auto);
+    gap: 1.5mm;
+  }
+
+  .print-leader-details span,
+  .print-summary span,
+  .print-stat-strip span {
+    display: grid;
+    place-items: center;
+    min-width: 15mm;
+    padding: 1.7mm 2mm;
+    border: 0.8pt solid var(--print-line);
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .print-leader-details small,
+  .print-summary small,
+  .print-stat-strip small {
+    color: var(--print-muted);
+    font-size: 6pt;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .print-leader-details b,
+  .print-summary b,
+  .print-stat-strip b {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 13pt;
+  }
+
+  .print-stat-strip {
+    margin-top: 3mm;
+    grid-auto-columns: 1fr;
+  }
+
+  .print-section {
+    margin-top: 5mm;
+  }
+
+  .print-section-heading {
+    display: flex;
+    gap: 4mm;
+    align-items: baseline;
+    margin-bottom: 2.5mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 0.8pt solid var(--print-line);
+  }
+
+  .print-section-heading .print-kicker {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .print-section-heading h2 {
+    font-size: 17pt;
+  }
+
+  .print-talent-list {
+    display: grid;
+    gap: 2.2mm;
+  }
+
+  .print-talent {
+    position: relative;
+    padding: 2.7mm 3mm 2.8mm;
+    border-left: 2.2pt solid var(--print-red);
+    background: var(--print-paper);
+    break-inside: avoid;
+  }
+
+  .print-talent-heading {
+    display: grid;
+    grid-template-columns: 27mm minmax(0, 1fr);
+    gap: 3mm;
+    align-items: baseline;
+  }
+
+  .print-talent-heading .print-kicker {
+    margin: 0;
+  }
+
+  .print-talent h3 {
+    display: inline;
+    font-size: 13.5pt;
+  }
+
+  .print-talent-heading small {
+    margin-left: 2mm;
+    color: var(--print-muted);
+    font-size: 7pt;
+  }
+
+  .print-action-meta {
+    margin: 1.5mm 0 0 30mm;
+    color: var(--print-red);
+    font-family: "IBM Plex Mono", "Courier New", monospace;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.015em;
+  }
+
+  .print-rule-text {
+    margin: 1.4mm 0 0 30mm;
+  }
+
+  .print-trigger {
+    margin: 1.8mm 0 0 30mm;
+    padding: 1.8mm 2.2mm;
+    border: 0.8pt solid rgba(159, 48, 40, 0.42);
+    background: rgba(159, 48, 40, 0.035);
+  }
+
+  .print-trigger b {
+    color: var(--print-red);
+    font-size: 7.5pt;
+  }
+
+  .print-trigger p {
+    margin: 0.7mm 0 0;
+  }
+
+  .print-crew-card {
+    display: grid;
+    grid-template-columns: 42mm minmax(0, 1fr);
+    gap: 4mm;
+    align-items: center;
+    margin-top: 4mm;
+    padding: 3mm 4mm;
+    color: #f8f2e5;
+    background: var(--print-ink);
+    break-inside: avoid;
+  }
+
+  .print-crew-card .print-kicker {
+    color: #d5b777;
+  }
+
+  .print-crew-card h3 {
+    font-size: 14pt;
+  }
+
+  .print-crew-card p {
+    margin: 0;
+  }
+
+  .print-summary {
+    grid-template-columns: repeat(4, 19mm);
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 8pt;
+  }
+
+  .print-table th {
+    padding: 2mm;
+    color: #fff;
+    background: var(--print-ink);
+    font-size: 6.3pt;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .print-table td {
+    padding: 2.1mm 2mm;
+    border-bottom: 0.7pt solid var(--print-line);
+    vertical-align: top;
+  }
+
+  .print-table tbody tr:nth-child(even) {
+    background: var(--print-paper);
+  }
+
+  .print-model-table th:nth-child(1),
+  .print-model-table td:nth-child(1) {
+    width: 17mm;
+    text-align: center;
+  }
+
+  .print-model-table th:nth-child(2) {
+    width: 35mm;
+  }
+
+  .print-model-table th:nth-child(3) {
+    width: 46mm;
+  }
+
+  .print-model-table th:nth-child(5),
+  .print-model-table td:nth-child(5) {
+    width: 17mm;
+    text-align: center;
+  }
+
+  .print-cost {
+    color: var(--print-red);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  .print-empty {
+    margin: 0;
+    padding: 4mm;
+    color: var(--print-muted);
+    border: 0.8pt dashed var(--print-line);
+    text-align: center;
+  }
+
+  .print-advances ul {
+    columns: 2;
+    margin: 0;
+    padding-left: 5mm;
+  }
+
+  .print-advances li {
+    margin-bottom: 1.2mm;
+    break-inside: avoid;
+  }
+
+  .print-history {
+    break-inside: avoid;
+  }
+
+  .print-footer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 2mm;
+    color: var(--print-muted);
+    border-top: 0.7pt solid var(--print-line);
+    font-size: 6.5pt;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .print-footer b {
+    color: var(--print-red);
+  }
+
+  .print-dossier .card-symbol {
+    color: var(--print-red);
+    font-weight: 800;
+  }
+}
