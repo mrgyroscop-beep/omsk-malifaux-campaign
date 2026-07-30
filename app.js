@@ -9,6 +9,8 @@ const STATIC_TEXT_EN = {
   "Экспорт": "Export",
   "Архивариус": "Archivist",
   "Открыть помощника по правилам": "Open the rules assistant",
+  "Облачная кампания": "Cloud campaign",
+  "Открыть облачную кампанию": "Open cloud campaign",
   "Обратная связь": "Feedback",
   "Печать": "Print",
   "Досье": "Dossier",
@@ -244,6 +246,11 @@ const STATIC_TEXT_EN = {
     "For example: how many Barter Flips does the winner receive?",
   "Данные досье не отправляются": "Dossier data is not sent",
   "Отправить": "Send",
+  "Общий архив · Cloudflare D1": "Shared archive · Cloudflare D1",
+  "Проверка канала": "Channel check",
+  "Один быстрый штамп": "One quick stamp",
+  "Проверка Cloudflare защищает Архивариуса и облачные записи от автоматического спама. После неё доступ сохранится на два часа.":
+    "Cloudflare protects the Archivist and cloud records from automated spam. Once complete, access remains valid for two hours.",
 };
 
 const UI_MESSAGES = {
@@ -992,26 +999,213 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function safeText(value, maximum = 4_000) {
+  return String(value ?? "").slice(0, maximum);
+}
+
+function safeNumber(value, fallback, minimum, maximum) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(maximum, Math.max(minimum, number));
+}
+
+function safeInteger(value, fallback, minimum, maximum) {
+  return Math.trunc(safeNumber(value, fallback, minimum, maximum));
+}
+
+function safeOptionalNumber(value, minimum = -10_000, maximum = 10_000) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? Math.min(maximum, Math.max(minimum, number))
+    : null;
+}
+
+function safeIdentifier(value, prefix = "entry") {
+  const candidate = String(value ?? "");
+  return /^[A-Za-z0-9_-]{1,96}$/u.test(candidate)
+    ? candidate
+    : `${prefix}-${uid()}`;
+}
+
+function safeExternalId(value, prefix = "card") {
+  const number = Number(value);
+  if (Number.isInteger(number) && number >= 0 && number <= Number.MAX_SAFE_INTEGER) {
+    return number;
+  }
+  const candidate = String(value ?? "");
+  return /^[A-Za-z0-9_-]{1,96}$/u.test(candidate)
+    ? candidate
+    : `${prefix}-${uid()}`;
+}
+
+function safeSlug(value) {
+  const candidate = safeText(value, 100).toLowerCase();
+  return /^[a-z0-9][a-z0-9-]{0,99}$/u.test(candidate) ? candidate : "";
+}
+
+function safeTextList(value, maximumItems = 100, maximumText = 300) {
+  return Array.isArray(value)
+    ? value
+        .slice(0, maximumItems)
+        .map((item) => safeText(item, maximumText))
+        .filter(Boolean)
+    : [];
+}
+
+function normalizeStoredKeyword(keyword) {
+  const source =
+    typeof keyword === "string"
+      ? { name: keyword, slug: keyword }
+      : keyword && typeof keyword === "object"
+        ? keyword
+        : {};
+  return {
+    id:
+      source.id === null || source.id === undefined
+        ? null
+        : safeExternalId(source.id, "keyword"),
+    name: safeText(source.name, 120),
+    slug: safeSlug(source.slug || source.name),
+  };
+}
+
+function normalizeStoredTrigger(trigger, index = 0) {
+  const source = trigger && typeof trigger === "object" ? trigger : {};
+  return {
+    id: safeExternalId(source.id, `trigger-${index + 1}`),
+    slug: safeSlug(source.slug),
+    name: safeText(source.name, 200),
+    suits: safeText(source.suits, 80),
+    stoneCost: safeNumber(source.stoneCost, 0, 0, 20),
+    description: safeText(source.description, 8_000),
+  };
+}
+
+function normalizeStoredAction(action, index = 0) {
+  const source = action && typeof action === "object" ? action : {};
+  return {
+    id: safeExternalId(source.id, `action-${index + 1}`),
+    slug: safeSlug(source.slug),
+    name: safeText(source.name, 200),
+    type: safeText(source.type, 60).toLowerCase(),
+    typeLabel: safeText(source.typeLabel, 100),
+    isSignature: Boolean(source.isSignature),
+    stoneCost: safeNumber(source.stoneCost, 0, 0, 20),
+    range: safeText(source.range, 80),
+    rangeType: safeText(source.rangeType, 60).toLowerCase(),
+    rangeTypeLabel: safeText(source.rangeTypeLabel, 100),
+    stat: safeText(source.stat, 80),
+    statSuits: safeText(source.statSuits, 80),
+    statModifier: safeText(source.statModifier, 80),
+    resistedBy: safeText(source.resistedBy, 80),
+    resistedByLabel: safeText(source.resistedByLabel, 100),
+    targetNumber: safeText(source.targetNumber, 80),
+    targetSuits: safeText(source.targetSuits, 80),
+    damage: safeText(source.damage, 120),
+    description: safeText(source.description, 8_000),
+    triggers: Array.isArray(source.triggers)
+      ? source.triggers
+          .slice(0, 50)
+          .map((trigger, triggerIndex) => normalizeStoredTrigger(trigger, triggerIndex))
+      : [],
+  };
+}
+
+function normalizeStoredAbility(ability, index = 0) {
+  const source = ability && typeof ability === "object" ? ability : {};
+  return {
+    id: safeExternalId(source.id, `ability-${index + 1}`),
+    slug: safeSlug(source.slug),
+    name: safeText(source.name, 200),
+    suits: safeText(source.suits, 80),
+    defensiveAbilityType: safeText(source.defensiveAbilityType, 100),
+    stoneCost: safeNumber(source.stoneCost, 0, 0, 20),
+    description: safeText(source.description, 8_000),
+  };
+}
+
+function normalizeStoredCardSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+  const slug = safeSlug(snapshot.slug);
+  const fetchedAt = Number.isFinite(Date.parse(snapshot.fetchedAt))
+    ? new Date(snapshot.fetchedAt).toISOString()
+    : "";
+  return {
+    id: safeExternalId(snapshot.id, "card"),
+    slug,
+    gameModeType: safeText(snapshot.gameModeType, 40).toLowerCase(),
+    name: safeText(snapshot.name, 200),
+    title: safeText(snapshot.title, 200),
+    displayName: safeText(snapshot.displayName || snapshot.name, 300),
+    nicknames: safeTextList(snapshot.nicknames, 30, 200),
+    faction: safeText(snapshot.faction, 80).toLowerCase(),
+    factionLabel: safeText(snapshot.factionLabel, 120),
+    secondFaction: safeText(snapshot.secondFaction, 80).toLowerCase(),
+    secondFactionLabel: safeText(snapshot.secondFactionLabel, 120),
+    station: safeText(snapshot.station, 80).toLowerCase(),
+    stationLabel: safeText(snapshot.stationLabel, 120),
+    cost: safeOptionalNumber(snapshot.cost, 0, 1_000),
+    health: safeOptionalNumber(snapshot.health, 0, 1_000),
+    size: safeOptionalNumber(snapshot.size, 0, 100),
+    base: safeOptionalNumber(snapshot.base, 0, 1_000),
+    baseLabel: safeText(snapshot.baseLabel, 80),
+    defense: safeOptionalNumber(snapshot.defense, -100, 100),
+    defenseSuit: safeText(snapshot.defenseSuit, 80),
+    willpower: safeOptionalNumber(snapshot.willpower, -100, 100),
+    willpowerSuit: safeText(snapshot.willpowerSuit, 80),
+    speed: safeOptionalNumber(snapshot.speed, -100, 100),
+    count: safeOptionalNumber(snapshot.count, 0, 1_000),
+    isUnhirable: Boolean(snapshot.isUnhirable),
+    isBeta: Boolean(snapshot.isBeta),
+    generatesStone: Boolean(snapshot.generatesStone),
+    keywords: Array.isArray(snapshot.keywords)
+      ? snapshot.keywords.slice(0, 100).map(normalizeStoredKeyword)
+      : [],
+    characteristics: safeTextList(snapshot.characteristics, 100, 200),
+    miniature: null,
+    actions: Array.isArray(snapshot.actions)
+      ? snapshot.actions
+          .slice(0, 100)
+          .map((action, index) => normalizeStoredAction(action, index))
+      : [],
+    abilities: Array.isArray(snapshot.abilities)
+      ? snapshot.abilities
+          .slice(0, 100)
+          .map((ability, index) => normalizeStoredAbility(ability, index))
+      : [],
+    fetchedAt,
+    source: {
+      provider: "BiggerHat",
+      apiUrl: slug
+        ? `https://biggerhat.net/api/v1/characters/${encodeURIComponent(slug)}`
+        : "https://biggerhat.net/api/v1",
+    },
+  };
+}
+
 function normalizeStoredModel(model) {
   const source = model && typeof model === "object" ? model : {};
   const legacyType = String(source.type || "Other");
   const type = ["Minion", "Peon", "Other"].includes(legacyType) ? legacyType : "Other";
   return {
-    ...source,
-    id: source.id || uid(),
-    name: String(source.name || ""),
-    cost: Number(source.cost || 0),
+    id: safeIdentifier(source.id, "model"),
+    name: safeText(source.name, 200),
+    cost: safeNumber(source.cost, 0, 0, 1_000),
     type,
     henchman: Boolean(source.henchman || legacyType === "Henchman"),
-    keywords: String(source.keywords || ""),
+    keywords: safeText(source.keywords, 500),
     versatile: Boolean(source.versatile),
     outOfKeyword: Boolean(source.outOfKeyword),
-    injuries: Math.max(0, Number(source.injuries || 0)),
-    cardSlug: source.cardSlug || source.cardSnapshot?.slug || null,
-    cardSnapshot:
-      source.cardSnapshot && typeof source.cardSnapshot === "object"
-        ? source.cardSnapshot
-        : null,
+    injuries: safeInteger(source.injuries, 0, 0, 100),
+    addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
+    scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
+    cardId:
+      source.cardId === null || source.cardId === undefined
+        ? null
+        : safeExternalId(source.cardId, "card"),
+    cardSlug: safeSlug(source.cardSlug || source.cardSnapshot?.slug) || null,
+    cardSnapshot: normalizeStoredCardSnapshot(source.cardSnapshot),
   };
 }
 
@@ -1022,21 +1216,85 @@ function normalizeStoredTalent(talent, slot, index) {
       : talent && typeof talent === "object"
         ? talent
         : {};
-  const hasSnapshot = source.snapshot && typeof source.snapshot === "object";
+  const rawSnapshot =
+    source.snapshot && typeof source.snapshot === "object" && !Array.isArray(source.snapshot)
+      ? source.snapshot
+      : null;
+  const sourceCard = normalizeStoredCardSnapshot(rawSnapshot?.sourceCard);
+  const entry =
+    slot?.kind === "ability"
+      ? normalizeStoredAbility(rawSnapshot?.entry, index)
+      : normalizeStoredAction(rawSnapshot?.entry, index);
+  const selectedTrigger = rawSnapshot?.selectedTrigger
+    ? normalizeStoredTrigger(rawSnapshot.selectedTrigger, index)
+    : null;
+  const snapshot = rawSnapshot
+    ? {
+        sourceCard,
+        entry,
+        selectedTrigger,
+      }
+    : null;
+  const hasSnapshot = Boolean(snapshot?.sourceCard);
+  const mode =
+    hasSnapshot && (source.mode === "biggerhat" || !source.mode)
+      ? "biggerhat"
+      : "manual";
   return {
-    ...source,
-    slotId: source.slotId || slot?.id || `legacy-${index + 1}`,
-    kind: source.kind || slot?.kind || "",
-    mode: source.mode || (hasSnapshot ? "biggerhat" : "manual"),
-    name: String(source.name || ""),
-    source: String(source.source || ""),
-    snapshot: hasSnapshot ? source.snapshot : null,
+    slotId: safeIdentifier(slot?.id || source.slotId, `talent-${index + 1}`),
+    kind: safeText(slot?.kind || source.kind, 40),
+    mode,
+    cardId:
+      source.cardId === null || source.cardId === undefined
+        ? null
+        : safeExternalId(source.cardId, "card"),
+    cardSlug: safeSlug(source.cardSlug) || null,
+    entryId:
+      source.entryId === null || source.entryId === undefined
+        ? null
+        : safeExternalId(source.entryId, "entry"),
+    name: safeText(source.name, 300),
+    source: safeText(source.source, 300),
+    snapshot: hasSnapshot ? snapshot : null,
+  };
+}
+
+function normalizeStoredEquipment(item) {
+  const source = item && typeof item === "object" ? item : {};
+  return {
+    id: safeIdentifier(source.id, "equipment"),
+    name: safeText(source.name, 300),
+    br: source.br === null || source.br === undefined ? null : safeText(source.br, 80),
+    cc:
+      source.cc === null || source.cc === undefined
+        ? null
+        : safeNumber(source.cc, 0, 0, 1_000),
+  };
+}
+
+function normalizeStoredGame(game) {
+  const source = game && typeof game === "object" ? game : {};
+  return {
+    id: safeIdentifier(source.id, "game"),
+    week: safeInteger(source.week, 1, 1, 99),
+    opponent: safeText(source.opponent, 200),
+    vp: safeNumber(source.vp, 0, -1_000, 10_000),
+    schemes: safeNumber(source.schemes, 0, 0, 100),
+    won: Boolean(source.won),
+    lost: Boolean(source.lost),
+    pathGoal: Boolean(source.pathGoal),
+    withdrewEarly: Boolean(source.withdrewEarly),
+    withdrewLate: Boolean(source.withdrewLate),
+    gap: safeNumber(source.gap, 0, -1_000, 1_000),
+    hand: safeNumber(source.hand, 0, 0, 100),
+    scrip: safeNumber(source.scrip, 0, -1_000, 10_000),
+    xp: safeNumber(source.xp, 0, 0, 100),
   };
 }
 
 function mergeDefaults(saved) {
   const base = clone(defaultState);
-  if (!saved || typeof saved !== "object") return base;
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return base;
   const savedLeader = saved.leader && typeof saved.leader === "object" ? saved.leader : {};
   const savedCrew =
     saved.crew && typeof saved.crew === "object" && !Array.isArray(saved.crew)
@@ -1049,31 +1307,53 @@ function mergeDefaults(saved) {
   const savedTalents = Array.isArray(savedLeader.talents) ? savedLeader.talents : [];
   const savedArsenal = saved.arsenal && typeof saved.arsenal === "object" ? saved.arsenal : {};
   return {
-    ...base,
-    ...saved,
     version: defaultState.version,
     crew: {
-      ...base.crew,
-      ...savedCrew,
-      keywords: [0, 1].map((index) => String(savedKeywords[index] ?? "")),
+      name: safeText(savedCrew.name, 200),
+      player: safeText(savedCrew.player, 200),
+      faction: safeText(savedCrew.faction, 80),
+      keywords: [0, 1].map((index) => safeText(savedKeywords[index], 200)),
     },
-    campaign: { ...base.campaign, ...(saved.campaign || {}) },
+    campaign: {
+      length: safeInteger(saved.campaign?.length, base.campaign.length, 4, 14),
+      week: safeInteger(saved.campaign?.week, base.campaign.week, 1, 14),
+      meetingDay: safeText(saved.campaign?.meetingDay, 120),
+    },
     leader: {
-      ...base.leader,
-      ...savedLeader,
-      talents: savedTalents.map((talent, index) =>
+      name: safeText(savedLeader.name, 200),
+      archetype: archetypes[savedLeader.archetype] ? savedLeader.archetype : "",
+      characteristics: [0, 1].map((index) =>
+        safeText(savedLeader.characteristics?.[index], 200),
+      ),
+      size: safeInteger(savedLeader.size, base.leader.size, 1, 10),
+      base: safeInteger(savedLeader.base, base.leader.base, 1, 100),
+      path: ["Bruiser", "Strategist"].includes(savedLeader.path)
+        ? savedLeader.path
+        : base.leader.path,
+      talents: savedTalents.slice(0, slots.length).map((talent, index) =>
         normalizeStoredTalent(talent, slots[index], index),
       ),
+      crewCard: safeText(savedLeader.crewCard, 100),
+      xp: safeInteger(savedLeader.xp, base.leader.xp, 0, xpTiers.length),
+      advances: Array.isArray(savedLeader.advances)
+        ? savedLeader.advances
+            .slice(0, xpTiers.length)
+            .map((advance) => safeText(advance?.name ?? advance?.label ?? advance, 200))
+            .filter(Boolean)
+        : [],
     },
     arsenal: {
-      ...base.arsenal,
-      ...savedArsenal,
       models: Array.isArray(savedArsenal.models)
-        ? savedArsenal.models.map(normalizeStoredModel)
+        ? savedArsenal.models.slice(0, 200).map(normalizeStoredModel)
         : [],
-      equipment: Array.isArray(savedArsenal.equipment) ? savedArsenal.equipment : [],
+      equipment: Array.isArray(savedArsenal.equipment)
+        ? savedArsenal.equipment.slice(0, 500).map(normalizeStoredEquipment)
+        : [],
+      scrip: safeNumber(savedArsenal.scrip, base.arsenal.scrip, -1_000, 100_000),
     },
-    games: Array.isArray(saved.games) ? saved.games : [],
+    games: Array.isArray(saved.games)
+      ? saved.games.slice(0, 500).map(normalizeStoredGame)
+      : [],
   };
 }
 
@@ -2520,7 +2800,7 @@ function renderArsenal() {
       .map(
         (model) => `
           <div class="model-row">
-            <span class="model-cost">${model.cost}</span>
+            <span class="model-cost">${escapeHtml(model.cost)}</span>
             <span class="model-main">
               <b>${escapeHtml(model.name)}</b>
               <small>${escapeHtml(
@@ -2529,7 +2809,7 @@ function renderArsenal() {
                   .join(" · "),
               )}</small>
               ${model.cardSnapshot || model.cardSlug
-                ? `<button class="model-card-link" type="button" data-view-model-card="${model.id}">
+                ? `<button class="model-card-link" type="button" data-view-model-card="${escapeHtml(model.id)}">
                     ${message("openCard")} · ${message("cardCounts", {
                       actions: model.cardSnapshot?.actions?.length || 0,
                       abilities: model.cardSnapshot?.abilities?.length || 0,
@@ -2540,11 +2820,11 @@ function renderArsenal() {
             <span class="model-badge">${model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
             <span class="mini-stepper">
               ${message("injuries")}
-              <button type="button" data-injury-minus="${model.id}" aria-label="${message("decreaseInjuries")}">−</button>
-              <b>${model.injuries || 0}</b>
-              <button type="button" data-injury-plus="${model.id}" aria-label="${message("addInjury")}">+</button>
+              <button type="button" data-injury-minus="${escapeHtml(model.id)}" aria-label="${message("decreaseInjuries")}">−</button>
+              <b>${escapeHtml(model.injuries || 0)}</b>
+              <button type="button" data-injury-plus="${escapeHtml(model.id)}" aria-label="${message("addInjury")}">+</button>
             </span>
-            <button class="row-delete" type="button" data-delete-model="${model.id}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
+            <button class="row-delete" type="button" data-delete-model="${escapeHtml(model.id)}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
           </div>`,
       )
       .join("");
@@ -2559,8 +2839,8 @@ function renderArsenal() {
         (item) => `
           <div class="equipment-item">
             <b>${escapeHtml(item.name)}</b>
-            <button class="row-delete" type="button" data-delete-equipment="${item.id}" aria-label="${message("deleteItem")}">×</button>
-            <small>${item.cc != null ? `CC ${item.cc} · BR ${displayBr(item.br)}` : message("customEntry")}</small>
+            <button class="row-delete" type="button" data-delete-equipment="${escapeHtml(item.id)}" aria-label="${message("deleteItem")}">×</button>
+            <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}</small>
           </div>`,
       )
       .join("");
@@ -2664,9 +2944,9 @@ function renderChronicle() {
             <span class="game-entry-number">${String(state.games.length - reverseIndex).padStart(2, "0")}</span>
             <span>
               <b>${escapeHtml(game.opponent || message("unknownOpponent"))}</b>
-              <p>${message("week", { n: game.week })} · ${game.vp} VP · ${game.won ? message("resultWin") : game.lost ? message("resultLoss") : message("resultDraw")}</p>
+              <p>${message("week", { n: escapeHtml(game.week) })} · ${escapeHtml(game.vp)} VP · ${game.won ? message("resultWin") : game.lost ? message("resultLoss") : message("resultDraw")}</p>
             </span>
-            <span class="game-entry-gain">+${game.scrip} ${localized("скрип", "scrip")}<br>+${game.xp} XP</span>
+            <span class="game-entry-gain">+${escapeHtml(game.scrip)} ${localized("скрип", "scrip")}<br>+${escapeHtml(game.xp)} XP</span>
           </div>`,
       )
       .join("");
@@ -3216,11 +3496,11 @@ function renderTalentEntries(card) {
                     ? `<span class="talent-trigger-warning">${message("talentNeedsTrigger")}</span>`
                     : `<label>
                         ${message("talentChooseTrigger")}
-                        <select data-trigger-choice="${entry.id}">
+                        <select data-trigger-choice="${escapeHtml(entry.id)}">
                           ${triggers
                             .map(
                               (trigger) =>
-                                `<option value="${trigger.id}">${escapeHtml(
+                                `<option value="${escapeHtml(trigger.id)}">${escapeHtml(
                                   [
                                     plainCardText(trigger.suits),
                                     trigger.name,
@@ -3234,7 +3514,7 @@ function renderTalentEntries(card) {
                         </select>
                       </label>`
                   : ""}
-                <button class="entry-select-button" type="button" data-select-talent-entry="${entry.id}" ${unavailable ? "disabled" : ""}>
+                <button class="entry-select-button" type="button" data-select-talent-entry="${escapeHtml(entry.id)}" ${unavailable ? "disabled" : ""}>
                   ${message("chooseFromCard")}
                 </button>
               </div>
@@ -3931,13 +4211,6 @@ async function submitChatQuestion(event) {
   const question = chatInput.value.trim();
   if (!question) return;
 
-  const requestHistory = chatHistory
-    .slice(-CHAT_HISTORY_LIMIT)
-    .map(({ role, content }) => ({ role, content }));
-
-  appendChatMessage({ role: "user", content: question, sources: [] });
-  chatInput.value = "";
-
   const endpoint = chatApiUrl();
   if (!endpoint || location.protocol === "file:") {
     appendChatMessage(
@@ -3954,23 +4227,65 @@ async function submitChatQuestion(event) {
     return;
   }
 
+  let apiSessionToken;
+  try {
+    apiSessionToken = await window.CloudCampaignApi?.ensureSession();
+  } catch {
+    return;
+  }
+  if (!apiSessionToken) {
+    appendChatMessage(
+      {
+        role: "assistant",
+        content: message("chatUnavailable"),
+        sources: [],
+      },
+      { error: true },
+    );
+    return;
+  }
+
+  const requestHistory = chatHistory
+    .slice(-CHAT_HISTORY_LIMIT)
+    .map(({ role, content }) => ({ role, content }));
+
+  appendChatMessage({ role: "user", content: question, sources: [] });
+  chatInput.value = "";
+
   setChatBusy(true);
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 50000);
+  const requestBody = JSON.stringify({
+    message: question,
+    history: requestHistory,
+    locale: currentLocale,
+    section: activeRoute(),
+    sessionId: chatSessionId(),
+  });
+  const send = async (token) => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 50000);
+    try {
+      return await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: requestBody,
+        signal: controller.signal,
+      });
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: question,
-        history: requestHistory,
-        locale: currentLocale,
-        section: activeRoute(),
-        sessionId: chatSessionId(),
-      }),
-      signal: controller.signal,
-    });
+    let response = await send(apiSessionToken);
+    if (response.status === 401) {
+      window.CloudCampaignApi?.clearSession();
+      apiSessionToken = await window.CloudCampaignApi?.ensureSession();
+      if (!apiSessionToken) throw new Error("Session unavailable");
+      response = await send(apiSessionToken);
+    }
 
     let payload = {};
     try {
@@ -4003,7 +4318,6 @@ async function submitChatQuestion(event) {
       { error: true },
     );
   } finally {
-    window.clearTimeout(timeout);
     setChatBusy(false);
     chatInput.focus();
   }
@@ -4340,6 +4654,9 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
     }
     renderAll();
     renderChatTranscript();
+    window.dispatchEvent(
+      new CustomEvent("malifaux-locale-change", { detail: { locale: currentLocale } }),
+    );
     if (document.querySelector("#modelDialog").open) {
       if (pendingModelCard) renderModelCardSelection(pendingModelCard);
       runModelCardSearch();
@@ -4377,3 +4694,25 @@ renderChatTranscript();
 activateReferenceTab(currentReferenceTab);
 initializeRouting();
 validateAllKeywords();
+
+window.MalifauxBuilder = Object.freeze({
+  getState: () => clone(state),
+  getLocale: () => currentLocale,
+  notify: (text) => toast(String(text)),
+  replaceState(value) {
+    state = mergeDefaults(value);
+    saveState();
+    document.querySelectorAll("[data-bind]").forEach((input) => {
+      input.value = getAtPath(input.dataset.bind) ?? "";
+    });
+    document.querySelectorAll("[data-path-choice]").forEach((input) => {
+      input.checked = state.leader.path === input.value;
+    });
+    document.querySelector("#gameForm").reset();
+    resetKeywordValidationState();
+    renderAll();
+    validateAllKeywords();
+    window.dispatchEvent(new CustomEvent("malifaux-state-replaced"));
+  },
+});
+window.dispatchEvent(new CustomEvent("malifaux-builder-ready"));

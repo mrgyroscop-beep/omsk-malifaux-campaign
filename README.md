@@ -26,7 +26,7 @@ python -m http.server 4173
 - русская и английская версии единого интерфейса;
 - титульное досье кампании и недельный цикл;
 - пять архетипов лидера с корректными характеристиками и ограничениями;
-- поиск карточек моделей через BiggerHat с локальным кэшем;
+- поиск карточек моделей через BiggerHat с локальным браузерным кэшем и общим Cloudflare KV-кэшем;
 - свободный ввод двух ключевых слов с подсказками и проверкой по каталогу BiggerHat;
 - автоматическое заполнение модели в арсенале и характеристики Henchman;
 - выбор Actions, Tactical Actions, Abilities и триггера Heavy Hitter с карточки;
@@ -41,8 +41,10 @@ python -m http.server 4173
 - краткие справочники по травмам и продвижениям, а также полный каталог из 82 предметов снаряжения;
 - раздел «Правила» с точными страницами 14–56 оригинальной книги, иллюстрациями и
   двуязычным оглавлением;
-- «Архивариус» с ответами по Campaign Mode, поиском по оригинальному тексту и
+- «Архивариус» с ответами по Campaign Mode через DeepSeek и Cloudflare AI Gateway, поиском по оригинальному тексту и
   кликабельными ссылками на использованные страницы;
+- необязательные облачные досье в Cloudflare D1: публичная хроника и таблица игроков с отдельным ключом организатора;
+- Turnstile-защита запросов к ИИ и изменений облачных данных;
 - кликабельные номера страниц во всех разделах и возврат к исходному месту;
 - автосохранение, импорт/экспорт JSON и печать.
 
@@ -65,7 +67,8 @@ python -m http.server 4173
 
 ### Архивариус
 
-Окно «Архивариус» отправляет вопрос через отдельный Cloudflare Worker. Ключ
+Окно «Архивариус» отправляет вопрос через отдельный Cloudflare Worker и
+Cloudflare AI Gateway. Ключ
 DeepSeek хранится только в Secret-хранилище Cloudflare и никогда не попадает в
 HTML, JavaScript или сетевые запросы браузера. Worker ищет подходящие фрагменты
 печатных страниц 14–56 и требует от модели отвечать только по найденному
@@ -76,12 +79,49 @@ HTML, JavaScript или сетевые запросы браузера. Worker �
 опубликованном сайте и через `localhost`; небезопасный источник `file://`
 намеренно не поддерживается.
 
+### Облачная кампания и безопасность
+
+Сайт остаётся статическим и может публиковаться на GitHub Pages. Cloudflare
+Worker обслуживает только API, поэтому переносить HTML, CSS, JavaScript и
+встроенные правила в Cloudflare Pages не требуется.
+
+Кнопка «Облачная кампания» создаёт общую запись в D1. Ссылка вида
+`?campaign=…#chronicle` открывает таблицу игроков и хронику только для чтения.
+Изменения разрешены владельцу отдельного ключа организатора. Ключ показывается
+один раз, хранится только в браузере организатора и никогда не добавляется в
+публичную ссылку; в D1 сохраняется только его SHA-256-хэш. Без авторизации это
+сознательная модель доступа: любой, у кого есть ссылка, может читать кампанию,
+но не редактировать её. Браузер хранит ключи раздельно для каждой кампании,
+поэтому открытие чужой публичной ссылки не стирает права организатора. Кампанию
+вместе с таблицей и хроникой можно удалить из облака по подтверждению.
+
+Перед записью и вопросом Архивариусу браузер получает короткую анонимную сессию
+после проверки Turnstile. Сессия подписана Worker, привязана к разрешённому
+Origin и действует два часа. BiggerHat запрашивается через Worker; ответы
+кэшируются в KV, а Cron обновляет каталоги каждые шесть часов. Если свежий ответ
+BiggerHat временно недоступен, Worker может вернуть сохранённую устаревшую
+копию. Cloudflare Web Analytics работает без cookies и не записывает параметры
+публичной ссылки.
+
+Для первого развёртывания Worker:
+
+```powershell
+cd worker
+npm install
+npx wrangler d1 migrations apply DB --remote
+npx wrangler deploy
+```
+
+Значения `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY` и `TURNSTILE_SECRET` должны
+задаваться через Cloudflare Secrets, а не через Git. Идентификаторы D1, KV,
+публичный Turnstile sitekey и расписание Cron находятся в `worker/wrangler.jsonc`.
+
 ### Карточки моделей и офлайн-режим
 
 Каталог карточек загружается из сторонней базы
-[BiggerHat](https://biggerhat.net/) при первом открытии селектора и сохраняется
-локально в браузере. Поиск после этого не создаёт новых запросов; полная карточка
-загружается только при выборе модели.
+[BiggerHat](https://biggerhat.net/) через Cloudflare Worker при первом открытии
+селектора и сохраняется в Cloudflare KV и локально в браузере. Поиск после этого
+не создаёт новых запросов; полная карточка загружается только при выборе модели.
 
 Выбранная карточка и заимствованный талант сохраняются снимком внутри досье.
 Поэтому уже созданные арсеналы, просмотр карточек и экспортированные JSON работают
@@ -117,7 +157,7 @@ Then open `http://localhost:4173`.
 - Russian and English versions in one interface;
 - campaign dossier and weekly cycle;
 - all five Leader Archetypes with their correct stats and limits;
-- BiggerHat model-card search with a local browser cache;
+- BiggerHat model-card search with browser and Cloudflare KV caches;
 - free entry, autocomplete, and BiggerHat validation for both campaign keywords;
 - automatic arsenal entry, including the Henchman characteristic;
 - card-based Action, Tactical Action, Ability, and Heavy Hitter trigger selection;
@@ -131,8 +171,11 @@ Then open `http://localhost:4173`.
 - concise Injury and Advancement references plus the complete 82-item Equipment catalog;
 - a Rules section containing exact original pages 14–56, illustrations, and a
   bilingual table of contents;
-- an Archivist assistant grounded in the original Campaign Mode text with
+- an Archivist assistant routed through DeepSeek and Cloudflare AI Gateway,
+  grounded in the original Campaign Mode text with
   clickable source-page citations;
+- optional Cloudflare D1 dossiers with a shared chronicle and player table;
+- Turnstile protection for AI requests and cloud-data mutations;
 - clickable page references throughout the builder with contextual back navigation;
 - browser autosave, JSON import/export, and print layout.
 
@@ -153,22 +196,60 @@ Russian. The RU / EN switch changes the interface and table of contents.
 
 ### Archivist
 
-The Archivist sends questions through a separate Cloudflare Worker. The DeepSeek
-key stays in Cloudflare Secrets and is never embedded in browser code or browser
-network requests. The Worker retrieves relevant text from printed pages 14–56
-and instructs the model to answer only from that context. Every returned source
-opens directly in the Rules section.
+The Archivist sends questions through a separate Cloudflare Worker and
+Cloudflare AI Gateway. The DeepSeek key stays in Cloudflare Secrets and is never
+embedded in browser code or browser network requests. The Worker retrieves
+relevant text from printed pages 14–56 and instructs the model to answer only
+from that context. Every returned source opens directly in the Rules section.
 
 Conversation history stays in the current tab's `sessionStorage`. Dossier,
 player, and arsenal data is not sent. Chat works on the published site and
 through `localhost`; the unsafe `file://` origin is intentionally unsupported.
 
+### Cloud campaigns and security
+
+The site remains static and can stay on GitHub Pages. Cloudflare serves only the
+API, so the HTML, CSS, JavaScript, and bundled rules do not need to move to
+Cloudflare Pages.
+
+The Cloud Campaign button creates a shared D1 record. A link such as
+`?campaign=…#chronicle` exposes the player table and shared chronicle in
+read-only mode. Mutations require a separate organizer key. The raw key is shown
+once, remains only in the organizer's browser, and is never included in the
+share link; D1 stores only its SHA-256 hash. Since there is no user
+authentication, anyone with the public link can read the campaign but cannot
+edit it. Organizer keys are stored separately per campaign, so opening another
+public link does not erase existing organizer access. A confirmed delete removes
+the cloud dossier together with its player table and chronicle.
+
+Before cloud mutations or an Archivist question, the browser obtains a
+short-lived anonymous session after Turnstile verification. The Worker signs the
+session, binds it to an allowed Origin, and expires it after two hours. BiggerHat
+requests pass through the Worker, use a KV read-through cache, and are prewarmed
+by Cron every six hours. A stale KV copy is used if the upstream service is
+temporarily unavailable. Cloudflare Web Analytics uses no cookies and does not
+record the public link's query parameters.
+
+Initial Worker deployment:
+
+```powershell
+cd worker
+npm install
+npx wrangler d1 migrations apply DB --remote
+npx wrangler deploy
+```
+
+Set `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY`, and `TURNSTILE_SECRET` as
+Cloudflare Secrets, never in Git. D1/KV IDs, the public Turnstile sitekey, and
+the Cron schedule live in `worker/wrangler.jsonc`.
+
 ### Model cards and offline use
 
 The card catalog is loaded from the third-party
-[BiggerHat](https://biggerhat.net/) database when a picker is first opened and is
-then cached locally in the browser. Further searches do not make API requests; a
-full card is fetched only when a model is selected.
+[BiggerHat](https://biggerhat.net/) database through the Cloudflare Worker when
+a picker is first opened. It is cached both in Cloudflare KV and locally in the
+browser. Further searches do not make API requests; a full card is fetched only
+when a model is selected.
 
 Every selected card and borrowed talent is stored as a snapshot inside the
 dossier. Existing arsenals, card views, and exported JSON therefore keep working

@@ -11,10 +11,23 @@
       name="chat-api-url"
       content="https://omsk-malifaux-campaign-chat.mrgyroscop.workers.dev/api/chat"
     />
+    <meta
+      name="app-api-url"
+      content="https://omsk-malifaux-campaign-chat.mrgyroscop.workers.dev"
+    />
+    <meta
+      name="biggerhat-api-url"
+      content="https://omsk-malifaux-campaign-chat.mrgyroscop.workers.dev/api/biggerhat/v1"
+    />
+    <meta
+      name="public-site-url"
+      content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
+    />
+    <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=6" />
-    <link rel="stylesheet" href="dossier-theme.css?v=15" />
+    <link rel="stylesheet" href="dossier-theme.css?v=16" />
     <link rel="stylesheet" href="print.css?v=1" media="print" />
   </head>
   <body class="theme-dossier">
@@ -137,6 +150,15 @@
             >
               <span class="archivist-button-sigil" aria-hidden="true">?</span>
               <span class="archivist-button-label">Архивариус</span>
+            </button>
+            <button
+              class="button button-ghost cloud-button"
+              id="openCloudButton"
+              type="button"
+              aria-label="Открыть облачную кампанию"
+            >
+              <span class="cloud-button-sigil" aria-hidden="true">☁</span>
+              <span>Облачная кампания</span>
             </button>
             <a
               class="button button-ghost feedback-link"
@@ -931,6 +953,55 @@
     </dialog>
 
     <dialog
+      id="cloudDialog"
+      class="modal modal-wide cloud-dossier-dialog"
+      aria-labelledby="cloudDialogTitle"
+    >
+      <div class="modal-panel cloud-dossier-panel">
+        <div class="modal-heading cloud-dossier-head">
+          <div>
+            <span class="kicker">Общий архив · Cloudflare D1</span>
+            <h2 id="cloudDialogTitle">Облачная кампания</h2>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="cloudDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <div id="cloudDialogContent" data-dynamic-i18n></div>
+      </div>
+    </dialog>
+
+    <dialog
+      id="securityDialog"
+      class="modal security-dialog"
+      aria-labelledby="securityDialogTitle"
+    >
+      <div class="modal-panel security-panel">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Проверка канала</span>
+            <h2 id="securityDialogTitle">Один быстрый штамп</h2>
+          </div>
+          <button
+            class="modal-close"
+            id="securityDialogClose"
+            type="button"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <p class="security-copy" id="securityCopy">
+          Проверка Cloudflare защищает Архивариуса и облачные записи от автоматического спама.
+          После неё доступ сохранится на два часа.
+        </p>
+        <div class="turnstile-slot" id="turnstileWidget"></div>
+        <p class="security-status" id="securityStatus" role="status" aria-live="polite"></p>
+      </div>
+    </dialog>
+
+    <dialog
       id="flowchartDialog"
       class="modal flowchart-dialog"
       aria-labelledby="flowchartDialogTitle"
@@ -1128,8 +1199,21 @@
 
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
-    <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=17"></script>
+    <!-- Cloudflare Web Analytics -->
+    <script
+      type="module"
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token":"7447b899ce164a429158661ab368751a"}'
+    ></script>
+    <!-- End Cloudflare Web Analytics -->
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+      async
+      defer
+    ></script>
+    <script src="biggerhat.js?v=3"></script>
+    <script src="app.js?v=18"></script>
+    <script src="cloud.js?v=1"></script>
     <script src="print.js?v=1"></script>
   </body>
 </html>

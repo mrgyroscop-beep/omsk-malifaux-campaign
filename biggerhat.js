@@ -1,12 +1,18 @@
 (() => {
   "use strict";
 
-  const API_BASE = "https://biggerhat.net/api/v1";
+  const SOURCE_API_BASE = "https://biggerhat.net/api/v1";
+  const PROXY_API_BASE =
+    document.querySelector('meta[name="biggerhat-api-url"]')?.content.trim().replace(/\/+$/u, "") ||
+    "";
+  const API_BASE =
+    location.protocol === "file:" || !PROXY_API_BASE ? SOURCE_API_BASE : PROXY_API_BASE;
   const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
   const DETAILS_KEY = "m4e-biggerhat-details-v1";
   const KEYWORDS_KEY = "m4e-biggerhat-keywords-v1";
   const PAGE_SIZE = 100;
   const DETAIL_CACHE_LIMIT = 50;
+  const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000;
   const KEYWORDS_CACHE_TTL = 24 * 60 * 60 * 1000;
 
   let catalogMemory = null;
@@ -189,18 +195,23 @@
       fetchedAt: new Date().toISOString(),
       source: {
         provider: "BiggerHat",
-        apiUrl: raw.slug ? `${API_BASE}/characters/${encodeURIComponent(raw.slug)}` : API_BASE,
+        apiUrl: raw.slug
+          ? `${SOURCE_API_BASE}/characters/${encodeURIComponent(raw.slug)}`
+          : SOURCE_API_BASE,
       },
     };
   }
 
   async function request(path, parameters = {}, options = {}) {
-    const url = new URL(`${API_BASE}/${path.replace(/^\/+/, "")}`);
-    Object.entries(parameters).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== "") {
-        url.searchParams.set(key, String(value));
-      }
-    });
+    const buildUrl = (base) => {
+      const url = new URL(`${base}/${path.replace(/^\/+/, "")}`);
+      Object.entries(parameters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          url.searchParams.set(key, String(value));
+        }
+      });
+      return url;
+    };
 
     const controller = new AbortController();
     const abortFromOutside = () => controller.abort();
@@ -208,19 +219,34 @@
     options.signal?.addEventListener("abort", abortFromOutside, { once: true });
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        const error = new Error(`BiggerHat responded with ${response.status}`);
-        error.status = response.status;
-        const retryAfter = Number(response.headers.get("Retry-After"));
-        error.retryAfter =
-          Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
-        throw error;
+      const fetchJson = async (base) => {
+        const response = await fetch(buildUrl(base), {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const error = new Error(`BiggerHat responded with ${response.status}`);
+          error.status = response.status;
+          const retryAfter = Number(response.headers.get("Retry-After"));
+          error.retryAfter =
+            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+          throw error;
+        }
+        return response.json();
+      };
+
+      try {
+        return await fetchJson(API_BASE);
+      } catch (error) {
+        if (
+          API_BASE === SOURCE_API_BASE ||
+          controller.signal.aborted ||
+          (error.status && error.status < 500)
+        ) {
+          throw error;
+        }
+        return await fetchJson(SOURCE_API_BASE);
       }
-      return await response.json();
     } finally {
       clearTimeout(timeout);
       options.signal?.removeEventListener("abort", abortFromOutside);
@@ -231,6 +257,11 @@
     const stored = readStorage(CATALOG_KEY, null);
     if (!stored || !Array.isArray(stored.items)) return null;
     return stored;
+  }
+
+  function catalogCacheIsFresh(catalog) {
+    const savedAt = Date.parse(catalog?.savedAt || "");
+    return Number.isFinite(savedAt) && Date.now() - savedAt < CATALOG_CACHE_TTL;
   }
 
   async function fetchCatalog(onProgress) {
@@ -278,18 +309,24 @@
 
   async function loadCatalog(options = {}) {
     const { force = false, onProgress } = options;
-    if (!force && catalogMemory) return catalogMemory;
-    if (!force) {
-      const stored = getStoredCatalog();
-      if (stored) {
-        catalogMemory = stored;
-        return stored;
-      }
+    if (!force && catalogMemory && catalogCacheIsFresh(catalogMemory)) {
+      return catalogMemory;
+    }
+    const stored = force ? null : getStoredCatalog();
+    if (stored && catalogCacheIsFresh(stored)) {
+      catalogMemory = stored;
+      return stored;
     }
     if (catalogPromise) return catalogPromise;
-    catalogPromise = fetchCatalog(onProgress).finally(() => {
-      catalogPromise = null;
-    });
+    catalogPromise = fetchCatalog(onProgress)
+      .catch((error) => {
+        if (!stored) throw error;
+        catalogMemory = stored;
+        return stored;
+      })
+      .finally(() => {
+        catalogPromise = null;
+      });
     return catalogPromise;
   }
 
@@ -482,6 +519,7 @@
 
   window.BiggerHatCards = Object.freeze({
     apiBase: API_BASE,
+    sourceApiBase: SOURCE_API_BASE,
     normalizeSummary,
     normalizeDetail,
     normalizeKeyword,

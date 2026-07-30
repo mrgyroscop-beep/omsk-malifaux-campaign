@@ -1,8 +1,12 @@
-# Campaign Archivist Worker
+# Malifaux Campaign Cloud Worker
 
-Cloudflare Worker for the Malifaux Campaign Builder. It keeps the DeepSeek key
-server-side, retrieves relevant passages from the bundled Campaign Mode pages,
-and returns an answer plus printed source-page numbers.
+Cloudflare API for the Malifaux Campaign Builder. The static site stays on
+GitHub Pages; this Worker provides:
+
+- DeepSeek access through Cloudflare AI Gateway;
+- Turnstile-verified anonymous API sessions;
+- a KV read-through cache and Cron prewarming for BiggerHat;
+- D1 cloud dossiers, a shared player table, and a shared chronicle.
 
 ## Local checks
 
@@ -10,6 +14,7 @@ and returns an answer plus printed source-page numbers.
 npm install
 npm test
 npm run check
+npx wrangler deploy --dry-run
 ```
 
 Rebuild the generated rules module after replacing the source PDF:
@@ -20,42 +25,67 @@ python scripts/extract-rules.py
 
 ## Secrets
 
-Never put the real key in `wrangler.jsonc`, source code, or Git. Set it directly
-in Cloudflare:
+Never put real secret values in `wrangler.jsonc`, source code, or Git:
 
 ```powershell
 npx wrangler secret put DEEPSEEK_API_KEY
+npx wrangler secret put SESSION_SIGNING_KEY
+npx wrangler secret put TURNSTILE_SECRET
 ```
 
-For local Worker development, create an ignored `worker/.dev.vars`:
-
-```text
-DEEPSEEK_API_KEY=your-local-key
-```
+`SESSION_SIGNING_KEY` should be a long random value. For local development,
+place values in the ignored `worker/.dev.vars` file.
 
 ## Deploy
 
+Apply D1 migrations before the first production deployment:
+
 ```powershell
 npx wrangler login
+npx wrangler d1 migrations apply DB --remote
 npx wrangler deploy
 ```
 
-After deployment, place the resulting `/api/chat` URL in the
-`chat-api-url` meta element in the root `index.html`.
+`wrangler.jsonc` contains the non-secret KV/D1 IDs, Turnstile-compatible origin
+allowlist, AI binding, rate-limit bindings, and the six-hour Cron schedule.
 
-## Public request
+## API
 
-`POST /api/chat`
+Public reads:
 
-```json
-{
-  "message": "How do Barter Flips work?",
-  "history": [],
-  "locale": "en",
-  "sessionId": "browser-session-id"
-}
+```text
+GET /api/biggerhat/v1/characters
+GET /api/biggerhat/v1/keywords
+GET /api/biggerhat/v1/characters/:slug
+GET /api/campaigns/:campaignId
 ```
 
-The Worker accepts only configured origins, limits request and history sizes,
-applies the Cloudflare rate-limit binding, hides upstream errors, and never
-returns the DeepSeek credential.
+Turnstile exchange:
+
+```text
+POST /api/session
+```
+
+The returned origin-bound bearer session is required for chat and every cloud
+mutation:
+
+```text
+POST   /api/chat
+POST   /api/campaigns
+POST   /api/campaigns/:campaignId/organizer
+PUT    /api/campaigns/:campaignId
+DELETE /api/campaigns/:campaignId
+POST   /api/campaigns/:campaignId/players
+PATCH  /api/campaigns/:campaignId/players/:playerId
+DELETE /api/campaigns/:campaignId/players/:playerId
+POST   /api/campaigns/:campaignId/events
+PATCH  /api/campaigns/:campaignId/events/:eventId
+DELETE /api/campaigns/:campaignId/events/:eventId
+```
+
+Cloud mutations additionally require `X-Organizer-Token`. Only its SHA-256 hash
+is stored in D1. Public campaign links never contain the organizer token.
+
+The Worker enforces exact origins, request-size limits, per-IP rate limits,
+strict Turnstile action/hostname binding, bounded D1 payloads, and structured
+logs without prompts, responses, dossier contents, or credentials.

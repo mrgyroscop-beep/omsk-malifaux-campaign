@@ -133,6 +133,841 @@ body.theme-dossier {
   align-items: stretch;
 }
 
+/* Cloud campaign: a shared carbon-copy ledger inside the dossier */
+
+.theme-dossier .topbar .cloud-button {
+  gap: 8px;
+}
+
+.theme-dossier .cloud-button-sigil {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  color: var(--dossier-brass);
+  border: 1px solid rgba(185, 154, 89, 0.42);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.theme-dossier .modal.cloud-dossier-dialog {
+  width: min(1280px, calc(100% - 34px));
+  max-height: min(92dvh, 980px);
+  overflow: hidden;
+}
+
+.theme-dossier .cloud-dossier-dialog .cloud-dossier-panel {
+  box-sizing: border-box;
+  max-height: calc(min(92dvh, 980px) - 14px);
+  overflow: auto;
+  background:
+    linear-gradient(90deg, transparent 0 49px, rgba(151, 54, 45, 0.12) 50px 51px, transparent 52px),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 31px,
+      rgba(91, 75, 48, 0.065) 32px 33px
+    ),
+    radial-gradient(circle at 87% 9%, rgba(120, 76, 37, 0.09), transparent 18%),
+    var(--dossier-paper);
+}
+
+.theme-dossier .cloud-dossier-dialog .cloud-dossier-head {
+  position: sticky;
+  top: -30px;
+  z-index: 8;
+  margin: -1px -1px 24px;
+  padding: 1px 1px 15px;
+  background:
+    linear-gradient(180deg, var(--dossier-paper) 72%, rgba(232, 221, 196, 0.94));
+}
+
+.theme-dossier .cloud-dossier-head h2 {
+  font-size: clamp(24px, 3vw, 38px);
+}
+
+.theme-dossier .cloud-onboarding {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(480px, 1.2fr);
+  gap: clamp(28px, 5vw, 74px);
+  min-height: 520px;
+  align-items: center;
+  padding: clamp(14px, 3vw, 34px);
+}
+
+.theme-dossier .cloud-onboarding-copy {
+  position: relative;
+  padding: 34px 0 34px 32px;
+  border-left: 3px double rgba(121, 97, 56, 0.52);
+}
+
+.theme-dossier .cloud-onboarding-copy::after {
+  content: "D1";
+  position: absolute;
+  right: 4px;
+  bottom: -18px;
+  color: rgba(159, 48, 40, 0.19);
+  font-family: var(--display);
+  font-size: 102px;
+  line-height: 1;
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.theme-dossier .cloud-file-code {
+  color: var(--dossier-red);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-onboarding-copy h3,
+.theme-dossier .cloud-file-head h3,
+.theme-dossier .cloud-section-title h3 {
+  margin: 9px 0 13px;
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.025em;
+}
+
+.theme-dossier .cloud-onboarding-copy h3 {
+  max-width: 540px;
+  font-size: clamp(34px, 4.4vw, 62px);
+  line-height: 0.98;
+}
+
+.theme-dossier .cloud-onboarding-copy > p {
+  max-width: 560px;
+  color: var(--dossier-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.theme-dossier .cloud-privacy-note {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  max-width: 520px;
+  margin-top: 28px;
+  padding: 16px 18px;
+  border: 1px solid rgba(121, 97, 56, 0.32);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.theme-dossier .cloud-privacy-note b {
+  color: var(--dossier-red);
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-privacy-note span {
+  color: var(--dossier-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.theme-dossier .cloud-onboarding-forms {
+  position: relative;
+  display: grid;
+  gap: 18px;
+}
+
+.theme-dossier .cloud-dossier-panel form,
+.theme-dossier .security-panel form {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.theme-dossier .cloud-sheet-form {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 15px 16px;
+  padding: 24px !important;
+  border: 1px solid rgba(91, 75, 48, 0.34) !important;
+  background: rgba(255, 255, 255, 0.19) !important;
+  box-shadow: 8px 9px 0 rgba(121, 97, 56, 0.08);
+}
+
+.theme-dossier .cloud-sheet-form::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(121, 97, 56, 0.11);
+  pointer-events: none;
+}
+
+.theme-dossier .cloud-sheet-form .kicker,
+.theme-dossier .cloud-sheet-form h4 {
+  grid-column: 1 / -1;
+}
+
+.theme-dossier .cloud-sheet-form h4 {
+  margin: -7px 0 2px;
+  font-family: var(--display);
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.theme-dossier .cloud-sheet-form label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 7px;
+}
+
+.theme-dossier .cloud-sheet-form label span,
+.theme-dossier .cloud-entry-form label span {
+  color: var(--dossier-muted);
+  font-family: var(--sans);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-sheet-form input,
+.theme-dossier .cloud-entry-form input,
+.theme-dossier .cloud-entry-form select,
+.theme-dossier .cloud-entry-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 11px;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(91, 75, 48, 0.34);
+  border-radius: 0;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.15);
+  font-family: var(--body);
+}
+
+.theme-dossier .cloud-sheet-form input:focus,
+.theme-dossier .cloud-entry-form input:focus,
+.theme-dossier .cloud-entry-form select:focus,
+.theme-dossier .cloud-entry-form textarea:focus {
+  border-color: var(--dossier-red);
+  box-shadow: inset 3px 0 0 var(--dossier-red);
+}
+
+.theme-dossier .cloud-sheet-form .button {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  min-height: 43px;
+}
+
+.theme-dossier .cloud-or {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--dossier-muted);
+  font-family: var(--sans);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-or::before,
+.theme-dossier .cloud-or::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: rgba(91, 75, 48, 0.23);
+}
+
+.theme-dossier .cloud-loading {
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--dossier-muted);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-loading i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dossier-red);
+  animation: archivistThinking 900ms ease-in-out infinite alternate;
+}
+
+.theme-dossier .cloud-loading i:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.theme-dossier .cloud-loading i:nth-child(3) {
+  margin-right: 9px;
+  animation-delay: 300ms;
+}
+
+.theme-dossier .cloud-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.theme-dossier .cloud-file-head {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 4px 2px 18px;
+  border-bottom: 1px solid rgba(91, 75, 48, 0.28);
+}
+
+.theme-dossier .cloud-file-head h3 {
+  margin-bottom: 4px;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1;
+}
+
+.theme-dossier .cloud-file-head p {
+  margin: 0;
+  color: var(--dossier-muted);
+  font-size: 11px;
+}
+
+.theme-dossier .cloud-access-stamp {
+  flex: 0 0 auto;
+  padding: 8px 12px 7px;
+  border: 2px solid currentColor;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+.theme-dossier .cloud-access-stamp.is-organizer {
+  color: var(--dossier-red);
+}
+
+.theme-dossier .cloud-access-stamp.is-reader {
+  color: var(--dossier-brass-dark);
+}
+
+.theme-dossier .cloud-error {
+  padding: 12px 14px;
+  color: #7c251f;
+  border: 1px solid rgba(159, 48, 40, 0.36);
+  background: rgba(159, 48, 40, 0.08);
+  font-size: 12px;
+}
+
+.theme-dossier .cloud-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-dossier .cloud-toolbar .button {
+  min-height: 39px;
+  padding: 0 12px;
+}
+
+.theme-dossier .cloud-toolbar .button.button-ghost {
+  color: var(--dossier-ink);
+  border-color: rgba(91, 75, 48, 0.34);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.theme-dossier .cloud-toolbar .button.button-ghost:hover {
+  color: var(--dossier-red);
+  border-color: var(--dossier-red);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.theme-dossier .cloud-detach {
+  margin-left: auto;
+  padding: 8px 0;
+  color: var(--dossier-muted);
+  border: 0;
+  border-bottom: 1px dashed rgba(91, 75, 48, 0.45);
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-sync-strip {
+  display: grid;
+  grid-template-columns: 0.7fr 1.3fr;
+  gap: 1px;
+  border: 1px solid rgba(91, 75, 48, 0.29);
+  background: rgba(91, 75, 48, 0.2);
+}
+
+.theme-dossier .cloud-sync-strip span {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--dossier-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dossier .cloud-sync-strip b {
+  color: var(--dossier-ink);
+  font-family: var(--sans);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-organizer-key,
+.theme-dossier .cloud-reader-note {
+  padding: 13px 15px;
+  border: 1px dashed rgba(91, 75, 48, 0.34);
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.theme-dossier .cloud-organizer-key summary,
+.theme-dossier .cloud-entry-details summary {
+  cursor: pointer;
+  color: var(--dossier-red);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-organizer-key > div {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.theme-dossier .cloud-organizer-key code {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 10px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 75, 48, 0.25);
+  background: rgba(255, 255, 255, 0.17);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-dossier .cloud-organizer-key button {
+  padding: 0 12px;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(91, 75, 48, 0.36);
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-organizer-key p,
+.theme-dossier .cloud-reader-note {
+  margin-bottom: 0;
+  color: var(--dossier-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.theme-dossier .cloud-organizer-key .cloud-delete-campaign {
+  margin-top: 10px;
+  padding: 8px 10px;
+  color: var(--dossier-red);
+  border-color: rgba(175, 48, 42, 0.45);
+}
+
+.theme-dossier .cloud-organizer-key .cloud-delete-campaign:hover {
+  color: #fff8e8;
+  background: var(--dossier-red);
+}
+
+.theme-dossier .cloud-reader-note {
+  margin: 0;
+}
+
+.theme-dossier .cloud-ledger-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.theme-dossier .cloud-ledger {
+  position: relative;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid rgba(91, 75, 48, 0.34);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.theme-dossier .cloud-ledger::before,
+.theme-dossier .cloud-ledger::after {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+}
+
+.theme-dossier .cloud-ledger::before {
+  top: 7px;
+  left: 7px;
+  border-top: 1px solid var(--dossier-brass-dark);
+  border-left: 1px solid var(--dossier-brass-dark);
+}
+
+.theme-dossier .cloud-ledger::after {
+  right: 7px;
+  bottom: 7px;
+  border-right: 1px solid var(--dossier-brass-dark);
+  border-bottom: 1px solid var(--dossier-brass-dark);
+}
+
+.theme-dossier .cloud-section-title {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(91, 75, 48, 0.25);
+}
+
+.theme-dossier .cloud-section-title h3 {
+  margin: 3px 0 0;
+  font-size: 27px;
+}
+
+.theme-dossier .cloud-table-wrap {
+  overflow-x: auto;
+}
+
+.theme-dossier .cloud-table-wrap table {
+  width: 100%;
+  min-width: 590px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.theme-dossier .cloud-table-wrap th {
+  padding: 7px 8px;
+  color: var(--dossier-muted);
+  border-bottom: 1px solid rgba(91, 75, 48, 0.28);
+  font-family: var(--sans);
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.theme-dossier .cloud-table-wrap td {
+  padding: 10px 8px;
+  border-bottom: 1px dotted rgba(91, 75, 48, 0.23);
+  vertical-align: top;
+}
+
+.theme-dossier .cloud-table-wrap td small {
+  display: block;
+  max-width: 180px;
+  margin-top: 3px;
+  color: var(--dossier-muted);
+  font-size: 9px;
+}
+
+.theme-dossier .cloud-number {
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.theme-dossier .cloud-table-empty,
+.theme-dossier .cloud-empty {
+  padding: 25px !important;
+  color: var(--dossier-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.theme-dossier .cloud-row-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.theme-dossier .cloud-row-actions button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--dossier-muted);
+  border: 1px solid rgba(91, 75, 48, 0.26);
+  background: transparent;
+}
+
+.theme-dossier .cloud-row-actions button:hover {
+  color: var(--dossier-red);
+  border-color: var(--dossier-red);
+}
+
+.theme-dossier .cloud-entry-details {
+  position: relative;
+  z-index: 1;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(91, 75, 48, 0.24);
+}
+
+.theme-dossier .cloud-entry-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 15px;
+}
+
+.theme-dossier .cloud-entry-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.theme-dossier .cloud-entry-form textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.theme-dossier .cloud-form-wide {
+  grid-column: 1 / -1;
+}
+
+.theme-dossier .cloud-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.theme-dossier .cloud-event-list {
+  display: grid;
+  gap: 8px;
+  max-height: 390px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.theme-dossier .cloud-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-left: 3px solid var(--dossier-brass-dark);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.theme-dossier .cloud-event.is-game {
+  border-left-color: var(--dossier-red);
+}
+
+.theme-dossier .cloud-event.is-milestone {
+  border-left-color: var(--dossier-brass);
+}
+
+.theme-dossier .cloud-event-week {
+  min-width: 44px;
+  padding: 5px 6px;
+  color: var(--dossier-red);
+  border: 1px solid rgba(159, 48, 40, 0.33);
+  font-family: var(--sans);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  transform: rotate(-1deg);
+}
+
+.theme-dossier .cloud-event b {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.theme-dossier .cloud-event p {
+  margin: 5px 0;
+  color: var(--dossier-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.theme-dossier .cloud-event small {
+  color: rgba(102, 95, 82, 0.72);
+  font-size: 8px;
+}
+
+.theme-dossier .cloud-dossier-dialog.is-busy button,
+.theme-dossier .cloud-dossier-dialog.is-busy input,
+.theme-dossier .cloud-dossier-dialog.is-busy select,
+.theme-dossier .cloud-dossier-dialog.is-busy textarea {
+  pointer-events: none;
+  opacity: 0.58;
+}
+
+.theme-dossier .security-dialog {
+  width: min(520px, calc(100% - 34px));
+}
+
+.theme-dossier .security-panel {
+  text-align: center;
+}
+
+.theme-dossier .security-panel .modal-heading {
+  text-align: left;
+}
+
+.theme-dossier .security-copy {
+  max-width: 410px;
+  margin: 0 auto 20px;
+  color: var(--dossier-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.theme-dossier .turnstile-slot {
+  min-height: 65px;
+  display: flex;
+  justify-content: center;
+}
+
+.theme-dossier .security-status {
+  min-height: 20px;
+  margin: 12px 0 0;
+  color: var(--dossier-red);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .theme-dossier .cloud-onboarding,
+  .theme-dossier .cloud-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-dossier .cloud-onboarding {
+    min-height: 0;
+    padding: 8px 0 24px;
+  }
+
+  .theme-dossier .cloud-onboarding-copy {
+    padding: 22px 0 22px 22px;
+  }
+
+  .theme-dossier .cloud-onboarding-copy::after {
+    font-size: 70px;
+  }
+}
+
+@media (max-width: 640px) {
+  .theme-dossier .modal.cloud-dossier-dialog {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .theme-dossier .cloud-dossier-dialog .cloud-dossier-panel {
+    max-height: 100dvh;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .theme-dossier .cloud-dossier-dialog .cloud-dossier-head {
+    top: 0;
+    margin: -1px -1px 18px;
+    padding-top: 6px;
+  }
+
+  .theme-dossier .cloud-onboarding-copy h3 {
+    font-size: 38px;
+  }
+
+  .theme-dossier .cloud-sheet-form {
+    grid-template-columns: 1fr;
+    padding: 18px !important;
+  }
+
+  .theme-dossier .cloud-sheet-form .button {
+    width: 100%;
+  }
+
+  .theme-dossier .cloud-file-head {
+    gap: 12px;
+  }
+
+  .theme-dossier .cloud-file-head h3 {
+    font-size: 31px;
+  }
+
+  .theme-dossier .cloud-access-stamp {
+    padding: 6px 8px;
+    font-size: 7px;
+  }
+
+  .theme-dossier .cloud-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .theme-dossier .cloud-toolbar .button,
+  .theme-dossier .cloud-detach {
+    width: 100%;
+    margin: 0;
+  }
+
+  .theme-dossier .cloud-sync-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-dossier .cloud-organizer-key > div {
+    display: grid;
+  }
+
+  .theme-dossier .cloud-entry-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .theme-dossier .cloud-event {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .theme-dossier .cloud-event .cloud-row-actions {
+    grid-column: 2;
+  }
+}
+
 .theme-dossier .brand {
   position: relative;
   min-width: 0;

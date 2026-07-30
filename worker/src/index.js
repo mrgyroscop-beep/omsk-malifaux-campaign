@@ -1,11 +1,13 @@
+import { issueSession, validateTurnstile, verifySession } from "./auth.js";
+import { handleBiggerHat, refreshBiggerHatCache } from "./biggerhat-cache.js";
+import { handleCampaignRequest } from "./campaigns.js";
 import { rulesContext, searchRules } from "./search.js";
 
-const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-const MAX_REQUEST_CHARS = 18000;
-const MAX_REQUEST_BYTES = 32000;
-const MAX_MESSAGE_CHARS = 3000;
+const MAX_REQUEST_CHARS = 18_000;
+const MAX_REQUEST_BYTES = 32_000;
+const MAX_MESSAGE_CHARS = 3_000;
 const MAX_HISTORY_ITEMS = 8;
-const MAX_HISTORY_ITEM_CHARS = 2400;
+const MAX_HISTORY_ITEM_CHARS = 2_400;
 
 const SEARCH_PROMPT = `You convert questions about Malifaux campaign rules into English
 search terms for the official rulebook. Return JSON only in the form
@@ -59,20 +61,32 @@ function allowedOrigins(env) {
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Organizer-Token, If-Match",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Access-Control-Expose-Headers":
+      "ETag, Retry-After, X-BiggerHat-Cache, X-BiggerHat-Fetched-At",
     "Access-Control-Max-Age": "86400",
-    "Cache-Control": "no-store",
     Vary: "Origin",
   };
 }
 
-function jsonResponse(data, status, origin) {
-  return new Response(JSON.stringify(data), {
+function withCors(response, origin) {
+  const headers = new Headers(response.headers);
+  Object.entries(corsHeaders(origin)).forEach(([name, value]) => headers.set(name, value));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function jsonResponse(data, status = 200, headers = {}) {
+  return Response.json(data, {
     status,
     headers: {
-      ...corsHeaders(origin),
-      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...headers,
     },
   });
 }
@@ -94,12 +108,33 @@ function safeHistory(value) {
     .filter((item) => item.content);
 }
 
+async function gatewayUrl(env) {
+  const gatewayId = env.AI_GATEWAY_ID || "default";
+  if (env.AI?.gateway) {
+    const base = await env.AI.gateway(gatewayId).getUrl("deepseek");
+    return `${String(base).replace(/\/+$/u, "")}/chat/completions`;
+  }
+  if (!env.CLOUDFLARE_ACCOUNT_ID) return "";
+  return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(
+    env.CLOUDFLARE_ACCOUNT_ID,
+  )}/${encodeURIComponent(gatewayId)}/deepseek/chat/completions`;
+}
+
 async function deepSeek(env, messages, options = {}) {
-  const response = await fetch(DEEPSEEK_URL, {
+  const endpoint = await gatewayUrl(env);
+  if (!endpoint) {
+    const error = new Error("AI Gateway is not configured");
+    error.status = 503;
+    throw error;
+  }
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
       "Content-Type": "application/json",
+      "cf-aig-collect-log-payload": "false",
+      "cf-aig-skip-cache": "true",
     },
     body: JSON.stringify({
       model: env.DEEPSEEK_MODEL || "deepseek-v4-flash",
@@ -147,9 +182,15 @@ async function englishSearchTerms(env, question) {
   }
 }
 
-function clientKey(request) {
+function clientKey(request, prefix = "ip") {
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-  return `ip:${ip}`;
+  return `${prefix}:${ip}`;
+}
+
+async function rateLimit(binding, key) {
+  if (!binding) return true;
+  const result = await binding.limit({ key });
+  return Boolean(result.success);
 }
 
 function conversationPrompt(history, question) {
@@ -172,100 +213,208 @@ function localizeCitations(answer, locale) {
   );
 }
 
+async function readSmallJson(request, maximum = MAX_REQUEST_CHARS) {
+  const contentLength = Number(request.headers.get("Content-Length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
+    return { error: jsonResponse({ error: "request_too_large" }, 413) };
+  }
+  const rawBody = await request.text();
+  if (rawBody.length > maximum) {
+    return { error: jsonResponse({ error: "request_too_large" }, 413) };
+  }
+  try {
+    return { body: JSON.parse(rawBody) };
+  } catch {
+    return { error: jsonResponse({ error: "invalid_json" }, 400) };
+  }
+}
+
+async function handleSession(request, env, origin) {
+  if (
+    !(await rateLimit(
+      env.API_RATE_LIMITER,
+      clientKey(request, "session"),
+    ))
+  ) {
+    return jsonResponse({ error: "rate_limited" }, 429);
+  }
+  const parsed = await readSmallJson(request, 8_000);
+  if (parsed.error) return parsed.error;
+  const validation = await validateTurnstile(
+    request,
+    env,
+    parsed.body?.turnstileToken,
+    origin,
+  );
+  if (!validation.success) {
+    return jsonResponse({ error: validation.error }, 403);
+  }
+  return jsonResponse({
+    token: await issueSession(env, origin),
+    expiresIn: 2 * 60 * 60,
+  });
+}
+
+async function requireApiSession(request, env, origin) {
+  const session = await verifySession(request, env, origin);
+  if (!session) {
+    return { error: jsonResponse({ error: "session_required" }, 401) };
+  }
+  return { session };
+}
+
+async function handleChat(request, env, origin) {
+  if (!env.DEEPSEEK_API_KEY || (!env.AI?.gateway && !env.CLOUDFLARE_ACCOUNT_ID)) {
+    return jsonResponse({ error: "not_configured" }, 503);
+  }
+
+  const session = await requireApiSession(request, env, origin);
+  if (session.error) return session.error;
+
+  const parsed = await readSmallJson(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.body;
+  const question = typeof body.message === "string" ? body.message.trim() : "";
+  if (!question || question.length > MAX_MESSAGE_CHARS) {
+    return jsonResponse({ error: "invalid_message" }, 400);
+  }
+
+  if (!(await rateLimit(env.CHAT_RATE_LIMITER, clientKey(request, "chat")))) {
+    return jsonResponse({ error: "rate_limited" }, 429);
+  }
+
+  try {
+    const translatedTerms = await englishSearchTerms(env, question);
+    const matches = searchRules(question, translatedTerms);
+    const ruleContext = rulesContext(matches);
+
+    if (!ruleContext.context) {
+      return jsonResponse({
+        answer:
+          body.locale === "en"
+            ? "I could not find a relevant passage in the loaded campaign rules."
+            : "В загруженных правилах кампании не нашлось подходящего фрагмента.",
+        sources: [],
+      });
+    }
+
+    const history = safeHistory(body.history);
+    const locale = body.locale === "en" ? "en" : "ru";
+    const rawAnswer = await deepSeek(env, [
+      {
+        role: "system",
+        content: `${ANSWER_PROMPT}\n\nlocale: ${locale}\n\nRULE_CONTEXT:\n${ruleContext.context}`,
+      },
+      { role: "user", content: conversationPrompt(history, question) },
+    ]);
+
+    return jsonResponse({
+      answer: localizeCitations(rawAnswer, locale),
+      sources: ruleContext.pages,
+    });
+  } catch (error) {
+    const status = error?.status === 429 ? 429 : 502;
+    return jsonResponse(
+      { error: status === 429 ? "upstream_rate_limited" : "upstream_error" },
+      status,
+    );
+  }
+}
+
+function isCampaignMutation(request, url) {
+  return url.pathname.startsWith("/api/campaigns") && request.method !== "GET";
+}
+
+async function dispatch(request, env, context, origin) {
+  const url = new URL(request.url);
+
+  if (request.method === "GET" && url.pathname.startsWith("/api/biggerhat/")) {
+    if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "biggerhat")))) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    return handleBiggerHat(request, env, context);
+  }
+
+  if (url.pathname.startsWith("/api/campaigns")) {
+    if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "cloud")))) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    if (isCampaignMutation(request, url)) {
+      const session = await requireApiSession(request, env, origin);
+      if (session.error) return session.error;
+    }
+    return handleCampaignRequest(request, env);
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/session") {
+    return handleSession(request, env, origin);
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/chat") {
+    return handleChat(request, env, origin);
+  }
+
+  return jsonResponse({ error: "not_found" }, 404);
+}
+
+function routeLabel(pathname) {
+  if (pathname === "/api/chat") return "chat";
+  if (pathname === "/api/session") return "session";
+  if (pathname.startsWith("/api/biggerhat/")) return "biggerhat";
+  if (pathname.startsWith("/api/campaigns")) return "campaigns";
+  return "not_found";
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context = {}) {
+    const startedAt = Date.now();
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
-
-    if (!allowedOrigins(env).has(origin)) {
-      return new Response("Forbidden", { status: 403 });
-    }
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) });
-    }
-
-    if (request.method !== "POST" || url.pathname !== "/api/chat") {
-      return jsonResponse({ error: "not_found" }, 404, origin);
-    }
-
-    if (!env.DEEPSEEK_API_KEY) {
-      return jsonResponse({ error: "not_configured" }, 503, origin);
-    }
-
-    const contentLength = Number(request.headers.get("Content-Length") || 0);
-    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
-      return jsonResponse({ error: "request_too_large" }, 413, origin);
-    }
-
-    const rawBody = await request.text();
-    if (rawBody.length > MAX_REQUEST_CHARS) {
-      return jsonResponse({ error: "request_too_large" }, 413, origin);
-    }
-
-    let body;
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
-      return jsonResponse({ error: "invalid_json" }, 400, origin);
-    }
-
-    const question = typeof body.message === "string" ? body.message.trim() : "";
-    if (!question || question.length > MAX_MESSAGE_CHARS) {
-      return jsonResponse({ error: "invalid_message" }, 400, origin);
-    }
-
-    if (env.CHAT_RATE_LIMITER) {
-      const { success } = await env.CHAT_RATE_LIMITER.limit({
-        key: clientKey(request),
-      });
-      if (!success) {
-        return jsonResponse({ error: "rate_limited" }, 429, origin);
-      }
-    }
+    let response;
 
     try {
-      const translatedTerms = await englishSearchTerms(env, question);
-      const matches = searchRules(question, translatedTerms);
-      const ruleContext = rulesContext(matches);
-
-      if (!ruleContext.context) {
-        return jsonResponse(
-          {
-            answer:
-              body.locale === "en"
-                ? "I could not find a relevant passage in the loaded campaign rules."
-                : "В загруженных правилах кампании не нашлось подходящего фрагмента.",
-            sources: [],
-          },
-          200,
-          origin,
-        );
+      if (!allowedOrigins(env).has(origin)) {
+        response = new Response("Forbidden", { status: 403 });
+      } else if (request.method === "OPTIONS") {
+        response = new Response(null, { status: 204 });
+      } else {
+        response = await dispatch(request, env, context, origin);
       }
-
-      const history = safeHistory(body.history);
-      const locale = body.locale === "en" ? "en" : "ru";
-      const rawAnswer = await deepSeek(env, [
-        {
-          role: "system",
-          content: `${ANSWER_PROMPT}\n\nlocale: ${locale}\n\nRULE_CONTEXT:\n${ruleContext.context}`,
-        },
-        { role: "user", content: conversationPrompt(history, question) },
-      ]);
-      const answer = localizeCitations(rawAnswer, locale);
-
-      return jsonResponse(
-        {
-          answer,
-          sources: ruleContext.pages,
-        },
-        200,
-        origin,
-      );
     } catch (error) {
-      const status = error?.status === 429 ? 429 : 502;
-      const code = status === 429 ? "upstream_rate_limited" : "upstream_error";
-      return jsonResponse({ error: code }, status, origin);
+      console.error(
+        JSON.stringify({
+          event: "worker_error",
+          route: routeLabel(url.pathname),
+          message: String(error?.message || "unknown").slice(0, 160),
+        }),
+      );
+      response = jsonResponse({ error: "internal_error" }, 500);
     }
+
+    const finalResponse = withCors(response, origin);
+    console.log(
+      JSON.stringify({
+        event: "request",
+        requestId: request.headers.get("CF-Ray") || crypto.randomUUID(),
+        route: routeLabel(url.pathname),
+        method: request.method,
+        status: finalResponse.status,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
+    return finalResponse;
+  },
+
+  async scheduled(_event, env, context) {
+    context.waitUntil(
+      refreshBiggerHatCache(env).catch((error) => {
+        console.error(
+          JSON.stringify({
+            event: "biggerhat_refresh_failed",
+            message: String(error?.message || "unknown").slice(0, 160),
+          }),
+        );
+      }),
+    );
   },
 };
