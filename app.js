@@ -141,6 +141,18 @@ const STATIC_TEXT_EN = {
   "Цикл кампании": "Campaign flow",
   "Травмы": "Injuries",
   "Продвижение": "Advancement",
+  "Шпаргалка · 3 страницы": "Quick guide · 3 pages",
+  "«Как играть?» для самых маленьких": "How to play? The tiny guide",
+  "Старт кампании, подготовка к игре и все шесть фаз последствий — в трёх наглядных схемах.":
+    "Starting a campaign, preparing an encounter, and all six Aftermath phases in three visual flowcharts.",
+  "Открыть диаграмму": "Open flowchart",
+  "Открыть диаграмму «Как играть?»": "Open the How to Play flowchart",
+  "Диаграммы кампании · 3 страницы": "Campaign flowcharts · 3 pages",
+  "Диаграммы кампании Malifaux": "Malifaux campaign flowcharts",
+  "Открыть отдельно": "Open separately",
+  "Открыть отдельно ↗": "Open separately ↗",
+  "Если встроенный просмотр недоступен,": "If the embedded viewer is unavailable,",
+  "откройте PDF отдельно": "open the PDF separately",
   "Запись VI · Первоисточник": "Record VI · Primary source",
   "Правила кампании": "Campaign rules",
   "Печатные страницы 14–56 из Index of the Untold — с оригинальной версткой, таблицами и иллюстрациями. Используйте указатель или переходите сюда прямо из ссылок в билдере.":
@@ -1790,10 +1802,15 @@ function applyStaticTranslations() {
       node.__i18nTrailing;
   }
 
-  document.querySelectorAll("[placeholder], [aria-label]").forEach((element) => {
-    ["placeholder", "aria-label"].forEach((attribute) => {
+  document.querySelectorAll("[placeholder], [aria-label], [title]").forEach((element) => {
+    ["placeholder", "aria-label", "title"].forEach((attribute) => {
       if (!element.hasAttribute(attribute)) return;
-      const cacheKey = attribute === "placeholder" ? "i18nPlaceholderRu" : "i18nAriaRu";
+      const cacheKey =
+        attribute === "placeholder"
+          ? "i18nPlaceholderRu"
+          : attribute === "aria-label"
+            ? "i18nAriaRu"
+            : "i18nTitleRu";
       const original = element.dataset[cacheKey] || element.getAttribute(attribute);
       if (!STATIC_TEXT_EN[original]) return;
       element.dataset[cacheKey] = original;
@@ -3376,6 +3393,16 @@ document.querySelector(".reference-tabs").addEventListener("keydown", (event) =>
         : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
   tabs[nextIndex].focus();
   activateReferenceTab(tabs[nextIndex].dataset.referenceTab);
+});
+
+const flowchartDialog = document.querySelector("#flowchartDialog");
+const flowchartFrame = document.querySelector("#flowchartFrame");
+
+document.querySelector("#openFlowchartButton").addEventListener("click", () => {
+  if (!flowchartFrame.getAttribute("src")) {
+    flowchartFrame.setAttribute("src", flowchartFrame.dataset.src);
+  }
+  flowchartDialog.showModal();
 });
 
 document.addEventListener("click", (event) => {

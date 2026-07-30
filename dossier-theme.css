@@ -1012,6 +1012,145 @@ body.theme-dossier {
 
 /* Reference ledger */
 
+.theme-dossier .flowchart-card {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  margin: 0 0 24px;
+  padding: 19px 22px;
+  overflow: hidden;
+  color: var(--dossier-paper-light);
+  border: 1px solid rgba(185, 154, 89, 0.46);
+  border-radius: 2px;
+  background:
+    linear-gradient(112deg, rgba(185, 154, 89, 0.1), transparent 34%),
+    var(--folder);
+  box-shadow:
+    0 15px 30px rgba(37, 31, 22, 0.16),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.12);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.theme-dossier .flowchart-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 88px;
+  height: 100%;
+  background: linear-gradient(135deg, transparent 46%, rgba(185, 154, 89, 0.06) 47%);
+  pointer-events: none;
+}
+
+.theme-dossier .flowchart-card:hover {
+  border-color: var(--dossier-brass);
+  box-shadow:
+    0 18px 36px rgba(37, 31, 22, 0.22),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.theme-dossier .flowchart-card-mark {
+  position: relative;
+  height: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 14px);
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-dossier .flowchart-card-mark::before {
+  content: "";
+  position: absolute;
+  right: 8px;
+  left: 7px;
+  height: 1px;
+  background: rgba(185, 154, 89, 0.72);
+}
+
+.theme-dossier .flowchart-card-mark::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-top: 1px solid var(--dossier-brass);
+  border-right: 1px solid var(--dossier-brass);
+  transform: rotate(45deg);
+}
+
+.theme-dossier .flowchart-card-mark i {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--dossier-brass);
+  border-radius: 50%;
+  background: var(--folder);
+  box-shadow: 0 0 0 4px rgba(185, 154, 89, 0.05);
+}
+
+.theme-dossier .flowchart-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.theme-dossier .flowchart-card-kicker {
+  color: var(--dossier-brass);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .flowchart-card-copy strong {
+  font-family: var(--display);
+  font-size: clamp(21px, 1.8vw, 28px);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.theme-dossier .flowchart-card-copy small {
+  max-width: 720px;
+  color: rgba(232, 221, 196, 0.6);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.theme-dossier .flowchart-card-action {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 13px;
+  color: var(--dossier-paper-light);
+  border: 1px solid rgba(185, 154, 89, 0.38);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.theme-dossier .flowchart-card-action b {
+  color: var(--dossier-brass);
+  font-size: 15px;
+  line-height: 1;
+}
+
 .theme-dossier .reference-tabs {
   gap: 7px;
   margin-bottom: 22px;
@@ -1125,6 +1264,88 @@ body.theme-dossier {
   width: min(1040px, calc(100% - 34px));
 }
 
+.theme-dossier .modal.flowchart-dialog {
+  width: min(1500px, calc(100vw - 34px));
+  height: min(90dvh, 920px);
+  max-height: min(90dvh, 920px);
+  overflow: hidden;
+}
+
+.theme-dossier .flowchart-dialog-panel {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.theme-dossier .flowchart-dialog-head {
+  flex: 0 0 auto;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+}
+
+.theme-dossier .flowchart-dialog-head h2 {
+  font-size: clamp(22px, 2vw, 32px);
+}
+
+.theme-dossier .flowchart-dialog-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.theme-dossier .flowchart-open-pdf {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 14px;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(91, 75, 48, 0.32);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.theme-dossier .flowchart-open-pdf:hover {
+  color: var(--dossier-red);
+  border-color: var(--dossier-red);
+}
+
+.theme-dossier .flowchart-open-pdf b {
+  margin-left: 8px;
+  color: var(--dossier-red);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.theme-dossier .flowchart-frame {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 1px solid rgba(91, 75, 48, 0.36);
+  background: #20221f;
+}
+
+.theme-dossier .flowchart-fallback {
+  flex: 0 0 auto;
+  margin: 10px 0 0;
+  color: var(--dossier-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.theme-dossier .flowchart-fallback a {
+  color: var(--dossier-red);
+  text-underline-offset: 3px;
+}
+
 .theme-dossier .modal::backdrop {
   background:
     radial-gradient(circle at 50% 30%, rgba(185, 154, 89, 0.08), transparent 34%),
@@ -1190,6 +1411,8 @@ body.theme-dossier {
 
 .theme-dossier .button:focus-visible,
 .theme-dossier .brand:focus-visible,
+.theme-dossier .flowchart-card:focus-visible,
+.theme-dossier .flowchart-open-pdf:focus-visible,
 .theme-dossier .language-switch button:focus-visible,
 .theme-dossier .utility-menu-toggle:focus-visible,
 .theme-dossier .row-delete:focus-visible,
@@ -1675,6 +1898,33 @@ body.theme-dossier {
     gap: 5px;
   }
 
+  .theme-dossier .flowchart-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .theme-dossier .flowchart-card-mark {
+    grid-template-columns: repeat(3, 9px);
+    gap: 5px;
+  }
+
+  .theme-dossier .flowchart-card-mark i {
+    width: 9px;
+    height: 9px;
+    border-width: 1px;
+  }
+
+  .theme-dossier .flowchart-card-copy strong {
+    font-size: 20px;
+  }
+
+  .theme-dossier .flowchart-card-action {
+    grid-column: 2;
+    justify-self: start;
+    padding: 9px 11px;
+  }
+
   .theme-dossier .reference-tabs button {
     min-height: 50px;
     padding: 10px 7px;
@@ -1718,6 +1968,51 @@ body.theme-dossier {
     z-index: 5;
     padding: 8px 0 14px;
     background: var(--dossier-paper);
+  }
+
+  .theme-dossier .flowchart-dialog-panel {
+    height: 100dvh;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+  }
+
+  .theme-dossier .flowchart-dialog-head {
+    position: static;
+    gap: 10px;
+    align-items: flex-start;
+    padding-top: 0;
+  }
+
+  .theme-dossier .flowchart-dialog-head h2 {
+    font-size: 21px;
+  }
+
+  .theme-dossier .flowchart-dialog-actions {
+    gap: 6px;
+  }
+
+  .theme-dossier .flowchart-open-pdf {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .theme-dossier .flowchart-open-pdf span {
+    display: none;
+  }
+
+  .theme-dossier .flowchart-open-pdf b {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .theme-dossier .flowchart-frame {
+    min-height: 0;
+  }
+
+  .theme-dossier .flowchart-fallback {
+    margin-top: 8px;
+    font-size: 10px;
   }
 
   .theme-dossier .toast-region {
@@ -1773,7 +2068,8 @@ body.theme-dossier {
   .theme-dossier .binder-punches,
   .theme-dossier .coffee-stain,
   .theme-dossier .utility-menu-toggle,
-  .theme-dossier .utility-menu-panel {
+  .theme-dossier .utility-menu-panel,
+  .theme-dossier .flowchart-card {
     display: none !important;
   }
 

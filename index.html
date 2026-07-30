@@ -10,7 +10,7 @@
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=6" />
-    <link rel="stylesheet" href="dossier-theme.css?v=11" />
+    <link rel="stylesheet" href="dossier-theme.css?v=12" />
   </head>
   <body class="theme-dossier">
     <div class="noise" aria-hidden="true"></div>
@@ -642,6 +642,28 @@
             <div class="folio">05</div>
           </div>
 
+          <button
+            class="flowchart-card"
+            id="openFlowchartButton"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="flowchartDialog"
+            aria-label="Открыть диаграмму «Как играть?»"
+          >
+            <span class="flowchart-card-mark" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </span>
+            <span class="flowchart-card-copy">
+              <span class="flowchart-card-kicker">Шпаргалка · 3 страницы</span>
+              <strong>«Как играть?» для самых маленьких</strong>
+              <small>
+                Старт кампании, подготовка к игре и все шесть фаз последствий — в трёх
+                наглядных схемах.
+              </small>
+            </span>
+            <span class="flowchart-card-action">Открыть диаграмму <b aria-hidden="true">↗</b></span>
+          </button>
+
           <div class="reference-tabs" role="tablist">
             <button class="is-active" id="reference-tab-flow" type="button" role="tab" aria-controls="reference-flow" aria-selected="true" data-reference-tab="flow">Цикл кампании</button>
             <button id="reference-tab-injuries" type="button" role="tab" aria-controls="reference-injuries" aria-selected="false" data-reference-tab="injuries">Травмы</button>
@@ -767,6 +789,52 @@
         </section>
       </main>
     </div>
+
+    <dialog
+      id="flowchartDialog"
+      class="modal flowchart-dialog"
+      aria-labelledby="flowchartDialogTitle"
+    >
+      <div class="modal-panel flowchart-dialog-panel">
+        <div class="modal-heading flowchart-dialog-head">
+          <div>
+            <span class="kicker">Диаграммы кампании · 3 страницы</span>
+            <h2 id="flowchartDialogTitle">«Как играть?» для самых маленьких</h2>
+          </div>
+          <div class="flowchart-dialog-actions">
+            <a
+              class="flowchart-open-pdf"
+              href="assets/malifaux-campaign-flowcharts-ru.pdf"
+              target="_blank"
+              rel="noopener"
+            >
+              <span>Открыть отдельно</span>
+              <b aria-hidden="true">↗</b>
+            </a>
+            <button
+              class="modal-close"
+              type="button"
+              data-close-dialog="flowchartDialog"
+              aria-label="Закрыть"
+            >×</button>
+          </div>
+        </div>
+        <iframe
+          class="flowchart-frame"
+          id="flowchartFrame"
+          data-src="assets/malifaux-campaign-flowcharts-ru.pdf#page=1&view=Fit"
+          title="Диаграммы кампании Malifaux"
+        ></iframe>
+        <p class="flowchart-fallback">
+          Если встроенный просмотр недоступен,
+          <a
+            href="assets/malifaux-campaign-flowcharts-ru.pdf"
+            target="_blank"
+            rel="noopener"
+          >откройте PDF отдельно</a>.
+        </p>
+      </div>
+    </dialog>
 
     <dialog id="modelDialog" class="modal">
       <form method="dialog" id="modelForm">
@@ -921,6 +989,6 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>
