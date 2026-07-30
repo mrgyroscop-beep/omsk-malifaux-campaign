@@ -7,6 +7,7 @@ const STATIC_TEXT_EN = {
   "Новое": "New",
   "Импорт": "Import",
   "Экспорт": "Export",
+  "Обратная связь": "Feedback",
   "Печать": "Print",
   "Досье": "Dossier",
   "Кампания и команда": "Campaign & crew",
@@ -201,6 +202,7 @@ const STATIC_TEXT_EN = {
   "Или своё название": "Or enter a custom name",
   "Добавить": "Add",
   "Открыть досье": "Open dossier",
+  "Открыть форму обратной связи": "Open the feedback form",
   "Разделы билдера": "Builder sections",
   "Язык интерфейса": "Interface language",
   "Русский": "Russian",
@@ -3364,7 +3366,7 @@ utilityMenuButton.addEventListener("click", (event) => {
 });
 
 utilityMenuPanel.addEventListener("click", (event) => {
-  if (event.target.closest("button")) setUtilityMenu(false);
+  if (event.target.closest(".button")) setUtilityMenu(false);
 });
 
 document.addEventListener("click", (event) => {

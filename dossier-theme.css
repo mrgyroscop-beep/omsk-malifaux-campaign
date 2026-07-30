@@ -309,6 +309,25 @@ body.theme-dossier {
   background: rgba(185, 154, 89, 0.07);
 }
 
+.theme-dossier .topbar .feedback-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.theme-dossier .topbar .feedback-link::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--dossier-red);
+  box-shadow: 0 0 0 3px rgba(159, 48, 40, 0.12);
+}
+
 .theme-dossier .topbar .button-ink {
   color: var(--folder-black);
   border-color: var(--dossier-paper-light);
