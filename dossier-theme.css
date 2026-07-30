@@ -125,13 +125,468 @@ body.theme-dossier {
   opacity: 0.62;
 }
 
+.theme-dossier .brand-cluster {
+  position: relative;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: stretch;
+}
+
 .theme-dossier .brand {
   position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
   align-self: stretch;
   gap: 0;
   padding: 0 26px 0 32px;
   border: 0;
   overflow: visible;
+}
+
+.theme-dossier .brand-copy {
+  min-width: 0;
+  display: grid;
+  margin-left: 42px;
+  text-align: left;
+}
+
+.theme-dossier .fate-flip-button {
+  position: absolute;
+  top: 9px;
+  left: 78px;
+  z-index: 2;
+  width: 50px;
+  min-width: 50px;
+  height: 58px;
+  display: grid;
+  grid-template-rows: 36px auto;
+  place-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 5px 5px;
+  color: var(--dossier-paper-deep);
+  border: 0;
+  border-left: 1px solid rgba(185, 154, 89, 0.22);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    transform 170ms ease;
+}
+
+.theme-dossier .fate-flip-button:hover,
+.theme-dossier .brand-cluster.is-fate-open .fate-flip-button {
+  color: #f4e8c9;
+  transform: translateY(-1px);
+}
+
+.theme-dossier .fate-flip-button > span:last-child {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-deck-icon {
+  position: relative;
+  width: 25px;
+  height: 32px;
+  display: block;
+}
+
+.theme-dossier .fate-deck-icon i,
+.theme-dossier .fate-deck-icon b {
+  position: absolute;
+  width: 20px;
+  height: 28px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: #1d1e1a;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.36);
+}
+
+.theme-dossier .fate-deck-icon i:first-child {
+  top: 0;
+  left: 0;
+  opacity: 0.32;
+  transform: rotate(-8deg);
+}
+
+.theme-dossier .fate-deck-icon i:nth-child(2) {
+  top: 1px;
+  left: 3px;
+  opacity: 0.58;
+  transform: rotate(-3deg);
+}
+
+.theme-dossier .fate-deck-icon b {
+  top: 2px;
+  left: 5px;
+  display: grid;
+  place-items: center;
+  color: var(--dossier-brass);
+  background:
+    linear-gradient(45deg, transparent 46%, rgba(185, 154, 89, 0.2) 47% 53%, transparent 54%),
+    #20211d;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.theme-dossier .fate-flip-popover {
+  position: absolute;
+  top: calc(100% - 3px);
+  left: 67px;
+  z-index: 110;
+  width: 270px;
+  padding: 13px;
+  color: var(--dossier-paper-light);
+  border: 1px solid rgba(185, 154, 89, 0.62);
+  border-radius: 4px 12px 12px 12px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(159, 48, 40, 0.14), transparent 34%),
+    linear-gradient(130deg, rgba(185, 154, 89, 0.08), transparent 43%),
+    #171814;
+  box-shadow:
+    0 24px 52px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.26);
+  animation: fatePopoverIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.theme-dossier .fate-flip-popover[hidden] {
+  display: none;
+}
+
+.theme-dossier .fate-flip-popover::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 25px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid rgba(185, 154, 89, 0.62);
+  border-left: 1px solid rgba(185, 154, 89, 0.62);
+  background: #171814;
+  transform: rotate(45deg);
+}
+
+.theme-dossier .fate-flip-head {
+  min-height: 28px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.theme-dossier .fate-flip-head > div:first-child {
+  display: grid;
+  gap: 1px;
+}
+
+.theme-dossier .fate-flip-head span {
+  color: var(--dossier-brass);
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-flip-head small {
+  color: rgba(232, 221, 196, 0.62);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-flip-head-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.theme-dossier .fate-flip-head-actions button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--dossier-paper-deep);
+  border: 1px solid rgba(185, 154, 89, 0.32);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 17px;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    transform 160ms ease;
+}
+
+.theme-dossier .fate-flip-head-actions button:hover {
+  color: #fff5db;
+  border-color: var(--dossier-brass);
+  transform: rotate(8deg);
+}
+
+.theme-dossier .fate-card-stage {
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(185, 154, 89, 0.2);
+  border-radius: 3px 3px 8px 8px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(185, 154, 89, 0.12), transparent 44%),
+    repeating-linear-gradient(120deg, transparent 0 12px, rgba(255, 255, 255, 0.015) 13px 14px),
+    #10110e;
+  perspective: 900px;
+}
+
+.theme-dossier .fate-card {
+  position: relative;
+  width: 146px;
+  height: 206px;
+  overflow: hidden;
+  border-radius: 9px;
+  box-shadow:
+    0 18px 28px rgba(0, 0, 0, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.theme-dossier .fate-card::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.theme-dossier .fate-card-back {
+  display: grid;
+  place-items: center;
+  color: var(--dossier-brass);
+  border: 4px solid #d9c99f;
+  background:
+    linear-gradient(45deg, transparent 46%, rgba(185, 154, 89, 0.24) 47% 53%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, rgba(185, 154, 89, 0.24) 47% 53%, transparent 54%),
+    #24251f;
+  background-size: 24px 24px;
+}
+
+.theme-dossier .fate-card-back-mark {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: #1a1b17;
+  box-shadow: 0 0 0 7px rgba(185, 154, 89, 0.12);
+  font-family: var(--display);
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.theme-dossier .fate-card-face {
+  color: var(--dossier-ink);
+  border: 1px solid rgba(40, 36, 30, 0.42);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.58), transparent 36%),
+    radial-gradient(circle at 20% 70%, rgba(121, 97, 56, 0.07), transparent 36%),
+    #eee4cd;
+}
+
+.theme-dossier .fate-card-face.is-red {
+  color: #9f3028;
+}
+
+.theme-dossier .fate-card-corner {
+  position: absolute;
+  top: 10px;
+  left: 11px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  font-family: var(--display);
+  line-height: 1;
+}
+
+.theme-dossier .fate-card-corner b {
+  font-size: 22px;
+}
+
+.theme-dossier .fate-card-corner svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.theme-dossier .fate-card-corner-bottom {
+  inset: auto 11px 10px auto;
+  transform: rotate(180deg);
+}
+
+.theme-dossier .fate-card-center {
+  position: absolute;
+  inset: 36px 22px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.theme-dossier .fate-card-center > svg {
+  width: 70px;
+  height: 70px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.theme-dossier .fate-card-center strong {
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-card-center small {
+  color: currentColor;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-card-face.is-red-joker {
+  color: #fff1d2;
+  border: 2px solid #d19a56;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 216, 139, 0.18), transparent 32%),
+    repeating-linear-gradient(135deg, transparent 0 13px, rgba(255, 255, 255, 0.025) 14px 15px),
+    #8e251f;
+}
+
+.theme-dossier .fate-card-face.is-black-joker {
+  color: #e5d7b5;
+  border: 2px solid #80755f;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(185, 154, 89, 0.12), transparent 32%),
+    repeating-linear-gradient(135deg, transparent 0 13px, rgba(255, 255, 255, 0.02) 14px 15px),
+    #12130f;
+}
+
+.theme-dossier .fate-joker-code {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.theme-dossier .fate-joker-code-bottom {
+  inset: auto 12px 12px auto;
+  transform: rotate(180deg);
+}
+
+.theme-dossier .fate-joker-center {
+  position: absolute;
+  inset: 28px 18px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.theme-dossier .fate-joker-center small {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+}
+
+.theme-dossier .fate-joker-center b {
+  margin: -4px 0;
+  font-family: var(--display);
+  font-size: 82px;
+  font-weight: 500;
+  line-height: 1;
+  text-shadow: 0 7px 20px rgba(0, 0, 0, 0.28);
+}
+
+.theme-dossier .fate-joker-center strong {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 0.12em;
+}
+
+.theme-dossier .fate-joker-center span {
+  margin-top: 8px;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.theme-dossier .fate-card.is-dealt {
+  animation: fateCardDeal 420ms cubic-bezier(0.16, 0.86, 0.28, 1.12) both;
+}
+
+.theme-dossier .fate-flip-result {
+  min-height: 34px;
+  margin: 10px 2px 2px;
+  color: var(--dossier-paper-light);
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.theme-dossier .fate-deck-note {
+  display: block;
+  color: rgba(232, 221, 196, 0.48);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@keyframes fatePopoverIn {
+  from {
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fateCardDeal {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) rotateY(74deg) rotateZ(-5deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateY(0) rotateZ(0) scale(1);
+  }
 }
 
 .theme-dossier .brand-mark {
@@ -1732,6 +2187,8 @@ body.theme-dossier {
 
 .theme-dossier .button:focus-visible,
 .theme-dossier .brand:focus-visible,
+.theme-dossier .fate-flip-button:focus-visible,
+.theme-dossier .fate-flip-head-actions button:focus-visible,
 .theme-dossier .flowchart-card:focus-visible,
 .theme-dossier .flowchart-open-pdf:focus-visible,
 .theme-dossier .language-switch button:focus-visible,
@@ -1865,6 +2322,19 @@ body.theme-dossier {
   .theme-dossier .brand {
     min-width: 0;
     padding: 0 14px 0 18px;
+  }
+
+  .theme-dossier .fate-flip-button {
+    top: 6px;
+    left: 58px;
+    width: 45px;
+    min-width: 45px;
+    height: 50px;
+  }
+
+  .theme-dossier .fate-flip-popover {
+    top: calc(100% - 1px);
+    left: 56px;
   }
 
   .theme-dossier .brand-mark {
@@ -2059,12 +2529,31 @@ body.theme-dossier {
 
   .theme-dossier .brand {
     gap: 10px;
+    flex: 0 1 76px;
+    padding-right: 0;
     padding-left: 13px;
   }
 
-  .theme-dossier .brand strong {
-    max-width: 154px;
-    font-size: 14px;
+  .theme-dossier .brand-copy {
+    display: none;
+  }
+
+  .theme-dossier .fate-flip-button {
+    top: 5px;
+    left: 55px;
+    width: 43px;
+    min-width: 43px;
+  }
+
+  .theme-dossier .fate-flip-popover {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    width: min(270px, calc(100vw - 24px));
+  }
+
+  .theme-dossier .fate-flip-popover::before {
+    left: 78px;
   }
 
   .theme-dossier .top-actions {
@@ -2418,6 +2907,11 @@ body.theme-dossier {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .theme-dossier .fate-flip-popover,
+  .theme-dossier .fate-card.is-dealt {
+    animation: none;
+  }
+
   .theme-dossier {
     scroll-behavior: auto;
   }

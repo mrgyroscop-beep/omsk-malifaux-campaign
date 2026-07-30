@@ -21,22 +21,72 @@
     <div class="noise" aria-hidden="true"></div>
     <div class="app-shell">
       <header class="topbar">
-        <button class="brand" type="button" data-route="dossier" aria-label="Открыть досье">
-          <span class="brand-mark" aria-hidden="true">
-            <img src="assets/bird-emblem.png" alt="" width="592" height="511" draggable="false" />
-          </span>
-          <span
-            class="brand-quote"
-            id="brandQuote"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          ></span>
-          <span>
-            <strong>Неписаный реестр</strong>
-            <small>M4E · Campaign Builder</small>
-          </span>
-        </button>
+        <div class="brand-cluster">
+          <button class="brand" type="button" data-route="dossier" aria-label="Открыть досье">
+            <span class="brand-mark" aria-hidden="true">
+              <img src="assets/bird-emblem.png" alt="" width="592" height="511" draggable="false" />
+            </span>
+            <span
+              class="brand-quote"
+              id="brandQuote"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            ></span>
+            <span class="brand-copy">
+              <strong>Неписаный реестр</strong>
+              <small>M4E · Campaign Builder</small>
+            </span>
+          </button>
+
+          <button
+            class="fate-flip-button"
+            id="fateFlipButton"
+            type="button"
+            aria-expanded="false"
+            aria-controls="fateFlipPopover"
+            aria-label="Флипнуть карту Fate Deck"
+          >
+            <span class="fate-deck-icon" aria-hidden="true">
+              <i></i><i></i><b>F</b>
+            </span>
+            <span id="fateFlipButtonLabel">Флип</span>
+          </button>
+
+          <aside class="fate-flip-popover" id="fateFlipPopover" hidden>
+            <header class="fate-flip-head">
+              <div>
+                <span>Fate Deck</span>
+                <small id="fateDeckRemaining">54 / 54</small>
+              </div>
+              <div class="fate-flip-head-actions">
+                <button
+                  id="fateShuffleButton"
+                  type="button"
+                  aria-label="Перемешать Fate Deck"
+                  title="Перемешать Fate Deck"
+                >↻</button>
+                <button
+                  id="fateFlipCloseButton"
+                  type="button"
+                  aria-label="Закрыть карту"
+                  title="Закрыть"
+                >×</button>
+              </div>
+            </header>
+            <div class="fate-card-stage" id="fateCardStage">
+              <article class="fate-card fate-card-back" id="fateCard" aria-hidden="true">
+                <span class="fate-card-back-mark">F</span>
+              </article>
+            </div>
+            <p class="fate-flip-result" id="fateFlipResult" role="status" aria-live="polite">
+              Нажмите «Флип», чтобы открыть верхнюю карту.
+            </p>
+            <small class="fate-deck-note" id="fateDeckNote">
+              54 карты · без повторов до перемешивания
+            </small>
+          </aside>
+        </div>
 
         <div class="campaign-pulse" aria-live="polite">
           <span class="pulse-dot"></span>
@@ -1065,7 +1115,7 @@
     <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
     <script src="biggerhat.js?v=2"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
     <script src="print.js?v=1"></script>
   </body>
 </html>

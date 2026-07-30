@@ -3355,6 +3355,241 @@ async function refreshCardCatalog(button) {
   }
 }
 
+const FATE_SUITS = [
+  { id: "rams", name: "Rams", poker: "♥", tone: "red" },
+  { id: "masks", name: "Masks", poker: "♦", tone: "red" },
+  { id: "tomes", name: "Tomes", poker: "♣", tone: "black" },
+  { id: "crows", name: "Crows", poker: "♠", tone: "black" },
+];
+
+const FATE_SUIT_ICONS = {
+  rams: `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M17 30c-8 0-12-6-12-13 0-6 4-10 9-10 5 0 8 4 8 8 0 3-2 6-5 6-3 0-5-2-5-5" />
+    <path d="M31 30c8 0 12-6 12-13 0-6-4-10-9-10-5 0-8 4-8 8 0 3 2 6 5 6 3 0 5-2 5-5" />
+    <path d="M16 24c1 12 5 17 8 17s7-5 8-17M19 29h10" />
+  </svg>`,
+  masks: `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M5 13c11-5 27-5 38 0l-4 17c-4 8-10 12-15 12S13 38 9 30L5 13Z" />
+    <path d="M12 21c4-3 8-3 11 1-3 4-8 5-11-1ZM36 21c-4-3-8-3-11 1 3 4 8 5 11-1ZM18 32c4 2 8 2 12 0" />
+  </svg>`,
+  tomes: `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M5 9c8-3 14-2 19 3v29c-5-5-11-6-19-3V9Zm38 0c-8-3-14-2-19 3v29c5-5 11-6 19-3V9Z" />
+    <path d="M10 17c4-1 7 0 10 2M10 24c4-1 7 0 10 2M38 17c-4-1-7 0-10 2M38 24c-4-1-7 0-10 2" />
+  </svg>`,
+  crows: `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M7 38c8-4 9-15 13-23 4-7 11-9 18-5l6 5-9 2c2 8-1 17-9 21-6 3-13 3-19 0Z" />
+    <path d="M21 18c7 3 11 8 13 15M18 25c-2 8-6 13-12 16M34 12l10 3" />
+  </svg>`,
+};
+
+const fateFlipRoot = document.querySelector(".brand-cluster");
+const fateFlipButton = document.querySelector("#fateFlipButton");
+const fateFlipButtonLabel = document.querySelector("#fateFlipButtonLabel");
+const fateFlipPopover = document.querySelector("#fateFlipPopover");
+const fateShuffleButton = document.querySelector("#fateShuffleButton");
+const fateFlipCloseButton = document.querySelector("#fateFlipCloseButton");
+const fateCard = document.querySelector("#fateCard");
+const fateFlipResult = document.querySelector("#fateFlipResult");
+const fateDeckRemaining = document.querySelector("#fateDeckRemaining");
+const fateDeckNote = document.querySelector("#fateDeckNote");
+
+let fateDeck = [];
+let currentFateCard = null;
+
+function buildFateDeck() {
+  const cards = FATE_SUITS.flatMap((suit) =>
+    Array.from({ length: 13 }, (_, index) => ({
+      id: `${suit.id}-${index + 1}`,
+      kind: "suited",
+      suit,
+      value: index + 1,
+    })),
+  );
+  cards.push(
+    { id: "black-joker", kind: "black-joker", value: 0 },
+    { id: "red-joker", kind: "red-joker", value: 14 },
+  );
+  return cards;
+}
+
+function fateRandomIndex(max) {
+  if (globalThis.crypto?.getRandomValues) {
+    const sample = new Uint32Array(1);
+    const ceiling = Math.floor(0x100000000 / max) * max;
+    do {
+      globalThis.crypto.getRandomValues(sample);
+    } while (sample[0] >= ceiling);
+    return sample[0] % max;
+  }
+  return Math.floor(Math.random() * max);
+}
+
+function shuffleFateDeck(cards) {
+  const shuffled = [...cards];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = fateRandomIndex(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function resetFateDeck() {
+  fateDeck = shuffleFateDeck(buildFateDeck());
+  currentFateCard = null;
+}
+
+function fateCardResult(card) {
+  if (!card) {
+    return localized(
+      "Нажмите «Флип», чтобы открыть верхнюю карту.",
+      "Select Flip to reveal the top card.",
+    );
+  }
+  if (card.kind === "red-joker") {
+    return localized(
+      "Red Joker · значение 14 · масть выбирает игрок",
+      "Red Joker · value 14 · choose any suit or none",
+    );
+  }
+  if (card.kind === "black-joker") {
+    return localized(
+      "Black Joker · значение 0 · без масти",
+      "Black Joker · value 0 · no suit",
+    );
+  }
+  return `${card.value} · ${card.suit.name} ${card.suit.poker}`;
+}
+
+function suitedFateCardHtml(card) {
+  const icon = FATE_SUIT_ICONS[card.suit.id];
+  return `
+    <span class="fate-card-corner fate-card-corner-top">
+      <b>${card.value}</b>${icon}
+    </span>
+    <span class="fate-card-center">
+      ${icon}
+      <strong>${card.suit.name}</strong>
+      <small>${card.suit.poker} · Fate suit</small>
+    </span>
+    <span class="fate-card-corner fate-card-corner-bottom">
+      <b>${card.value}</b>${icon}
+    </span>`;
+}
+
+function jokerFateCardHtml(card) {
+  const isRed = card.kind === "red-joker";
+  return `
+    <span class="fate-joker-code">${isRed ? "RJ" : "BJ"}</span>
+    <span class="fate-joker-center">
+      <small>${isRed ? "Red" : "Black"}</small>
+      <b>${card.value}</b>
+      <strong>Joker</strong>
+      <span>${
+        isRed
+          ? localized("любая масть", "any suit or none")
+          : localized("без масти", "no suit")
+      }</span>
+    </span>
+    <span class="fate-joker-code fate-joker-code-bottom">${isRed ? "RJ" : "BJ"}</span>`;
+}
+
+function renderFateCard(animate = false) {
+  if (!currentFateCard) {
+    fateCard.className = "fate-card fate-card-back";
+    fateCard.removeAttribute("data-card-id");
+    fateCard.setAttribute("aria-hidden", "true");
+    fateCard.innerHTML = `<span class="fate-card-back-mark">F</span>`;
+    return;
+  }
+
+  const card = currentFateCard;
+  const tone =
+    card.kind === "red-joker"
+      ? "red-joker"
+      : card.kind === "black-joker"
+        ? "black-joker"
+        : card.suit.tone;
+  fateCard.className = `fate-card fate-card-face is-${tone}`;
+  fateCard.dataset.cardId = card.id;
+  fateCard.setAttribute("aria-hidden", "false");
+  fateCard.setAttribute("aria-label", fateCardResult(card));
+  fateCard.innerHTML =
+    card.kind === "suited" ? suitedFateCardHtml(card) : jokerFateCardHtml(card);
+
+  if (animate) {
+    fateCard.classList.remove("is-dealt");
+    void fateCard.offsetWidth;
+    fateCard.classList.add("is-dealt");
+  }
+}
+
+function renderFateFlip(animate = false) {
+  if (!fateDeck.length && !currentFateCard) resetFateDeck();
+  fateFlipButtonLabel.textContent = localized("Флип", "Flip");
+  fateFlipButton.setAttribute(
+    "aria-label",
+    localized("Флипнуть карту Fate Deck", "Flip a Fate Deck card"),
+  );
+  fateShuffleButton.setAttribute(
+    "aria-label",
+    localized("Перемешать Fate Deck", "Shuffle the Fate Deck"),
+  );
+  fateShuffleButton.title = localized("Перемешать Fate Deck", "Shuffle the Fate Deck");
+  fateFlipCloseButton.setAttribute("aria-label", localized("Закрыть карту", "Close card"));
+  fateFlipCloseButton.title = localized("Закрыть", "Close");
+  fateDeckRemaining.textContent = localized(
+    `${fateDeck.length} из 54`,
+    `${fateDeck.length} of 54`,
+  );
+  fateDeckNote.textContent = localized(
+    "54 карты · без повторов до перемешивания",
+    "54 cards · no repeats before reshuffling",
+  );
+  fateFlipResult.textContent = fateCardResult(currentFateCard);
+  renderFateCard(animate);
+}
+
+function setFateFlipOpen(open) {
+  fateFlipPopover.hidden = !open;
+  fateFlipButton.setAttribute("aria-expanded", String(open));
+  fateFlipRoot.classList.toggle("is-fate-open", open);
+}
+
+function drawFateCard() {
+  if (!fateDeck.length) resetFateDeck();
+  currentFateCard = fateDeck.pop();
+  renderFateFlip(true);
+  setFateFlipOpen(true);
+}
+
+fateFlipButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  drawFateCard();
+});
+
+fateShuffleButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  resetFateDeck();
+  drawFateCard();
+});
+
+fateFlipCloseButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setFateFlipOpen(false);
+  fateFlipButton.focus();
+});
+
+document.addEventListener("click", (event) => {
+  if (!fateFlipRoot.contains(event.target)) setFateFlipOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !fateFlipPopover.hidden) {
+    setFateFlipOpen(false);
+    fateFlipButton.focus();
+  }
+});
+
 function renderAll() {
   renderChrome();
   renderDossier();
@@ -3368,6 +3603,7 @@ function renderAll() {
   renderEquipmentCatalog();
   renderGamePreview();
   calculateRating();
+  renderFateFlip();
   if (activeRoute() === "rules") renderRulesPage();
   applyStaticTranslations();
 }
