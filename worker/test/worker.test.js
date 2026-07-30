@@ -126,3 +126,57 @@ test("returns an answer and source pages", async (context) => {
   assert.equal(payload.answer, "Use a Barter Flip. [p. 21]");
   assert.ok(payload.sources.includes(21));
 });
+
+test("instructs the answer model to recover Russian slang instead of rejecting it", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  let call = 0;
+  globalThis.fetch = async (_url, options) => {
+    call += 1;
+    const payload = JSON.parse(options.body);
+    if (call === 1) {
+      assert.ok(payload.messages[0].content.includes('"ростер"'));
+      return Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                terms: ["starting arsenal", "soulstones", "encounter size"],
+              }),
+            },
+          },
+        ],
+      });
+    }
+    const prompt = payload.messages[0].content;
+    assert.ok(prompt.includes("Do not say that a user's word is absent"));
+    assert.ok(prompt.includes("custom campaign Leader"));
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content:
+              "Стартовый арсенал собирается на 25 камней; лидер бесплатный. [стр. 15]",
+          },
+        },
+      ],
+    });
+  };
+
+  const response = await worker.fetch(
+    request({
+      message: "На сколько камней собирать ростер?",
+      history: [],
+      locale: "ru",
+    }),
+    environment(),
+  );
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.match(payload.answer, /25 камней/u);
+  assert.equal(call, 2);
+  assert.ok(payload.sources.includes(15));
+  assert.ok(payload.sources.includes(19));
+});

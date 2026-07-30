@@ -51,13 +51,17 @@ const RUSSIAN_RULE_TERMS = new Map([
   ["арсенал", ["arsenal"]],
   ["бартер", ["barter"]],
   ["банда", ["crew"]],
+  ["билд", ["starting", "campaign", "arsenal", "leader", "hire"]],
   ["встреч", ["encounter", "game"]],
+  ["взять", ["hire", "add"]],
   ["дуэл", ["duel"]],
   ["действ", ["action"]],
   ["заработ", ["payday", "scrip"]],
+  ["камн", ["soulstone", "encounter", "size"]],
   ["ключ", ["keyword"]],
   ["кооператив", ["cooperative"]],
   ["лидер", ["leader"]],
+  ["мастер", ["master", "leader"]],
   ["модель", ["model"]],
   ["наем", ["hire"]],
   ["наним", ["hire"]],
@@ -68,9 +72,13 @@ const RUSSIAN_RULE_TERMS = new Map([
   ["продвиж", ["advance", "advancement"]],
   ["репутац", ["reputation"]],
   ["рейтинг", ["campaign", "rating"]],
+  ["ростер", ["crew", "arsenal", "encounter", "hire"]],
+  ["собир", ["starting", "hire", "arsenal"]],
   ["снаряж", ["equipment"]],
   ["скрип", ["scrip"]],
   ["способност", ["ability"]],
+  ["существ", ["existing", "published"]],
+  ["сущесв", ["existing", "published"]],
   ["травм", ["injury"]],
   ["флип", ["flip"]],
 ]);
@@ -115,6 +123,32 @@ function occurrences(haystack, needle) {
   return count;
 }
 
+function intentPageBoost(query, page) {
+  const normalizedQuery = normalize(query);
+  const asksAboutMaster =
+    normalizedQuery.includes("мастер") || normalizedQuery.includes("лидер");
+  const asksAboutBuilding =
+    normalizedQuery.includes("билд") ||
+    normalizedQuery.includes("сборк") ||
+    normalizedQuery.includes("существ") ||
+    normalizedQuery.includes("сущесв");
+  const asksAboutRoster =
+    normalizedQuery.includes("ростер") || normalizedQuery.includes("арсенал");
+  const asksAboutStones =
+    normalizedQuery.includes("камн") || normalizedQuery.includes("соулстон");
+  let score = 0;
+
+  if (asksAboutMaster && asksAboutBuilding) {
+    if (page.page === 17) score += 40;
+    if (page.page === 15 || page.page === 18) score += 24;
+  }
+  if (asksAboutRoster && asksAboutStones) {
+    if (page.page === 15 || page.page === 19) score += 32;
+  }
+
+  return score;
+}
+
 export function searchRules(query, translatedTerms = [], limit = 4) {
   const terms = expandedTerms(query, translatedTerms);
   if (!terms.length) return [];
@@ -132,6 +166,7 @@ export function searchRules(query, translatedTerms = [], limit = 4) {
       const textHits = Math.min(occurrences(text, term), 8);
       score += titleHits * 7 + textHits;
     }
+    score += intentPageBoost(query, page);
 
     return { ...page, score };
   })

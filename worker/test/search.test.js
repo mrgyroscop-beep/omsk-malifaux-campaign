@@ -23,6 +23,18 @@ test("expands common Russian campaign vocabulary", () => {
   assert.ok(results.some((page) => [34, 35, 36].includes(page.page)));
 });
 
+test("recognizes Russian builder slang and a typo in existing master", () => {
+  const results = searchRules("Могу я взять мастера сущесвующего себе в билдер?");
+  assert.ok(results.some((page) => page.page === 15));
+  assert.ok(results.some((page) => page.page === 17));
+});
+
+test("treats roster and stones as arsenal and encounter vocabulary", () => {
+  const results = searchRules("На сколько камней собирать ростер?");
+  assert.ok(results.some((page) => page.page === 15));
+  assert.ok(results.some((page) => page.page === 19));
+});
+
 test("builds a bounded context with printed page labels", () => {
   const results = searchRules("equipment from barter flips");
   const output = rulesContext(results, 9000);
