@@ -26,7 +26,7 @@
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
     <link rel="stylesheet" href="dossier-theme.css?v=16" />
     <link rel="stylesheet" href="print.css?v=1" media="print" />
   </head>
@@ -501,6 +501,22 @@
             </article>
           </div>
 
+          <article class="ledger-card permanent-record-card" id="leaderPermanentCard">
+            <div class="card-title">
+              <div>
+                <span class="kicker">Постоянные записи лидера</span>
+                <h2>Способности и травмы</h2>
+              </div>
+              <button
+                class="page-ref"
+                id="rules-ref-leader-permanent"
+                type="button"
+                data-rules-pages="30-31,50-51"
+              >стр. 30–31, 50–51</button>
+            </div>
+            <div id="leaderPermanentRecords" class="permanent-record-grid"></div>
+          </article>
+
           <article class="ledger-card crew-card-section">
             <div class="card-title">
               <div>
@@ -515,6 +531,22 @@
               >стр. 15–16</button>
             </div>
             <div class="crew-card-grid" id="crewCardGrid"></div>
+          </article>
+
+          <article class="ledger-card totem-section">
+            <div class="card-title">
+              <div>
+                <span class="kicker">Связь с лидером</span>
+                <h2>Тотем</h2>
+              </div>
+              <button
+                class="page-ref"
+                id="rules-ref-totem"
+                type="button"
+                data-rules-pages="32,52-53"
+              >стр. 32, 52–53</button>
+            </div>
+            <div id="totemCard"></div>
           </article>
         </section>
 
@@ -555,7 +587,24 @@
           </div>
 
           <div class="arsenal-layout">
-            <article class="ledger-card">
+            <div class="arsenal-primary-stack">
+              <article class="ledger-card arsenal-totem-card" id="arsenalTotemCardShell" hidden>
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Связанный постоянный участник</span>
+                    <h2>Тотем в текущем ростере</h2>
+                  </div>
+                  <button
+                    class="page-ref"
+                    id="rules-ref-arsenal-totem"
+                    type="button"
+                    data-rules-pages="32,52-53"
+                  >стр. 32, 52–53</button>
+                </div>
+                <div id="arsenalTotemCard"></div>
+              </article>
+
+              <article class="ledger-card">
               <div class="card-title">
                 <div>
                   <span class="kicker">Состав</span>
@@ -564,7 +613,8 @@
                 <button class="button button-red" id="addModelButton" type="button">+ Добавить модель</button>
               </div>
               <div class="model-list" id="modelList"></div>
-            </article>
+              </article>
+            </div>
 
             <aside class="side-stack">
               <article class="ledger-card compact-card">
@@ -583,23 +633,24 @@
                 <div class="rating-equation">
                   <label>
                     <span>Снаряжение в игре</span>
-                    <input id="ratingEquipment" type="number" min="0" value="0" />
+                    <input id="ratingEquipment" type="number" min="0" value="0" readonly />
                   </label>
                   <span class="operator">+</span>
                   <label>
                     <span>Продвижения</span>
-                    <input id="ratingAdvances" type="number" min="0" value="0" />
+                    <input id="ratingAdvances" type="number" min="0" value="0" readonly />
                   </label>
                   <span class="operator">−</span>
                   <label>
                     <span>Травмы в ростере</span>
-                    <input id="ratingInjuries" type="number" min="0" value="0" />
+                    <input id="ratingInjuries" type="number" min="0" value="0" readonly />
                   </label>
                 </div>
                 <div class="rating-result">
                   <span>Campaign Rating</span>
                   <strong id="ratingResult">0</strong>
                 </div>
+                <div id="activeLoadoutSummary" class="active-loadout-summary"></div>
               </article>
 
               <article class="ledger-card compact-card">
@@ -610,6 +661,9 @@
                   </div>
                   <button class="icon-button" id="addEquipmentButton" type="button" aria-label="Добавить снаряжение">+</button>
                 </div>
+                <p class="equipment-loadout-note">
+                  Назначение действует для текущей встречи и может быть изменено перед следующей.
+                </p>
                 <div id="equipmentList" class="equipment-list"></div>
               </article>
             </aside>
@@ -733,6 +787,17 @@
               <span><i></i> Полученный опыт</span>
               <span><i class="tier-dot"></i> Число внутри — максимальный тир продвижения</span>
             </div>
+            <div class="advancement-ledger-heading">
+              <div>
+                <span class="kicker">Постоянные изменения</span>
+                <h3>Продвижения лидера и тотема</h3>
+                <p id="advancementStatus"></p>
+              </div>
+              <button class="button button-red" id="addAdvancementButton" type="button">
+                + Оформить продвижение
+              </button>
+            </div>
+            <div id="advancementLedger" class="advancement-ledger"></div>
           </article>
         </section>
 
@@ -1090,6 +1155,11 @@
             <input name="cost" type="number" min="0" required value="5" />
           </label>
           <label class="field">
+            <span>Лимит моделей</span>
+            <input name="modelLimit" type="number" min="1" max="100" required value="1" />
+            <small>Число одинаковых моделей, разрешённых карточкой</small>
+          </label>
+          <label class="field">
             <span>Тип</span>
             <select name="type">
               <option value="Minion">Minion</option>
@@ -1118,6 +1188,43 @@
         </div>
         <button class="button button-red button-wide" value="default">Добавить в арсенал</button>
       </form>
+    </dialog>
+
+    <dialog id="injuryDialog" class="modal" aria-labelledby="injuryDialogTitle">
+      <div class="modal-panel">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Determine Injuries</span>
+            <h2 id="injuryDialogTitle">Добавить травму</h2>
+            <p class="injury-dialog-target" id="injuryDialogTarget"></p>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="injuryDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <section class="catalog-block" aria-label="Каталог травм">
+          <label class="catalog-search">
+            <span class="sr-only">Поиск по названию или флипу</span>
+            <input
+              id="injurySearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Название травмы или флип"
+              aria-controls="injurySearchResults"
+            />
+            <span aria-hidden="true">⌕</span>
+          </label>
+          <p class="catalog-status" id="injuryCatalogStatus" aria-live="polite"></p>
+          <div
+            class="catalog-results injury-search-results"
+            id="injurySearchResults"
+            role="listbox"
+          ></div>
+        </section>
+      </div>
     </dialog>
 
     <dialog id="talentDialog" class="modal modal-wide">
@@ -1203,11 +1310,141 @@
             <small>CC не списывается</small>
           </span>
         </label>
+        <label class="check-tile equipment-free-choice">
+          <input name="ratingExempt" type="checkbox" />
+          <span class="equipment-choice-mark" aria-hidden="true">−</span>
+          <span>
+            <b>Не учитывать в рейтинге кампании</b>
+            <small>Только если особый эффект прямо исключает предмет из CR</small>
+          </span>
+        </label>
         <label class="field">
           <span>Или своё название</span>
           <input name="customName" placeholder="Пользовательское снаряжение" />
         </label>
         <button class="button button-red button-wide" id="equipmentSubmit" value="default">Добавить</button>
+      </form>
+    </dialog>
+
+    <dialog id="advancementDialog" class="modal modal-wide">
+      <form id="advancementForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Leadership Experience</span>
+            <h2>Оформить продвижение</h2>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="advancementDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Ячейка опыта</span>
+            <select name="xpIndex" id="advancementXpIndex"></select>
+          </label>
+          <label class="field">
+            <span>Кто получает</span>
+            <select name="target" id="advancementTarget"></select>
+          </label>
+          <label class="field">
+            <span>Таблица продвижения</span>
+            <select name="table" id="advancementTable"></select>
+          </label>
+          <label class="field" id="advancementFlipField">
+            <span>Результат флипа</span>
+            <select name="flip" id="advancementFlip"></select>
+          </label>
+        </div>
+
+        <label class="check-tile advancement-joker-choice" id="advancementCheatedJokerField" hidden>
+          <input name="cheatedJoker" id="advancementCheatedJoker" type="checkbox" />
+          <span class="equipment-choice-mark" aria-hidden="true">↪</span>
+          <span>
+            <b>Джокер был подложен с руки</b>
+            <small>Для Tier II cheated Joker использует значение карты; natural Joker даёт Choose</small>
+          </span>
+        </label>
+
+        <div class="advancement-rule-strip" data-dynamic-i18n>
+          <p id="advancementRuleHint"></p>
+          <button class="page-ref" id="advancementRulesButton" type="button">Открыть правило</button>
+        </div>
+
+        <label class="field" id="advancementChoiceField">
+          <span>Результат таблицы</span>
+          <select name="choice" id="advancementChoice"></select>
+        </label>
+        <section class="advancement-biggerhat" id="advancementBiggerHatField" hidden data-dynamic-i18n>
+          <div class="advancement-biggerhat-heading">
+            <div>
+              <span class="kicker">Natural Joker · BiggerHat</span>
+              <b id="advancementBiggerHatTitle">Запись с карточки модели</b>
+            </div>
+            <button class="button button-ghost" id="advancementBiggerHatButton" type="button">
+              Выбрать с BiggerHat
+            </button>
+          </div>
+          <div id="advancementBiggerHatPreview"></div>
+        </section>
+        <label class="field">
+          <span>Название продвижения</span>
+          <input name="name" id="advancementName" required />
+        </label>
+        <label class="field" id="advancementAppliesField" hidden>
+          <span>Изменяемое действие</span>
+          <select name="appliesTo" id="advancementAppliesTo"></select>
+        </label>
+        <label class="field" id="advancementExistingTriggersField" hidden>
+          <span>Триггеров на действии до продвижения</span>
+          <input name="existingTriggers" id="advancementExistingTriggers" type="number" min="0" max="20" value="0" readonly />
+        </label>
+        <label class="field">
+          <span>Описание или заметка</span>
+          <textarea name="notes" rows="4" placeholder="Точный эффект, триггер или важное ограничение"></textarea>
+        </label>
+        <label class="field">
+          <span>Доплата скрип</span>
+          <input name="scripCost" id="advancementScripCost" type="number" min="0" max="20" value="0" readonly />
+        </label>
+
+        <fieldset class="totem-setup" id="totemSetup" hidden>
+          <legend>Личное дело тотема</legend>
+          <div class="form-grid">
+            <label class="field">
+              <span>Имя тотема</span>
+              <input name="totemName" />
+            </label>
+            <label class="field">
+              <span>Размер Sz</span>
+              <input name="totemSize" type="number" min="1" max="4" value="1" />
+            </label>
+            <label class="field">
+              <span>База</span>
+              <select name="totemBase">
+                <option value="30">30 мм</option>
+                <option value="40">40 мм</option>
+                <option value="50">50 мм</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Характеристика I</span>
+              <input name="totemCharacteristic1" />
+            </label>
+            <label class="field">
+              <span>Характеристика II</span>
+              <input name="totemCharacteristic2" />
+            </label>
+          </div>
+          <div id="totemProfilePreview" data-dynamic-i18n></div>
+        </fieldset>
+
+        <button class="button button-red button-wide" id="advancementSubmit" type="submit">
+          Записать продвижение
+        </button>
       </form>
     </dialog>
 
@@ -1226,7 +1463,8 @@
       defer
     ></script>
     <script src="biggerhat.js?v=3"></script>
-    <script src="app.js?v=19"></script>
+    <script src="advancement-data.js?v=1"></script>
+    <script src="app.js?v=22"></script>
     <script src="cloud.js?v=1"></script>
     <script src="print.js?v=1"></script>
   </body>

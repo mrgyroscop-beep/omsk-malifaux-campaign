@@ -21,6 +21,20 @@ python -m http.server 4173
 
 После запуска откройте `http://localhost:4173`.
 
+### Проверка KAN-6
+
+Постоянный браузерный smoke-тест проверяет назначение, перенос и снятие
+снаряжения, запрет Peon, удаление модели/предмета, снимок игрового состава,
+очистку ростера после игры, перезагрузку и мобильную вёрстку.
+
+```powershell
+npm install
+npm run test:kan6
+```
+
+По умолчанию тест запускается в установленном Microsoft Edge. Путь к другой
+копии билдера можно передать через переменную `APP_PATH`.
+
 ### Возможности
 
 - русская и английская версии единого интерфейса;
@@ -158,6 +172,20 @@ python -m http.server 4173
 ```
 
 Then open `http://localhost:4173`.
+
+### KAN-6 verification
+
+The persistent browser smoke test covers assignment, transfer and removal of
+equipment, the Peon restriction, model/equipment deletion, encounter snapshots,
+post-game loadout reset, reload persistence, and the mobile layout.
+
+```powershell
+npm install
+npm run test:kan6
+```
+
+The test uses the installed Microsoft Edge by default. Set `APP_PATH` to test
+another copy of the builder.
 
 ### Features
 

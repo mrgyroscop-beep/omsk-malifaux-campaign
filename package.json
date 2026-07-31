@@ -1,0 +1,15 @@
+{
+  "name": "omsk-malifaux-campaign",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:kan6": "node tests/kan6-loadout.smoke.cjs",
+    "test:kan7": "node tests/kan7-injuries.smoke.cjs",
+    "test:kan8": "node tests/kan8-abilities.smoke.cjs",
+    "test:kan9": "node tests/kan9-totem.smoke.cjs",
+    "test:kan10": "node tests/kan10-advancement.smoke.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
+  }
+}

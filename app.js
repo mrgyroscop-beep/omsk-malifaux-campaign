@@ -1,4 +1,5 @@
 const STORAGE_KEY = "m4e-untold-campaign-v1";
+const advancementData = window.MalifauxAdvancementData || null;
 
 const STATIC_TEXT_EN = {
   "Неписаный реестр": "The Unwritten Index",
@@ -107,6 +108,8 @@ const STATIC_TEXT_EN = {
   "Травмы в ростере": "Injuries hired",
   "Хранилище": "Storage",
   "Снаряжение": "Equipment",
+  "Назначение действует для текущей встречи и может быть изменено перед следующей.":
+    "Assignments apply to the current encounter and may be changed before the next one.",
   "Запись IV · Свидетельства и последствия": "Record IV · Evidence & aftermath",
   "Записывайте игры": "Record your games",
   "Результат встречи превращается в скрип, опыт и новые страницы истории. Калькулятор следует шести фазам Aftermath.":
@@ -145,7 +148,36 @@ const STATIC_TEXT_EN = {
     "The English rules text below is reproduced verbatim from Index of the Untold.",
   "Цикл кампании": "Campaign flow",
   "Травмы": "Injuries",
+  "Добавить травму": "Add injury",
+  "Поиск по названию или флипу": "Search by name or flip",
+  "Название травмы или флип": "Injury name or flip",
+  "Каталог травм": "Injury catalog",
   "Продвижение": "Advancement",
+  "Связь с лидером": "Bond with the leader",
+  "Тотем": "Totem",
+  "Постоянные изменения": "Permanent changes",
+  "Продвижения лидера и тотема": "Leader and Totem advancements",
+  "+ Оформить продвижение": "+ Record advancement",
+  "Оформить продвижение": "Record advancement",
+  "Ячейка опыта": "XP slot",
+  "Кто получает": "Recipient",
+  "Таблица продвижения": "Advancement table",
+  "Результат флипа": "Flip result",
+  "Открыть правило": "Open rule",
+  "Результат таблицы": "Table result",
+  "Название продвижения": "Advancement name",
+  "Изменяемое действие": "Action being modified",
+  "Триггеров на действии до продвижения": "Triggers on the action before advancement",
+  "Описание или заметка": "Description or note",
+  "Доплата скрип": "Scrip surcharge",
+  "Личное дело тотема": "Totem dossier",
+  "Имя тотема": "Totem name",
+  "Характеристика I": "Characteristic I",
+  "Характеристика II": "Characteristic II",
+  "Записать продвижение": "Record advancement",
+  "Джокер был подложен с руки": "The Joker was cheated from hand",
+  "Для Tier II cheated Joker использует значение карты; natural Joker даёт Choose":
+    "For Tier II, a cheated Joker uses its card value; a natural Joker grants Choose",
   "Шпаргалка · 3 страницы": "Quick guide · 3 pages",
   "«Как играть?» для самых маленьких": "How to play? The tiny guide",
   "Старт кампании, подготовка к игре и все шесть фаз последствий — в трёх наглядных схемах.":
@@ -220,8 +252,13 @@ const STATIC_TEXT_EN = {
   "Трек опыта лидера": "Leader experience track",
   "Закрыть": "Close",
   "Например, Death Marshal": "For example, Death Marshal",
+  "Лимит моделей": "Model limit",
+  "Число одинаковых моделей, разрешённых карточкой": "Number of identical models allowed by the card",
   "Через запятую": "Comma-separated",
   "Пользовательское снаряжение": "Custom equipment",
+  "Не учитывать в рейтинге кампании": "Do not count toward campaign rating",
+  "Только если особый эффект прямо исключает предмет из CR":
+    "Only when a special effect explicitly excludes the item from CR",
   "Каталог карточек · BiggerHat": "Card catalog · BiggerHat",
   "Найдите модель и заполните поля автоматически": "Find a model and fill in the fields automatically",
   "Обновить каталог": "Refresh catalog",
@@ -397,6 +434,45 @@ const UI_MESSAGES = {
     en: "purchased for {cost} scrip",
   },
   equipmentFreeTag: { ru: "получено бесплатно", en: "received for free" },
+  equipmentAssignmentLabel: {
+    ru: "На текущую встречу",
+    en: "For the current encounter",
+  },
+  equipmentUnassigned: { ru: "Не назначено", en: "Not assigned" },
+  equipmentLeaderTarget: { ru: "Лидер", en: "Leader" },
+  equipmentTotemTarget: { ru: "Тотем", en: "Totem" },
+  equipmentOutsideRating: { ru: "не влияет на CR", en: "does not affect CR" },
+  modelInLoadout: { ru: "В составе", en: "In crew" },
+  modelOutsideLoadout: { ru: "Взять в состав", en: "Hire for encounter" },
+  modelInLoadoutAria: {
+    ru: "Убрать {name} из состава текущей встречи",
+    en: "Remove {name} from the current encounter crew",
+  },
+  modelOutsideLoadoutAria: {
+    ru: "Взять {name} в состав текущей встречи",
+    en: "Hire {name} for the current encounter",
+  },
+  equipmentDuplicateAssignment: {
+    ru: "На эту модель уже назначено снаряжение «{name}».",
+    en: "This model already has equipment named “{name}” attached.",
+  },
+  currentLoadoutTitle: { ru: "Команда на текущую встречу", en: "Current encounter crew" },
+  currentLoadoutEmpty: {
+    ru: "Лидер готов. Добавьте модели из арсенала и распределите снаряжение.",
+    en: "The leader is ready. Hire arsenal models and distribute equipment.",
+  },
+  loadoutLeaderRole: { ru: "Лидер", en: "Leader" },
+  loadoutTotemRole: { ru: "Тотем · всегда нанят", en: "Totem · always hired" },
+  loadoutNoEquipment: { ru: "без снаряжения", en: "no equipment" },
+  loadoutEquipmentCount: {
+    ru: "{n} ед. снаряжения",
+    en: "{n} equipment",
+  },
+  recordedCrew: { ru: "Состав на игру", en: "Encounter crew" },
+  loadoutResetAfterGame: {
+    ru: "Состав сохранён в истории. Временный ростер очищен для следующей встречи.",
+    en: "The crew snapshot was saved. The temporary roster is clear for the next encounter.",
+  },
   gameSaved: {
     ru: "Запись сохранена: +{scrip} скрип, +{xp} XP.",
     en: "Entry saved: +{scrip} scrip, +{xp} XP.",
@@ -956,6 +1032,17 @@ const equipment = [
   ],
 ];
 
+const equipmentAssignmentRules = Object.freeze({
+  "vengeful vow": Object.freeze({
+    allowedTargetKinds: Object.freeze(["leader"]),
+    requireNonUnique: false,
+  }),
+  "strange seed pod": Object.freeze({
+    allowedTargetKinds: Object.freeze(["leader", "model", "totem"]),
+    requireNonUnique: true,
+  }),
+});
+
 const injuries = [
   ["Black Joker", "Traitor", "Если не лидер/тотем: модель аннигилируется и может бесплатно перейти противнику.", "If this model is a leader or totem, reflip this result. Annihilate this model. The opposing crew may add a copy of this model to its arsenal spending no scrip; the model gains the keywords of its new crew’s leader. The model retains any injuries and equipment it had this game in its new crew and they are annihilated from its previous crew."],
   ["1 R/M", "Just a Flesh Wound", "Травма не получена.", "No injury is gained."],
@@ -987,14 +1074,28 @@ const injuries = [
   ["Red Joker", "Close Call", "При обычном флипе перейдите к Lucky Miss; при cheat травмы нет.", "If the red joker was cheated, this model receives no injury. If the red joker was flipped, flip on the Lucky Miss table."],
 ];
 
-const xpTiers = [
-  1, 1, 2, null, 3, null, 4, null, 1, null, 2, null, 4,
-  null, null, null, 1, null, null, 2, 1, null, null, null, 3, null,
-  null, null, null, 1, null, null, null, null, 2, null, null, null, 4,
-];
+const injuryCatalog = Object.freeze(
+  injuries.map(([flip, name, effect, effectEn], index) =>
+    Object.freeze({
+      id: `injury-${String(index + 1).padStart(2, "0")}`,
+      flip,
+      name,
+      effect,
+      effectEn,
+    }),
+  ),
+);
+
+const xpTiers = Array.isArray(advancementData?.xpTrack)
+  ? [...advancementData.xpTrack]
+  : [
+      1, 1, 2, null, 3, null, 4, null, 1, null, 2, null, 4,
+      null, null, null, 1, null, null, 2, 1, null, null, null, 3, null,
+      null, null, null, 1, null, null, null, null, 2, null, null, null, 4,
+    ];
 
 const defaultState = {
-  version: 2,
+  version: 4,
   crew: {
     name: "",
     player: "",
@@ -1017,11 +1118,18 @@ const defaultState = {
     crewCard: "",
     xp: 0,
     advances: [],
+    injuries: [],
+    totem: null,
   },
   arsenal: {
     models: [],
     equipment: [],
+    equipmentScripSpent: 0,
     scrip: 0,
+  },
+  loadout: {
+    hiredModelIds: [],
+    assignments: [],
   },
   games: [],
 };
@@ -1031,7 +1139,10 @@ const cardCatalog = window.BiggerHatCards || null;
 let pendingModelCard = null;
 let activeTalentSlot = null;
 let selectedTalentSource = null;
+let pendingAdvancementTalent = null;
+let returnToAdvancementAfterTalent = false;
 let activeCardView = null;
+let activeInjuryTarget = null;
 let modelSearchRequest = 0;
 let talentSearchRequest = 0;
 let modelSelectionRequest = 0;
@@ -1081,6 +1192,11 @@ function safeIdentifier(value, prefix = "entry") {
   return /^[A-Za-z0-9_-]{1,96}$/u.test(candidate)
     ? candidate
     : `${prefix}-${uid()}`;
+}
+
+function storedIdentifier(value) {
+  const candidate = String(value ?? "");
+  return /^[A-Za-z0-9_-]{1,96}$/u.test(candidate) ? candidate : "";
 }
 
 function safeExternalId(value, prefix = "card") {
@@ -1239,12 +1355,100 @@ function normalizeStoredCardSnapshot(snapshot) {
   };
 }
 
+function normalizeStoredInjuries(value, ownerId = "model") {
+  const numericCount =
+    Array.isArray(value) || (value && typeof value === "object")
+      ? null
+      : safeInteger(value, 0, 0, 100);
+  const sourceItems = Array.isArray(value)
+    ? value.slice(0, 100)
+    : Array.from({ length: numericCount || 0 }, (_, index) => ({
+        id: `${ownerId}-legacy-injury-${index + 1}`,
+        name: "Не указана",
+        nameEn: "Unspecified",
+        week: 1,
+      }));
+  const validIdPattern = /^[A-Za-z0-9_-]{1,96}$/u;
+  const inputIdCounts = sourceItems.reduce((counts, injury) => {
+    const rawId =
+      injury && typeof injury === "object" && !Array.isArray(injury)
+        ? String(injury.id ?? "")
+        : "";
+    if (validIdPattern.test(rawId)) counts.set(rawId, (counts.get(rawId) || 0) + 1);
+    return counts;
+  }, new Map());
+  const reservedUniqueIds = new Set(
+    [...inputIdCounts.entries()]
+      .filter(([, count]) => count === 1)
+      .map(([id]) => id),
+  );
+  const seenIds = new Set();
+  return sourceItems
+    .map((injury, index) => {
+      const source =
+        typeof injury === "string"
+          ? { name: injury }
+          : injury && typeof injury === "object" && !Array.isArray(injury)
+            ? injury
+            : {};
+      const catalogId = safeText(
+        source.catalogId || source.catalogKey || source.injuryId || source.key,
+        96,
+      );
+      const catalogEntry = injuryCatalog.find((entry) => entry.id === catalogId) || null;
+      const rawId = String(source.id ?? "");
+      const baseId = validIdPattern.test(rawId)
+        ? rawId
+        : `${ownerId}-injury-${index + 1}`;
+      let id = baseId;
+      let suffix = 2;
+      while (
+        seenIds.has(id) ||
+        (id !== rawId && reservedUniqueIds.has(id))
+      ) {
+        const suffixText = `-${suffix}`;
+        id = `${baseId.slice(0, 96 - suffixText.length)}${suffixText}`;
+        suffix += 1;
+      }
+      seenIds.add(id);
+      return {
+        id,
+        catalogId: catalogEntry?.id || catalogId || null,
+        name:
+          safeText(source.name || source.label, 200) ||
+          catalogEntry?.name ||
+          "Не указана",
+        nameEn:
+          safeText(source.nameEn || source.englishName, 200) ||
+          catalogEntry?.name ||
+          "Unspecified",
+        effect:
+          safeText(source.effect || source.text || source.description, 4_000) ||
+          catalogEntry?.effect ||
+          "",
+        effectEn:
+          safeText(source.effectEn || source.englishEffect, 4_000) ||
+          catalogEntry?.effectEn ||
+          "",
+        flip: safeText(source.flip, 32) || catalogEntry?.flip || "",
+        week: safeInteger(source.week, 1, 1, 99),
+      };
+    })
+    .filter((injury) => injury.name);
+}
+
+function injuryCount(value) {
+  return Array.isArray(value) ? value.length : safeInteger(value, 0, 0, 100);
+}
+
 function normalizeStoredModel(model) {
   const source = model && typeof model === "object" ? model : {};
   const legacyType = String(source.type || "Other");
   const type = ["Minion", "Peon", "Other"].includes(legacyType) ? legacyType : "Other";
+  const snapshot = normalizeStoredCardSnapshot(source.cardSnapshot);
+  const id = safeIdentifier(source.id, "model");
   return {
-    id: safeIdentifier(source.id, "model"),
+    id,
     name: safeText(source.name, 200),
     cost: safeNumber(source.cost, 0, 0, 1_000),
     type,
@@ -1252,7 +1456,8 @@ function normalizeStoredModel(model) {
     keywords: safeText(source.keywords, 500),
     versatile: Boolean(source.versatile),
     outOfKeyword: Boolean(source.outOfKeyword),
-    injuries: safeInteger(source.injuries, 0, 0, 100),
+    modelLimit: safeInteger(source.modelLimit ?? snapshot?.count, 1, 1, 100),
+    injuries: normalizeStoredInjuries(source.injuries, id),
     addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
     scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
     cardId:
@@ -1260,7 +1465,7 @@ function normalizeStoredModel(model) {
         ? null
         : safeExternalId(source.cardId, "card"),
     cardSlug: safeSlug(source.cardSlug || source.cardSnapshot?.slug) || null,
-    cardSnapshot: normalizeStoredCardSnapshot(source.cardSnapshot),
+    cardSnapshot: snapshot,
   };
 }
 
@@ -1314,6 +1519,30 @@ function normalizeStoredTalent(talent, slot, index) {
   };
 }
 
+function normalizeEquipmentAssignmentRules(rules, name) {
+  const catalogRules =
+    equipmentAssignmentRules[
+      String(name || "")
+        .trim()
+        .replace(/\s+/gu, " ")
+        .toLocaleLowerCase("en")
+    ] || null;
+  const source =
+    rules && typeof rules === "object" && !Array.isArray(rules)
+      ? rules
+      : catalogRules;
+  if (!source) return null;
+  const allowedTargetKinds = Array.isArray(source.allowedTargetKinds)
+    ? source.allowedTargetKinds
+        .filter((kind) => ["leader", "model", "totem"].includes(kind))
+        .filter((kind, index, values) => values.indexOf(kind) === index)
+    : ["leader", "model", "totem"];
+  return {
+    allowedTargetKinds,
+    requireNonUnique: Boolean(source.requireNonUnique),
+  };
+}
+
 function normalizeStoredEquipment(item) {
   const source = item && typeof item === "object" ? item : {};
   const scripPaid = safeNumber(source.scripPaid, 0, 0, 1_000);
@@ -1332,6 +1561,158 @@ function normalizeStoredEquipment(item) {
         : safeNumber(source.cc, 0, 0, 1_000),
     scripPaid,
     acquisition,
+    ratingExempt:
+      typeof source.ratingExempt === "boolean"
+        ? source.ratingExempt
+        : typeof source.countsForRating === "boolean"
+          ? !source.countsForRating
+          : false,
+    assignmentRules: normalizeEquipmentAssignmentRules(
+      source.assignmentRules,
+      source.name,
+    ),
+  };
+}
+
+function normalizeStoredLoadout(loadout, models, equipmentItems, legacyEquipment = []) {
+  const source =
+    loadout && typeof loadout === "object" && !Array.isArray(loadout) ? loadout : {};
+  const modelIds = new Set(models.map((model) => model.id));
+  const equipmentIds = new Set(equipmentItems.map((item) => item.id));
+  const hasStoredLoadout = Boolean(
+    loadout && typeof loadout === "object" && !Array.isArray(loadout),
+  );
+  const hiredModelIds = (
+    Array.isArray(source.hiredModelIds)
+      ? source.hiredModelIds
+      : hasStoredLoadout
+        ? []
+        : models.map((model) => model.id)
+  )
+    .map((id) => String(id))
+    .filter((id, index, values) => modelIds.has(id) && values.indexOf(id) === index);
+  const rawAssignments = Array.isArray(source.assignments)
+    ? source.assignments
+    : legacyEquipment
+        .filter((item) => item?.assignedTo)
+        .map((item) => ({
+          equipmentId: item.id,
+          targetKind:
+            item.assignedTo === "leader"
+              ? "leader"
+              : item.assignedTo === "totem"
+                ? "totem"
+                : "model",
+          targetId:
+            item.assignedTo === "leader" || item.assignedTo === "totem"
+              ? null
+              : item.assignedTo,
+        }));
+  const assignments = rawAssignments
+    .slice(0, equipmentItems.length)
+    .map((assignment) => {
+      const targetKind = ["leader", "model", "totem"].includes(assignment?.targetKind)
+        ? assignment.targetKind
+        : "";
+      return {
+        equipmentId: String(assignment?.equipmentId || ""),
+        targetKind,
+        targetId:
+          targetKind === "model" && modelIds.has(String(assignment?.targetId || ""))
+            ? String(assignment.targetId)
+            : null,
+      };
+    })
+    .filter(
+      (assignment, index, values) =>
+        equipmentIds.has(assignment.equipmentId) &&
+        assignment.targetKind &&
+        (assignment.targetKind !== "model" ||
+          hiredModelIds.includes(assignment.targetId)) &&
+        values.findIndex((item) => item.equipmentId === assignment.equipmentId) === index,
+    );
+  return { hiredModelIds, assignments };
+}
+
+function normalizeStoredLoadoutEquipment(item) {
+  const source = item && typeof item === "object" ? item : {};
+  return {
+    id: safeIdentifier(source.id, "equipment"),
+    name: safeText(source.name, 300),
+    br: source.br === null || source.br === undefined ? null : safeText(source.br, 80),
+    cc:
+      source.cc === null || source.cc === undefined
+        ? null
+        : safeNumber(source.cc, 0, 0, 1_000),
+    ratingExempt: Boolean(source.ratingExempt),
+  };
+}
+
+function normalizeStoredLoadoutAbility(item, index = 0) {
+  const source = item && typeof item === "object" ? item : {};
+  const id = safeIdentifier(source.id || source.advancementId, `ability-${index + 1}`);
+  return {
+    id,
+    advancementId: safeIdentifier(source.advancementId || id, id),
+    choiceId: safeText(source.choiceId, 120),
+    name: safeText(source.name, 200) || localized("Способность", "Ability"),
+    effect: safeText(source.effect || source.text || source.description, 4_000),
+    source: safeText(source.source, 240),
+    tableId: safeText(source.tableId || "ability", 60),
+    flip: normalizeStoredFlip(source.flip),
+    scripPaid: safeNumber(source.scripPaid, 0, 0, 100),
+    snapshot:
+      source.snapshot && typeof source.snapshot === "object"
+        ? clone(source.snapshot)
+        : null,
+  };
+}
+
+function normalizeStoredLoadoutMember(member, fallbackRole) {
+  const source = member && typeof member === "object" ? member : {};
+  return {
+    id: safeIdentifier(source.id, fallbackRole),
+    role: ["leader", "model", "totem"].includes(source.role)
+      ? source.role
+      : fallbackRole,
+    name: safeText(source.name, 200),
+    type: safeText(source.type, 80),
+    henchman: Boolean(source.henchman),
+    injuries: normalizeStoredInjuries(source.injuries, safeIdentifier(source.id, fallbackRole)),
+    abilities: Array.isArray(source.abilities)
+      ? source.abilities
+          .slice(0, 100)
+          .map(normalizeStoredLoadoutAbility)
+          .filter((ability) => ability.name)
+      : [],
+    equipment: Array.isArray(source.equipment)
+      ? source.equipment
+          .slice(0, 100)
+          .map(normalizeStoredLoadoutEquipment)
+          .filter((item) => item.name)
+      : [],
+  };
+}
+
+function normalizeStoredGameLoadout(loadout) {
+  if (!loadout || typeof loadout !== "object" || Array.isArray(loadout)) return null;
+  const leader = normalizeStoredLoadoutMember(loadout.leader, "leader");
+  const models = Array.isArray(loadout.models)
+    ? loadout.models
+        .slice(0, 100)
+        .map((member) => normalizeStoredLoadoutMember(member, "model"))
+        .filter((member) => member.name)
+    : [];
+  const totem = loadout.totem
+    ? normalizeStoredLoadoutMember(loadout.totem, "totem")
+    : null;
+  if (!leader.name && !models.length && !totem) return null;
+  return {
+    version: 1,
+    recordedAt: safeText(loadout.recordedAt, 80),
+    leader,
+    models,
+    totem,
   };
 }
 
@@ -1357,7 +1738,592 @@ function normalizeStoredGame(game) {
       source.creditedXp === null || source.creditedXp === undefined
         ? null
         : Math.min(xp, safeNumber(source.creditedXp, 0, 0, 100)),
+    loadoutSnapshot: normalizeStoredGameLoadout(source.loadoutSnapshot),
   };
+}
+
+function advancementThresholds() {
+  if (Array.isArray(advancementData?.xpThresholds)) {
+    return advancementData.xpThresholds.map((slot) => ({
+      xp: safeInteger(slot.xp, 0, 1, xpTiers.length),
+      maxTier: safeInteger(slot.maxTier, 1, 1, 4),
+    }));
+  }
+  return xpTiers
+    .map((maxTier, index) => (maxTier ? { xp: index + 1, maxTier } : null))
+    .filter(Boolean);
+}
+
+function storedTotemProfile(advance, leaderXp = null) {
+  const source = storedAdvancementSource(advance);
+  const table = advancementData?.tables?.totem;
+  const catalog = Array.isArray(advancementData?.tier3?.totems)
+    ? advancementData.tier3.totems
+    : [];
+  if (
+    source.tableId !== "totem" ||
+    table?.tier !== 3 ||
+    table?.selection !== "exact"
+  ) {
+    return null;
+  }
+  if (source.recipient !== "leader") return null;
+  if (leaderXp !== null) {
+    const xp = safeInteger(source.xp, 0, 1, xpTiers.length);
+    const slot = advancementThresholds().find((entry) => entry.xp === xp);
+    if (!slot || xp > leaderXp || table.tier > slot.maxTier) return null;
+  }
+  const profileId = safeText(
+    source.choiceId || source.resultId || source.profileId,
+    96,
+  );
+  const profile = catalog.find((entry) => entry.id === profileId) || null;
+  const flip = normalizeStoredFlip(source.flip);
+  if (!profile || String(profile.flip) !== flip.card) return null;
+  if (source.resultType && source.resultType !== "totem") return null;
+  return profile;
+}
+
+function normalizeStoredTotem(totem, sourceAdvancement, leaderKeywords = []) {
+  const sourceProfile = storedTotemProfile(sourceAdvancement);
+  if (!sourceProfile) return null;
+  const source = storedAdvancementSource(sourceAdvancement);
+  const stored =
+    totem && typeof totem === "object" && !Array.isArray(totem) ? totem : {};
+  const snapshot = clone(sourceProfile);
+  const statsSource = sourceProfile.stats || {};
+  const base = safeInteger(stored.base, 30, 1, 100);
+  const characteristics = Array.isArray(stored.characteristics)
+    ? stored.characteristics
+    : [stored.characteristic1, stored.characteristic2];
+  const sourceId = safeText(source.id, 96);
+  const storedId = storedIdentifier(stored.id);
+  const linkedTotemId = storedIdentifier(source.acquiredTotemId);
+  const deterministicId = `totem-${sourceId || sourceProfile.id}`.slice(0, 96);
+  const id = storedId || linkedTotemId || deterministicId;
+  const customName = safeText(stored.customName || stored.name, 200).trim();
+  return {
+    id,
+    profileId: sourceProfile.id,
+    snapshot,
+    profile: clone(snapshot),
+    customName,
+    name: customName || sourceProfile.name,
+    stats: {
+      df: safeNumber(statsSource.df, sourceProfile.stats?.df ?? 0, -20, 50),
+      wp: safeNumber(statsSource.wp, sourceProfile.stats?.wp ?? 0, -20, 50),
+      sp: safeNumber(statsSource.sp, sourceProfile.stats?.sp ?? 0, -20, 50),
+      health: safeNumber(statsSource.health, sourceProfile.stats?.health ?? 0, 0, 100),
+    },
+    size: safeInteger(stored.size, 1, 1, 4),
+    base: [30, 40, 50].includes(base) ? base : 30,
+    characteristics: characteristics
+      .slice(0, 2)
+      .map((value) => safeText(value, 100))
+      .filter(Boolean),
+    injuries: normalizeStoredInjuries(stored.injuries, id),
+    sourceAdvancementId: sourceId,
+    acquiredBy: sourceId,
+    cost: 0,
+    permanentHired: true,
+    keywords: (Array.isArray(leaderKeywords) ? leaderKeywords : [])
+      .slice(0, 2)
+      .map((value) => safeText(value, 200))
+      .filter(Boolean),
+  };
+}
+
+function normalizeStoredFlip(flip) {
+  const source =
+    flip && typeof flip === "object" && !Array.isArray(flip)
+      ? flip
+      : { card: flip };
+  const card = safeText(source.card ?? source.kind ?? source.value, 32);
+  return {
+    card: /^(?:[1-9]|1[0-3]|black-joker|red-joker)$/u.test(card) ? card : "",
+    cheated: Boolean(source.cheated),
+  };
+}
+
+function storedAdvancementSource(advance) {
+  return typeof advance === "string"
+    ? { name: advance }
+    : advance && typeof advance === "object" && !Array.isArray(advance)
+      ? advance
+      : {};
+}
+
+function storedAbilityIdentity(source) {
+  const choiceId = safeText(source.choiceId || source.resultId, 120);
+  const genericNaturalChoice = /natural-joker-choose$/u.test(choiceId);
+  if (choiceId && !genericNaturalChoice) return `choice:${canonical(choiceId)}`;
+  const snapshot =
+    source.snapshot && typeof source.snapshot === "object" && !Array.isArray(source.snapshot)
+      ? source.snapshot.entry || source.snapshot
+      : {};
+  const name = safeText(source.name || source.label || snapshot.name, 200);
+  const origin = safeText(
+    source.source ||
+      snapshot.source ||
+      source.snapshot?.sourceCard?.displayName ||
+      source.snapshot?.sourceCard?.name,
+    240,
+  );
+  return `fallback:${canonical(name)}|${canonical(origin)}`;
+}
+
+function storedCatalogAdvancementChoice(source) {
+  const tableId = safeText(source.tableId, 60);
+  const choiceId = safeText(source.choiceId || source.resultId, 120);
+  if (!choiceId || !advancementData) return null;
+  if (["attack-modification", "tactical-modification"].includes(tableId)) {
+    const collection =
+      tableId === "attack-modification"
+        ? advancementData.tier1?.attackModification
+        : advancementData.tier1?.tacticalModification;
+    return (collection || []).find((entry) => entry.id === choiceId) || null;
+  }
+  if (["action", "ability"].includes(tableId)) {
+    const catalog =
+      tableId === "action"
+        ? advancementData.tier2?.actions
+        : advancementData.tier2?.abilities;
+    if (catalog?.naturalJoker?.id === choiceId) return catalog.naturalJoker;
+    return [
+      ...(catalog?.always || []),
+      ...Object.values(catalog?.byValue || {}).flatMap((entries) => entries || []),
+    ].find((entry) => entry.id === choiceId) || null;
+  }
+  if (tableId === "totem") {
+    return (advancementData.tier3?.totems || []).find(
+      (entry) => entry.id === choiceId,
+    ) || null;
+  }
+  if (tableId === "summoning") {
+    return (advancementData.tier3?.summoning || []).find(
+      (entry) => entry.id === choiceId,
+    ) || null;
+  }
+  return null;
+}
+
+function storedCanonicalAdvancementChoice(source) {
+  const tableId = safeText(source.tableId, 60);
+  const choice = storedCatalogAdvancementChoice(source);
+  if (!choice) return null;
+  const flip = normalizeStoredFlip(source.flip);
+  if (["attack-modification", "tactical-modification"].includes(tableId)) {
+    const numericFlip = Number(flip.card);
+    const valid = Number.isInteger(numericFlip)
+      ? typeof choice.value === "number" && choice.value <= numericFlip
+      : choice.value === flip.card ||
+        (choice.value === "any-joker" && ["black-joker", "red-joker"].includes(flip.card));
+    return valid ? clone(choice) : null;
+  }
+  if (["action", "ability"].includes(tableId)) {
+    if (choice.value === "natural-joker") {
+      return !flip.cheated && ["black-joker", "red-joker"].includes(flip.card)
+        ? clone(choice)
+        : null;
+    }
+    const effectiveValue =
+      flip.card === "black-joker"
+        ? flip.cheated
+          ? 0
+          : null
+        : flip.card === "red-joker"
+          ? flip.cheated
+            ? 14
+            : null
+          : Number(flip.card);
+    if (effectiveValue === null || !Number.isFinite(effectiveValue)) return null;
+    return choice.value === "always" || Number(choice.value) <= effectiveValue
+      ? clone(choice)
+      : null;
+  }
+  if (tableId === "totem") {
+    return String(choice.flip) === flip.card ? clone(choice) : null;
+  }
+  if (tableId === "summoning") {
+    return clone(choice);
+  }
+  return null;
+}
+
+function normalizeStoredAdvancementsLegacy(rawAdvances, leaderXp, preferredTotemSourceId = "") {
+  if (!Array.isArray(rawAdvances)) return [];
+  const slots = advancementThresholds();
+  const eligibleSlots = slots.filter((slot) => slot.xp <= leaderXp);
+  const reserved = new Set();
+  const used = new Set();
+  const seenAbilities = new Set();
+  const validTotemSources = rawAdvances
+    .map((advance) => ({
+      advance,
+      source: storedAdvancementSource(advance),
+      profile: storedTotemProfile(advance, leaderXp),
+    }))
+    .filter((entry) => entry.profile);
+  const selectedTotemSource =
+    validTotemSources.find(
+      (entry) =>
+        preferredTotemSourceId &&
+        safeText(entry.source.id, 96) === preferredTotemSourceId,
+    ) || validTotemSources[0] || null;
+  const deduplicatedAdvances = rawAdvances.filter((advance) => {
+    const source = storedAdvancementSource(advance);
+    const claimsTotem = source.tableId === "totem" || source.resultType === "totem";
+    if (claimsTotem) return advance === selectedTotemSource?.advance;
+    const isAbility =
+      source.tableId === "ability" || source.resultType === "ability" || source.type === "ability";
+    if (!isAbility) return true;
+    const recipient =
+      source.recipient === "totem" || source.target === "totem"
+        ? "totem"
+        : "leader";
+    const key = `${recipient}:${storedAbilityIdentity(source)}`;
+    if (seenAbilities.has(key)) return false;
+    seenAbilities.add(key);
+    return true;
+  });
+  const sourceAdvances = deduplicatedAdvances.slice(0, slots.length);
+
+  sourceAdvances.forEach((advance) => {
+    if (!advance || typeof advance !== "object" || Array.isArray(advance)) return;
+    const xp = safeInteger(advance.xp, 0, 1, xpTiers.length);
+    if (slots.some((slot) => slot.xp === xp) && xp <= leaderXp && !reserved.has(xp)) {
+      reserved.add(xp);
+    }
+  });
+
+  return sourceAdvances
+    .map((advance, index) => {
+      const legacy =
+        typeof advance === "string" ||
+        !advance ||
+        typeof advance !== "object" ||
+        Array.isArray(advance) ||
+        !advance.tableId;
+      const source = storedAdvancementSource(advance);
+      const tableId = safeText(source.tableId || "legacy", 60);
+      const table = advancementData?.tables?.[tableId];
+      let xp = safeInteger(source.xp, 0, 1, xpTiers.length);
+      if (!slots.some((slot) => slot.xp === xp) || xp > leaderXp) xp = 0;
+      if (xp && used.has(xp)) xp = 0;
+      if (!xp) {
+        xp =
+          eligibleSlots.find(
+            (slot) => !reserved.has(slot.xp) && !used.has(slot.xp),
+          )?.xp || 0;
+      }
+      const slot = slots.find((candidate) => candidate.xp === xp);
+      const totemProfile = tableId === "totem" ? storedTotemProfile(source) : null;
+      if (
+        tableId === "totem" &&
+        (!totemProfile || !slot || table?.tier > slot.maxTier)
+      ) {
+        return null;
+      }
+      if (xp) used.add(xp);
+      const tier = table
+        ? table.tier
+        : safeInteger(source.tier, slot?.maxTier || 1, 1, 4);
+      const recipient =
+        source.recipient === "totem" || source.target === "totem"
+          ? "totem"
+          : "leader";
+      const rawSnapshot =
+        source.snapshot && typeof source.snapshot === "object" && !Array.isArray(source.snapshot)
+          ? source.snapshot
+          : null;
+      const canonicalChoice = totemProfile
+        ? clone(totemProfile)
+        : storedCanonicalAdvancementChoice(source);
+      return {
+        id: safeIdentifier(source.id, `advance-${index + 1}`),
+        xp: xp || null,
+        maxTier: slot?.maxTier || null,
+        tier,
+        tableId,
+        recipient,
+        choiceId: totemProfile?.id || safeText(source.choiceId || source.resultId, 120),
+        name: safeText(source.name || source.label, 200) || localized("Продвижение", "Advancement"),
+        resultType:
+          totemProfile?.id
+            ? "totem"
+            : safeText(source.resultType || source.type || (legacy ? "legacy" : ""), 60),
+        flip: normalizeStoredFlip(source.flip),
+        appliesTo: safeText(source.appliesTo || source.target?.name, 200),
+        notes: safeText(source.notes, 4_000),
+        snapshot: totemProfile
+          ? clone(totemProfile)
+          : rawSnapshot
+            ? clone(rawSnapshot)
+            : canonicalChoice
+              ? clone(canonicalChoice)
+              : null,
+        cardId: safeText(source.cardId, 120) || null,
+        cardSlug: safeText(source.cardSlug, 240) || null,
+        entryId: safeText(source.entryId, 120) || null,
+        source: safeText(source.source, 240) || null,
+        scripPaid:
+          totemProfile?.id
+            ? 0
+            : safeNumber(source.scripPaid ?? source.scripCost, 0, 0, 100),
+        acquiredTotemId: safeText(source.acquiredTotemId, 96) || null,
+        legacy,
+        createdAt: safeText(source.createdAt, 64),
+      };
+    })
+    .filter((advance) => advance?.name);
+}
+
+function normalizeStoredAdvancements(
+  rawAdvances,
+  leaderXp,
+  preferredTotemSourceId = "",
+  { talents = [] } = {},
+) {
+  if (!Array.isArray(rawAdvances)) return [];
+  const slots = advancementThresholds();
+  const eligibleSlots = slots.filter((slot) => slot.xp <= leaderXp);
+  const reserved = new Set();
+  const used = new Set();
+  const accepted = [];
+  rawAdvances.forEach((advance) => {
+    const source = storedAdvancementSource(advance);
+    const xp = safeInteger(source.xp, 0, 1, xpTiers.length);
+    if (slots.some((slot) => slot.xp === xp) && xp <= leaderXp) reserved.add(xp);
+  });
+  const validTotemSources = rawAdvances
+    .map((advance) => ({
+      advance,
+      source: storedAdvancementSource(advance),
+      profile: storedTotemProfile(advance, leaderXp),
+    }))
+    .filter((entry) => entry.profile);
+  const selectedTotemSource =
+    validTotemSources.find(
+      (entry) =>
+        preferredTotemSourceId &&
+        safeText(entry.source.id, 96) === preferredTotemSourceId,
+    ) || validTotemSources[0] || null;
+
+  for (let index = 0; index < rawAdvances.length && accepted.length < slots.length; index += 1) {
+    const advance = rawAdvances[index];
+    const source = storedAdvancementSource(advance);
+    const tableId = safeText(source.tableId || "legacy", 60);
+    const table = advancementData?.tables?.[tableId] || null;
+    const catalogChoice = table ? storedCatalogAdvancementChoice(source) : null;
+    const canonicalChoice = catalogChoice
+      ? storedCanonicalAdvancementChoice(source)
+      : null;
+    const known = Boolean(table && (catalogChoice || tableId === "crew-card"));
+    const legacy =
+      typeof advance === "string" ||
+      !advance ||
+      typeof advance !== "object" ||
+      Array.isArray(advance) ||
+      !advance.tableId ||
+      !known;
+    let xp = safeInteger(source.xp, 0, 1, xpTiers.length);
+    const explicitSlot = slots.find((slot) => slot.xp === xp);
+    if (!explicitSlot || xp > leaderXp || used.has(xp)) xp = 0;
+    if (known && (!xp || !explicitSlot || table.tier > explicitSlot.maxTier)) continue;
+    if (!known && !xp) {
+      xp =
+        eligibleSlots.find(
+          (slot) => !reserved.has(slot.xp) && !used.has(slot.xp),
+        )?.xp || 0;
+    }
+    const slot = slots.find((candidate) => candidate.xp === xp);
+    if (!slot) continue;
+    const claimsTotem = tableId === "totem" || source.resultType === "totem";
+    if (claimsTotem && advance !== selectedTotemSource?.advance) continue;
+    if (catalogChoice && !canonicalChoice) continue;
+
+    const rawRecipient =
+      source.recipient ||
+      (typeof source.target === "string" ? source.target : "") ||
+      "leader";
+    const recipient =
+      rawRecipient === "totem"
+        ? "totem"
+        : rawRecipient === "leader"
+          ? "leader"
+          : "";
+    const acceptedTotem = accepted.find(
+      (entry) => entry.tableId === "totem" && !entry.legacy,
+    );
+    if (
+      known &&
+      (!recipient ||
+        !table.recipients?.includes(recipient) ||
+        (recipient === "totem" && !acceptedTotem))
+    ) {
+      continue;
+    }
+
+    const rawSnapshot =
+      source.snapshot && typeof source.snapshot === "object" && !Array.isArray(source.snapshot)
+        ? source.snapshot
+        : null;
+    const naturalJoker = canonicalChoice?.value === "natural-joker";
+    const importedName = safeText(
+      source.name || source.label || rawSnapshot?.entry?.name || rawSnapshot?.name,
+      200,
+    ).trim();
+    const name =
+      known && canonicalChoice && !naturalJoker
+        ? canonicalChoice.name
+        : importedName || localized("Продвижение", "Advancement");
+    const appliesTo = safeText(source.appliesTo || source.target?.name, 200).trim();
+    const isModification = ["attack-modification", "tactical-modification"].includes(tableId);
+    const actionKind = tableId === "attack-modification" ? "attack" : "tactical";
+    const importedTotem = acceptedTotem ? { profile: acceptedTotem.snapshot } : null;
+    const action = isModification
+      ? advancementKnownActionsFrom({
+          recipient,
+          kind: actionKind,
+          talents,
+          totem: importedTotem,
+          advances: accepted,
+        }).find((entry) => entry.name === appliesTo)
+      : null;
+    if (known && isModification && !action) continue;
+    if (
+      known &&
+      canonicalChoice?.requirements?.currentSkill &&
+      !canonicalChoice.requirements.currentSkill.includes(Number(action?.skill))
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      canonicalChoice?.requirements?.resist &&
+      !canonicalChoice.requirements.resist.includes(action?.resist)
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      isModification &&
+      canonicalChoice?.type === "trigger" &&
+      (action?.triggerNames || []).some(
+        (triggerName) => canonical(triggerName) === canonical(canonicalChoice.name),
+      )
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      isModification &&
+      accepted.some(
+        (entry) =>
+          !entry.legacy &&
+          entry.tableId === tableId &&
+          entry.recipient === recipient &&
+          entry.choiceId === canonicalChoice?.id &&
+          canonical(entry.appliesTo) === canonical(appliesTo),
+      )
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      ["action", "ability"].includes(tableId) &&
+      accepted.some((entry) => {
+        if (entry.legacy || entry.tableId !== tableId || entry.recipient !== recipient) return false;
+        if (!naturalJoker) return entry.choiceId === canonicalChoice.id;
+        if (source.entryId && entry.entryId) return source.entryId === entry.entryId;
+        if (source.cardId && entry.cardId) {
+          return String(source.cardId) === String(entry.cardId) && canonical(name) === canonical(entry.name);
+        }
+        return canonical(name) === canonical(entry.name) && canonical(source.source) === canonical(entry.source);
+      })
+    ) {
+      continue;
+    }
+    if (
+      !known &&
+      (tableId === "ability" || source.resultType === "ability" || source.type === "ability") &&
+      accepted.some(
+        (entry) =>
+          entry.recipient === (recipient || "leader") &&
+          storedAbilityIdentity(entry) === storedAbilityIdentity(source),
+      )
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      tableId === "summoning" &&
+      accepted.some((entry) => entry.tableId === "summoning" && !entry.legacy)
+    ) {
+      continue;
+    }
+    if (
+      known &&
+      tableId === "crew-card" &&
+      accepted.some(
+        (entry) =>
+          entry.tableId === "crew-card" &&
+          !entry.legacy &&
+          canonical(entry.name) === canonical(name),
+      )
+    ) {
+      continue;
+    }
+
+    const scripPaid =
+      known &&
+      isModification &&
+      canonicalChoice?.type === "trigger" &&
+      Number(action?.triggers || 0) >= Number(table.triggerSurcharge?.existingTriggerCount || 2)
+        ? Number(table.triggerSurcharge?.scrip || 2)
+        : 0;
+    const snapshot =
+      known && tableId === "totem"
+        ? clone(canonicalChoice)
+        : known && canonicalChoice && !naturalJoker
+          ? clone(canonicalChoice)
+          : rawSnapshot
+            ? clone(rawSnapshot)
+            : canonicalChoice
+              ? clone(canonicalChoice)
+              : null;
+    const normalized = {
+      id: safeIdentifier(source.id, `advance-${index + 1}`),
+      xp,
+      maxTier: slot.maxTier,
+      tier: table ? table.tier : safeInteger(source.tier, slot.maxTier, 1, 4),
+      tableId,
+      recipient: recipient || "leader",
+      choiceId: canonicalChoice?.id || safeText(source.choiceId || source.resultId, 120),
+      name,
+      resultType:
+        tableId === "totem" && canonicalChoice
+          ? "totem"
+          : known && canonicalChoice
+            ? canonicalChoice.type || ({ action: "action", ability: "ability" }[tableId] || "")
+            : safeText(source.resultType || source.type || (legacy ? "legacy" : ""), 60),
+      flip: normalizeStoredFlip(source.flip),
+      appliesTo,
+      notes: safeText(source.notes, 4_000),
+      snapshot,
+      cardId: safeText(source.cardId, 120) || null,
+      cardSlug: safeText(source.cardSlug, 240) || null,
+      entryId: safeText(source.entryId, 120) || null,
+      source: safeText(source.source, 240) || null,
+      scripPaid,
+      acquiredTotemId: safeText(source.acquiredTotemId, 96) || null,
+      legacy,
+      createdAt: safeText(source.createdAt, 64),
+    };
+    used.add(xp);
+    accepted.push(normalized);
+  }
+  return accepted;
 }
 
 function mergeDefaults(saved) {
@@ -1374,6 +2340,68 @@ function mergeDefaults(saved) {
   const slots = archetypes[savedLeader.archetype]?.talents || [];
   const savedTalents = Array.isArray(savedLeader.talents) ? savedLeader.talents : [];
   const savedArsenal = saved.arsenal && typeof saved.arsenal === "object" ? saved.arsenal : {};
+  const storedModels = Array.isArray(savedArsenal.models)
+    ? savedArsenal.models.slice(0, 200).map(normalizeStoredModel)
+    : [];
+  const storedEquipment = Array.isArray(savedArsenal.equipment)
+    ? savedArsenal.equipment.slice(0, 500).map(normalizeStoredEquipment)
+    : [];
+  const loadout = normalizeStoredLoadout(
+    saved.loadout,
+    storedModels,
+    storedEquipment,
+    Array.isArray(savedArsenal.equipment) ? savedArsenal.equipment : [],
+  );
+  const equipmentScripSpent =
+    savedArsenal.equipmentScripSpent === null ||
+    savedArsenal.equipmentScripSpent === undefined
+      ? storedEquipment.reduce(
+          (sum, item) => sum + Math.max(0, Number(item.scripPaid) || 0),
+          0,
+        )
+      : safeNumber(savedArsenal.equipmentScripSpent, 0, 0, 100_000);
+  const leaderXp = safeInteger(savedLeader.xp, base.leader.xp, 0, xpTiers.length);
+  const normalizedTalents = savedTalents.slice(0, slots.length).map((talent, index) =>
+    normalizeStoredTalent(talent, slots[index], index),
+  );
+  const preferredTotemSourceId = safeText(
+    savedLeader.totem?.sourceAdvancementId || savedLeader.totem?.acquiredBy,
+    96,
+  );
+  const normalizedAdvances = normalizeStoredAdvancements(
+    savedLeader.advances,
+    leaderXp,
+    preferredTotemSourceId,
+    { talents: normalizedTalents },
+  );
+  const totemSource = normalizedAdvances.find(
+    (advance) =>
+      advance.tableId === "totem" && storedTotemProfile(advance, leaderXp),
+  );
+  const totem = normalizeStoredTotem(savedLeader.totem, totemSource, savedKeywords);
+  if (totem && totemSource) {
+    totemSource.acquiredTotemId = totem.id;
+    totemSource.choiceId = totem.profileId;
+  }
+  const orphanedTotemRefund = totem
+    ? 0
+    : normalizedAdvances
+        .filter((advance) => advance.recipient === "totem")
+        .reduce(
+          (sum, advance) => sum + Math.max(0, Number(advance.scripPaid) || 0),
+          0,
+        );
+  const advances = normalizedAdvances.filter(
+    (advance) => totem || advance.recipient !== "totem",
+  );
+  const normalizedLoadout = totem
+    ? loadout
+    : {
+        ...loadout,
+        assignments: loadout.assignments.filter(
+          (assignment) => assignment.targetKind !== "totem",
+        ),
+      };
   return {
     version: defaultState.version,
     crew: {
@@ -1398,27 +2426,24 @@ function mergeDefaults(saved) {
       path: ["Bruiser", "Strategist"].includes(savedLeader.path)
         ? savedLeader.path
         : base.leader.path,
-      talents: savedTalents.slice(0, slots.length).map((talent, index) =>
-        normalizeStoredTalent(talent, slots[index], index),
-      ),
+      talents: normalizedTalents,
       crewCard: safeText(savedLeader.crewCard, 100),
-      xp: safeInteger(savedLeader.xp, base.leader.xp, 0, xpTiers.length),
-      advances: Array.isArray(savedLeader.advances)
-        ? savedLeader.advances
-            .slice(0, xpTiers.length)
-            .map((advance) => safeText(advance?.name ?? advance?.label ?? advance, 200))
-            .filter(Boolean)
-        : [],
+      xp: leaderXp,
+      advances,
+      injuries: normalizeStoredInjuries(savedLeader.injuries, "leader"),
+      totem,
     },
     arsenal: {
-      models: Array.isArray(savedArsenal.models)
-        ? savedArsenal.models.slice(0, 200).map(normalizeStoredModel)
-        : [],
+      models: storedModels,
       equipment: Array.isArray(savedArsenal.equipment)
-        ? savedArsenal.equipment.slice(0, 500).map(normalizeStoredEquipment)
+        ? storedEquipment
         : [],
-      scrip: safeNumber(savedArsenal.scrip, base.arsenal.scrip, -1_000, 100_000),
+      equipmentScripSpent,
+      scrip:
+        safeNumber(savedArsenal.scrip, base.arsenal.scrip, -1_000, 100_000) +
+        orphanedTotemRefund,
     },
+    loadout: normalizedLoadout,
     games: Array.isArray(saved.games)
       ? saved.games.slice(0, 500).map(normalizeStoredGame)
       : [],
@@ -1892,6 +2917,34 @@ function sortCharactersForCrew(characters) {
 
 function isHireableCard(character) {
   return Number.isFinite(Number(character?.cost)) && character?.cost !== null && !character?.isUnhirable;
+}
+
+function isTalentSourceCard(character, limit) {
+  const rawCost = character?.cost;
+  const cost = Number(rawCost);
+  if (
+    rawCost === null ||
+    rawCost === undefined ||
+    rawCost === "" ||
+    !Number.isFinite(cost) ||
+    cost > Number(limit)
+  ) {
+    return false;
+  }
+  const station = canonical(character?.stationLabel || character?.station);
+  const characteristics = (Array.isArray(character?.characteristics)
+    ? character.characteristics
+    : []
+  ).map(canonical);
+  if (
+    station === "master" ||
+    station === "totem" ||
+    characteristics.includes("master") ||
+    characteristics.includes("totem")
+  ) {
+    return false;
+  }
+  return characterMatchesKeyword(character);
 }
 
 function stationToModelType(character) {
@@ -2842,15 +3895,15 @@ function renderCrewCards() {
 
 function arsenalTotals() {
   const cost = state.arsenal.models.reduce((sum, model) => sum + Number(model.cost || 0), 0);
-  const injuriesCount = state.arsenal.models.reduce((sum, model) => sum + Number(model.injuries || 0), 0);
+  const injuriesCount = state.arsenal.models.reduce(
+    (sum, model) => sum + injuryCount(model.injuries),
+    0,
+  );
   return { cost, injuriesCount };
 }
 
 function purchasedEquipmentScrip() {
-  return state.arsenal.equipment.reduce(
-    (sum, item) => sum + Math.max(0, Number(item.scripPaid) || 0),
-    0,
-  );
+  return Math.max(0, Number(state.arsenal.equipmentScripSpent) || 0);
 }
 
 function startingScripBalance(modelCost) {
@@ -2858,13 +3911,389 @@ function startingScripBalance(modelCost) {
   return startingScrip - purchasedEquipmentScrip();
 }
 
+function equipmentNameKey(item) {
+  return String(item?.name || "")
+    .trim()
+    .replace(/\s+/gu, " ")
+    .toLocaleLowerCase("en");
+}
+
+function equipmentTargetKey(target) {
+  return target.kind === "model" ? `model:${target.targetId}` : target.kind;
+}
+
+function assignmentTargetKey(assignment) {
+  return assignment?.targetKind === "model"
+    ? `model:${assignment.targetId}`
+    : String(assignment?.targetKind || "");
+}
+
+function isModelHired(modelId) {
+  return state.loadout.hiredModelIds.includes(modelId);
+}
+
+function equipmentTargets(item) {
+  const targets = [
+    {
+      key: "leader",
+      targetId: null,
+      name: state.leader.name || message("equipmentLeaderTarget"),
+      kind: "leader",
+      unique: true,
+    },
+    ...state.arsenal.models
+      .filter((model) => isModelHired(model.id) && model.type !== "Peon")
+      .map((model) => ({
+        key: `model:${model.id}`,
+        targetId: model.id,
+        name: model.name || localized("Модель без имени", "Unnamed model"),
+        kind: "model",
+        unique: Number(model.modelLimit || 1) <= 1,
+      })),
+  ];
+  if (state.leader.totem) {
+    targets.push({
+      key: "totem",
+      targetId: null,
+      name:
+        state.leader.totem.name ||
+        state.leader.totem.type ||
+        message("equipmentTotemTarget"),
+      kind: "totem",
+      unique: true,
+    });
+  }
+  const rules = normalizeEquipmentAssignmentRules(item.assignmentRules, item.name);
+  if (!rules) return targets;
+  return targets.filter(
+    (target) =>
+      rules.allowedTargetKinds.includes(target.kind) &&
+      (!rules.requireNonUnique || !target.unique),
+  );
+}
+
+function equipmentAssignment(itemId) {
+  return state.loadout.assignments.find(
+    (assignment) => assignment.equipmentId === itemId,
+  );
+}
+
+function equipmentAssignedTo(targetKind, targetId = null) {
+  const equipmentById = new Map(
+    state.arsenal.equipment.map((item) => [item.id, item]),
+  );
+  return state.loadout.assignments
+    .filter(
+      (assignment) =>
+        assignment.targetKind === targetKind &&
+        (targetKind !== "model" || assignment.targetId === targetId),
+    )
+    .map((assignment) => equipmentById.get(assignment.equipmentId))
+    .filter(Boolean);
+}
+
+function snapshotEquipment(items) {
+  return items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    br: item.br,
+    cc: item.cc,
+    ratingExempt: item.ratingExempt === true,
+  }));
+}
+
+function currentLoadoutSnapshot() {
+  return {
+    version: 1,
+    recordedAt: new Date().toISOString(),
+    leader: {
+      id: "leader",
+      role: "leader",
+      name: state.leader.name || message("equipmentLeaderTarget"),
+      type: state.leader.archetype || "",
+      henchman: false,
+      injuries: clone(state.leader.injuries),
+      abilities: abilityRecords("leader"),
+      equipment: snapshotEquipment(equipmentAssignedTo("leader")),
+    },
+    models: state.loadout.hiredModelIds
+      .map((id) => state.arsenal.models.find((model) => model.id === id))
+      .filter(Boolean)
+      .map((model) => ({
+        id: model.id,
+        role: "model",
+        name: model.name || localized("Модель без имени", "Unnamed model"),
+        type: displayModelType(model.type),
+        henchman: Boolean(model.henchman),
+        injuries: clone(model.injuries),
+        abilities: [],
+        equipment: snapshotEquipment(equipmentAssignedTo("model", model.id)),
+      })),
+    totem: state.leader.totem
+      ? {
+          id: state.leader.totem.id,
+          role: "totem",
+          name: state.leader.totem.name || message("equipmentTotemTarget"),
+          type:
+            state.leader.totem.profile?.name ||
+            state.leader.totem.type ||
+            message("equipmentTotemTarget"),
+          henchman: false,
+          injuries: clone(state.leader.totem.injuries),
+          abilities: abilityRecords("totem"),
+          equipment: snapshotEquipment(equipmentAssignedTo("totem")),
+        }
+      : null,
+  };
+}
+
+function loadoutEquipmentHtml(items, { showEmpty = true } = {}) {
+  if (!items.length) {
+    return showEmpty
+      ? `<span class="loadout-equipment-empty">${message("loadoutNoEquipment")}</span>`
+      : "";
+  }
+  return `<span class="loadout-equipment-list">${items
+    .map(
+      (item) =>
+        `<span class="loadout-equipment-chip${item.ratingExempt ? " is-exempt" : ""}">${escapeHtml(
+          item.name,
+        )}</span>`,
+    )
+    .join("")}</span>`;
+}
+
+function injuryRecordName(injury) {
+  if (currentLocale === "en" && injury?.nameEn) return injury.nameEn;
+  return injury?.name || injury?.nameEn || localized("Не указана", "Unspecified");
+}
+
+function injuryRecordEffect(injury) {
+  if (currentLocale === "en" && injury?.effectEn) return injury.effectEn;
+  return injury?.effect || injury?.effectEn || "";
+}
+
+function injuryListHtml(
+  records,
+  { targetKind = "", targetId = "", removable = false } = {},
+) {
+  const items = Array.isArray(records) ? records : [];
+  if (!items.length) return "";
+  return `<span class="injury-list">${items
+    .map((injury) => {
+      const effect = injuryRecordEffect(injury);
+      return `<span class="injury-chip" title="${escapeHtml(effect)}">
+        <span><b>${escapeHtml(injuryRecordName(injury))}</b>${
+          injury.flip ? `<small>${escapeHtml(displayFlip(injury.flip))}</small>` : ""
+        }</span>
+        ${
+          removable
+            ? `<button type="button" data-remove-injury="${escapeHtml(
+                injury.id,
+              )}" data-injury-target-kind="${escapeHtml(
+                targetKind,
+              )}" data-injury-target-id="${escapeHtml(
+                targetId,
+              )}" aria-label="${localized("Удалить травму", "Remove injury")} ${escapeHtml(
+                injuryRecordName(injury),
+              )}">×</button>`
+            : ""
+        }
+      </span>`;
+    })
+    .join("")}</span>`;
+}
+
+function loadoutMemberHtml(member, { compact = false } = {}) {
+  const role =
+    member.role === "leader"
+      ? message("loadoutLeaderRole")
+      : member.role === "totem"
+        ? message("loadoutTotemRole")
+        : [member.type, member.henchman ? "Henchman" : ""].filter(Boolean).join(" · ");
+  return `
+    <div class="loadout-member${compact ? " is-compact" : ""}" data-loadout-member="${escapeHtml(
+      member.role === "model" ? member.id : member.role,
+    )}">
+      <span class="loadout-member-mark" aria-hidden="true">${
+        member.role === "leader" ? "L" : member.role === "totem" ? "T" : "•"
+      }</span>
+      <div class="loadout-member-main">
+        <b>${escapeHtml(member.name)}</b>
+        <small>${escapeHtml(
+          [
+            role,
+            injuryCount(member.injuries)
+              ? `${localized("травм", "injuries")}: ${injuryCount(member.injuries)}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        )}</small>
+        ${
+          member.role !== "model"
+            ? `<div class="loadout-permanent-section" data-loadout-section="abilities">
+                <b>${localized("Способности", "Abilities")}</b>
+                ${abilityListHtml(member.abilities)}
+              </div>`
+            : ""
+        }
+        <div class="loadout-permanent-section" data-loadout-section="injuries">
+          <b>${localized("Травмы", "Injuries")}</b>
+          ${injuryListHtml(member.injuries) || `<span class="permanent-empty">—</span>`}
+        </div>
+        ${loadoutEquipmentHtml(member.equipment || [])}
+      </div>
+    </div>`;
+}
+
+function renderActiveLoadoutSummary() {
+  const wrap = document.querySelector("#activeLoadoutSummary");
+  if (!wrap) return;
+  const snapshot = currentLoadoutSnapshot();
+  const members = [
+    snapshot.leader,
+    ...snapshot.models,
+    ...(snapshot.totem ? [snapshot.totem] : []),
+  ];
+  const assignedCount = members.reduce(
+    (sum, member) => sum + member.equipment.length,
+    0,
+  );
+  wrap.innerHTML = `
+    <div class="active-loadout-heading">
+      <span>
+        <b>${message("currentLoadoutTitle")}</b>
+        <small>${message("loadoutEquipmentCount", { n: assignedCount })}</small>
+      </span>
+      <i>${String(members.length).padStart(2, "0")}</i>
+    </div>
+    ${
+      snapshot.models.length || snapshot.totem || assignedCount
+        ? `<div class="active-loadout-members">${members
+            .map((member) => loadoutMemberHtml(member, { compact: true }))
+            .join("")}</div>`
+        : `<p class="active-loadout-empty">${message("currentLoadoutEmpty")}</p>`
+    }`;
+}
+
+function assignedEquipmentCount() {
+  const equipmentById = new Map(
+    state.arsenal.equipment.map((item) => [item.id, item]),
+  );
+  return state.loadout.assignments.reduce((count, assignment) => {
+    const item = equipmentById.get(assignment.equipmentId);
+    return count + (item && item.ratingExempt !== true ? 1 : 0);
+  }, 0);
+}
+
+function hiredInjuriesCount() {
+  const modelInjuries = state.arsenal.models.reduce(
+    (sum, model) =>
+      sum +
+      (isModelHired(model.id) && model.type !== "Peon"
+        ? injuryCount(model.injuries)
+        : 0),
+    0,
+  );
+  return (
+    injuryCount(state.leader.injuries) +
+    modelInjuries +
+    injuryCount(state.leader.totem?.injuries)
+  );
+}
+
+function campaignAdvanceCount() {
+  return state.leader.advances.filter(
+    (advance) => advance.recipient !== "totem" || Boolean(state.leader.totem),
+  ).length;
+}
+
+function repairLoadout() {
+  const previous = JSON.stringify(state.loadout);
+  const modelIds = new Set(state.arsenal.models.map((model) => model.id));
+  const equipmentById = new Map(
+    state.arsenal.equipment.map((item) => [item.id, item]),
+  );
+  state.loadout.hiredModelIds = state.loadout.hiredModelIds.filter(
+    (id, index, values) => modelIds.has(id) && values.indexOf(id) === index,
+  );
+  const usedEquipment = new Set();
+  const usedNamesByTarget = new Set();
+  state.loadout.assignments = state.loadout.assignments.filter((assignment) => {
+    const item = equipmentById.get(assignment.equipmentId);
+    if (!item || usedEquipment.has(item.id)) return false;
+    const target = equipmentTargets(item).find(
+      (candidate) => candidate.key === assignmentTargetKey(assignment),
+    );
+    if (!target) return false;
+    const targetNameKey = `${target.key}\u0000${equipmentNameKey(item)}`;
+    if (usedNamesByTarget.has(targetNameKey)) return false;
+    usedEquipment.add(item.id);
+    usedNamesByTarget.add(targetNameKey);
+    assignment.targetKind = target.kind;
+    assignment.targetId = target.targetId;
+    return true;
+  });
+  if (JSON.stringify(state.loadout) !== previous) saveState();
+}
+
+function setEquipmentAssignment(item, targetKey) {
+  const currentIndex = state.loadout.assignments.findIndex(
+    (assignment) => assignment.equipmentId === item.id,
+  );
+  if (!targetKey) {
+    if (currentIndex >= 0) state.loadout.assignments.splice(currentIndex, 1);
+    return true;
+  }
+  const target = equipmentTargets(item).find(
+    (candidate) => candidate.key === targetKey,
+  );
+  if (!target) return false;
+  const duplicate = state.loadout.assignments.some((assignment) => {
+    if (assignment.equipmentId === item.id) return false;
+    const assignedItem = state.arsenal.equipment.find(
+      (candidate) => candidate.id === assignment.equipmentId,
+    );
+    return (
+      equipmentNameKey(assignedItem) === equipmentNameKey(item) &&
+      assignmentTargetKey(assignment) === target.key
+    );
+  });
+  if (duplicate) {
+    toast(message("equipmentDuplicateAssignment", { name: item.name }));
+    return false;
+  }
+  const nextAssignment = {
+    equipmentId: item.id,
+    targetKind: target.kind,
+    targetId: target.targetId,
+  };
+  if (currentIndex >= 0) {
+    state.loadout.assignments[currentIndex] = nextAssignment;
+  } else {
+    state.loadout.assignments.push(nextAssignment);
+  }
+  return true;
+}
+
 function renderArsenal() {
+  repairLoadout();
   const { cost, injuriesCount } = arsenalTotals();
+  const ratingInjuries = hiredInjuriesCount();
   document.querySelector("#arsenalCost").textContent = cost;
   document.querySelector("#modelCount").textContent = state.arsenal.models.length;
   document.querySelector("#scripCount").textContent = state.arsenal.scrip;
   document.querySelector("#injuryCount").textContent = injuriesCount;
-  document.querySelector("#ratingInjuries").value = injuriesCount;
+  document.querySelector("#ratingInjuries").value = ratingInjuries;
+  document.querySelector("#ratingEquipment").value = assignedEquipmentCount();
+  document.querySelector("#ratingAdvances").value = campaignAdvanceCount();
+  renderActiveLoadoutSummary();
+  const arsenalTotemShell = document.querySelector("#arsenalTotemCardShell");
+  if (arsenalTotemShell) {
+    arsenalTotemShell.hidden = !state.leader.totem;
+    if (state.leader.totem) renderTotemCard("#arsenalTotemCard");
+  }
 
   const list = document.querySelector("#modelList");
   if (!state.arsenal.models.length) {
@@ -2896,14 +4325,43 @@ function renderArsenal() {
                     })}
                   </button>`
                 : ""}
+              ${
+                isModelHired(model.id)
+                  ? `<span class="model-loadout-equipment">${loadoutEquipmentHtml(
+                      equipmentAssignedTo("model", model.id),
+                    )}</span>`
+                  : ""
+              }
+              ${injuryListHtml(model.injuries, {
+                targetKind: "model",
+                targetId: model.id,
+                removable: model.type !== "Peon",
+              })}
             </span>
+            <button
+              class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
+              type="button"
+              data-toggle-hired-model="${escapeHtml(model.id)}"
+              aria-pressed="${isModelHired(model.id)}"
+              aria-label="${message(
+                isModelHired(model.id) ? "modelInLoadoutAria" : "modelOutsideLoadoutAria",
+                { name: model.name },
+              )}"
+            >
+              <span aria-hidden="true">${isModelHired(model.id) ? "✓" : "+"}</span>
+              ${message(isModelHired(model.id) ? "modelInLoadout" : "modelOutsideLoadout")}
+            </button>
             <span class="model-badge">${model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
-            <span class="mini-stepper">
-              ${message("injuries")}
-              <button type="button" data-injury-minus="${escapeHtml(model.id)}" aria-label="${message("decreaseInjuries")}">−</button>
-              <b>${escapeHtml(model.injuries || 0)}</b>
-              <button type="button" data-injury-plus="${escapeHtml(model.id)}" aria-label="${message("addInjury")}">+</button>
-            </span>
+            ${
+              model.type === "Peon"
+                ? ""
+                : `<span class="injury-controls">
+                    <span>${message("injuries")}: <b>${injuryCount(model.injuries)}</b></span>
+                    <button type="button" data-add-injury-model="${escapeHtml(
+                      model.id,
+                    )}">${message("addInjury")}</button>
+                  </span>`
+            }
             <button class="row-delete" type="button" data-delete-model="${escapeHtml(model.id)}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
           </div>`,
       )
@@ -2918,11 +4376,30 @@ function renderArsenal() {
       .map(
         (item) => {
           const acquisition = equipmentAcquisitionLabel(item);
+          const targets = equipmentTargets(item);
+          const assignment = equipmentAssignment(item.id);
+          const selectedTargetKey = assignmentTargetKey(assignment);
+          const ratingLabel =
+            item.ratingExempt === true
+              ? ` · ${message("equipmentOutsideRating")}`
+              : "";
           return `
           <div class="equipment-item">
             <b>${escapeHtml(item.name)}</b>
             <button class="row-delete" type="button" data-delete-equipment="${escapeHtml(item.id)}" aria-label="${message("deleteItem")}">×</button>
-            <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}${acquisition ? ` · ${escapeHtml(acquisition)}` : ""}</small>
+            <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}${acquisition ? ` · ${escapeHtml(acquisition)}` : ""}${escapeHtml(ratingLabel)}</small>
+            <label class="equipment-assignment">
+              <span>${message("equipmentAssignmentLabel")}</span>
+              <select data-assign-equipment="${escapeHtml(item.id)}">
+                <option value="">${message("equipmentUnassigned")}</option>
+                ${targets
+                  .map(
+                    (target) =>
+                      `<option value="${escapeHtml(target.key)}" ${target.key === selectedTargetKey ? "selected" : ""}>${escapeHtml(target.name)}</option>`,
+                  )
+                  .join("")}
+              </select>
+            </label>
           </div>`;
         },
       )
@@ -2933,6 +4410,16 @@ function renderArsenal() {
     button.addEventListener("click", () => {
       const removed = state.arsenal.models.find((model) => model.id === button.dataset.deleteModel);
       state.arsenal.models = state.arsenal.models.filter((model) => model.id !== button.dataset.deleteModel);
+      state.loadout.hiredModelIds = state.loadout.hiredModelIds.filter(
+        (id) => id !== button.dataset.deleteModel,
+      );
+      state.loadout.assignments = state.loadout.assignments.filter(
+        (assignment) =>
+          !(
+            assignment.targetKind === "model" &&
+            assignment.targetId === button.dataset.deleteModel
+          ),
+      );
       if (removed?.scripPaid) state.arsenal.scrip += removed.scripPaid;
       if (state.campaign.week === 1 && state.games.length === 0) {
         state.arsenal.scrip = startingScripBalance(arsenalTotals().cost);
@@ -2943,11 +4430,38 @@ function renderArsenal() {
     });
   });
 
-  list.querySelectorAll("[data-injury-plus]").forEach((button) => {
-    button.addEventListener("click", () => changeInjury(button.dataset.injuryPlus, 1));
+  list.querySelectorAll("[data-add-injury-model]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openInjuryDialog("model", button.dataset.addInjuryModel),
+    );
   });
-  list.querySelectorAll("[data-injury-minus]").forEach((button) => {
-    button.addEventListener("click", () => changeInjury(button.dataset.injuryMinus, -1));
+  list.querySelectorAll("[data-remove-injury]").forEach((button) => {
+    button.addEventListener("click", () =>
+      removeInjury(
+        button.dataset.injuryTargetKind,
+        button.dataset.injuryTargetId,
+        button.dataset.removeInjury,
+      ),
+    );
+  });
+  list.querySelectorAll("[data-toggle-hired-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modelId = button.dataset.toggleHiredModel;
+      if (isModelHired(modelId)) {
+        state.loadout.hiredModelIds = state.loadout.hiredModelIds.filter(
+          (id) => id !== modelId,
+        );
+        state.loadout.assignments = state.loadout.assignments.filter(
+          (assignment) =>
+            !(assignment.targetKind === "model" && assignment.targetId === modelId),
+        );
+      } else if (state.arsenal.models.some((model) => model.id === modelId)) {
+        state.loadout.hiredModelIds.push(modelId);
+      }
+      saveState();
+      renderArsenal();
+      calculateRating();
+    });
   });
   list.querySelectorAll("[data-view-model-card]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2959,23 +4473,192 @@ function renderArsenal() {
   });
   equipmentWrap.querySelectorAll("[data-delete-equipment]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.arsenal.equipment = state.arsenal.equipment.filter((item) => item.id !== button.dataset.deleteEquipment);
+      state.arsenal.equipment = state.arsenal.equipment.filter(
+        (item) => item.id !== button.dataset.deleteEquipment,
+      );
+      state.loadout.assignments = state.loadout.assignments.filter(
+        (assignment) => assignment.equipmentId !== button.dataset.deleteEquipment,
+      );
       saveState();
       renderArsenal();
     });
   });
+  equipmentWrap.querySelectorAll("[data-assign-equipment]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const item = state.arsenal.equipment.find(
+        (equipmentItem) => equipmentItem.id === select.dataset.assignEquipment,
+      );
+      if (!item) return;
+      if (!setEquipmentAssignment(item, select.value)) {
+        renderArsenal();
+        return;
+      }
+      saveState();
+      renderArsenal();
+      calculateRating();
+    });
+  });
 }
 
-function changeInjury(id, delta) {
-  const model = state.arsenal.models.find((item) => item.id === id);
-  if (!model || model.type === "Peon") {
+function injuryTarget(kind, id = "") {
+  if (kind === "leader") return state.leader;
+  if (kind === "totem") return state.leader.totem || null;
+  if (kind === "model") {
+    return state.arsenal.models.find((model) => model.id === id) || null;
+  }
+  return null;
+}
+
+function bindPermanentRecordActions(wrap) {
+  wrap.querySelectorAll("[data-delete-ability-advancement]").forEach((button) => {
+    button.addEventListener("click", () =>
+      deleteAdvancement(button.dataset.deleteAbilityAdvancement),
+    );
+  });
+  wrap.querySelectorAll("[data-remove-injury]").forEach((button) => {
+    button.addEventListener("click", () =>
+      removeInjury(
+        button.dataset.injuryTargetKind,
+        button.dataset.injuryTargetId,
+        button.dataset.removeInjury,
+      ),
+    );
+  });
+}
+
+function renderLeaderPermanentRecords() {
+  const wrap = document.querySelector("#leaderPermanentRecords");
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <section class="permanent-record-section" data-permanent-section="abilities">
+      <div class="permanent-record-heading">
+        <span>${localized("Способности", "Abilities")}</span>
+        <b>${abilityRecords("leader").length}</b>
+      </div>
+      ${abilityListHtml(abilityRecords("leader"), { removable: true })}
+    </section>
+    <section class="permanent-record-section" data-permanent-section="injuries">
+      <div class="permanent-record-heading">
+        <span>${localized("Травмы", "Injuries")}</span>
+        <b>${injuryCount(state.leader.injuries)}</b>
+      </div>
+      ${injuryListHtml(state.leader.injuries, {
+        targetKind: "leader",
+        removable: true,
+      }) || `<p class="permanent-empty">${localized("Травм пока нет.", "No injuries yet.")}</p>`}
+      <button type="button" class="injury-add-button" data-add-injury-leader>
+        ${message("addInjury")}
+      </button>
+    </section>`;
+  wrap.querySelector("[data-add-injury-leader]")?.addEventListener("click", () => {
+    openInjuryDialog("leader");
+  });
+  bindPermanentRecordActions(wrap);
+}
+
+function renderInjuryCatalog(query = "") {
+  const results = document.querySelector("#injurySearchResults");
+  const status = document.querySelector("#injuryCatalogStatus");
+  if (!results || !status) return;
+  const needle = canonical(query);
+  const matches = injuryCatalog.filter((entry) =>
+    canonical(`${entry.flip} ${entry.name} ${entry.effect} ${entry.effectEn}`).includes(
+      needle,
+    ),
+  );
+  status.textContent = localized(
+    `Найдено: ${matches.length}. Повторные травмы разрешены.`,
+    `${matches.length} found. Duplicate injuries are allowed.`,
+  );
+  results.innerHTML = matches
+    .map(
+      (entry) => `
+        <button class="catalog-result injury-catalog-result" type="button" data-select-injury="${escapeHtml(
+          entry.id,
+        )}">
+          <b>${escapeHtml(entry.name)}</b>
+          <em>${escapeHtml(displayFlip(entry.flip))}</em>
+          <small>${escapeHtml(localized(entry.effect, entry.effectEn))}</small>
+        </button>`,
+    )
+    .join("");
+  results.querySelectorAll("[data-select-injury]").forEach((button) => {
+    button.addEventListener("click", () => addSelectedInjury(button.dataset.selectInjury));
+  });
+}
+
+function openInjuryDialog(kind, id = "") {
+  const target = injuryTarget(kind, id);
+  if (!target || (kind === "model" && target.type === "Peon")) {
     toast(message("peonNoInjuries"));
     return;
   }
-  model.injuries = Math.max(0, Math.min(3, Number(model.injuries || 0) + delta));
-  if (model.injuries >= 3) toast(message("threeInjuries"));
-  saveState();
+  activeInjuryTarget = { kind, id };
+  const targetName =
+    target.name ||
+    target.profile?.name ||
+    localized("Модель без имени", "Unnamed model");
+  document.querySelector("#injuryDialogTarget").textContent = targetName;
+  const search = document.querySelector("#injurySearch");
+  search.value = "";
+  renderInjuryCatalog();
+  const dialog = document.querySelector("#injuryDialog");
+  if (!dialog.open) dialog.showModal();
+  search.focus();
+}
+
+function addSelectedInjury(catalogId) {
+  const target = activeInjuryTarget
+    ? injuryTarget(activeInjuryTarget.kind, activeInjuryTarget.id)
+    : null;
+  const catalogEntry = injuryCatalog.find((entry) => entry.id === catalogId);
+  if (!target || !catalogEntry) return;
+  const before = clone(target.injuries);
+  target.injuries.push({
+    id: `injury-instance-${uid()}`,
+    catalogId: catalogEntry.id,
+    name: catalogEntry.name,
+    nameEn: catalogEntry.name,
+    effect: catalogEntry.effect,
+    effectEn: catalogEntry.effectEn,
+    flip: catalogEntry.flip,
+    week: state.campaign.week,
+  });
+  if (!saveState()) {
+    target.injuries = before;
+    return;
+  }
+  document.querySelector("#injuryDialog").close();
+  renderLeaderPermanentRecords();
   renderArsenal();
+  renderTotemCard();
+  calculateRating();
+  if (injuryCount(target.injuries) >= 3) toast(message("threeInjuries"));
+}
+
+function removeInjury(kind, id, injuryId) {
+  const target = injuryTarget(kind, id);
+  const injury = target?.injuries?.find((item) => item.id === injuryId);
+  if (!target || !injury) return;
+  if (
+    !window.confirm(
+      localized(
+        `Удалить травму «${injuryRecordName(injury)}»?`,
+        `Remove injury “${injuryRecordName(injury)}”?`,
+      ),
+    )
+  ) {
+    return;
+  }
+  const before = clone(target.injuries);
+  target.injuries = target.injuries.filter((item) => item.id !== injuryId);
+  if (!saveState()) {
+    target.injuries = before;
+    return;
+  }
+  renderLeaderPermanentRecords();
+  renderArsenal();
+  renderTotemCard();
   calculateRating();
 }
 
@@ -3024,6 +4707,132 @@ function renderGamePreview() {
   };
 }
 
+function advancementIdsForXpRollback(nextXp) {
+  const ids = new Set(
+    state.leader.advances
+      .filter((advance) => Number(advance.xp) > nextXp)
+      .map((advance) => advance.id),
+  );
+  const removesActiveTotem = state.leader.advances.some(
+    (advance) =>
+      ids.has(advance.id) &&
+      (advance.tableId === "totem" ||
+        ([
+          state.leader.totem?.sourceAdvancementId,
+          state.leader.totem?.acquiredBy,
+        ].filter(Boolean).includes(advance.id))),
+  );
+  if (removesActiveTotem) {
+    state.leader.advances
+      .filter((advance) => advance.recipient === "totem")
+      .forEach((advance) => ids.add(advance.id));
+  }
+  return ids;
+}
+
+function removeAdvancementIds(ids) {
+  if (!ids.size) return { removed: [], refund: 0, removedTotem: false };
+  const sourceIds = new Set(
+    [
+      state.leader.totem?.sourceAdvancementId,
+      state.leader.totem?.acquiredBy,
+    ].filter(Boolean),
+  );
+  const removesLinkedTotem = state.leader.advances.some(
+    (advance) =>
+      ids.has(advance.id) &&
+      (advance.tableId === "totem" || sourceIds.has(advance.id)),
+  );
+  if (removesLinkedTotem) {
+    state.leader.advances
+      .filter((advance) => advance.recipient === "totem")
+      .forEach((advance) => ids.add(advance.id));
+  }
+  const removed = state.leader.advances.filter((advance) => ids.has(advance.id));
+  const removedTotem = removesLinkedTotem;
+  const refund = removed.reduce(
+    (sum, advance) => sum + Math.max(0, Number(advance.scripPaid) || 0),
+    0,
+  );
+  state.leader.advances = state.leader.advances.filter(
+    (advance) => !ids.has(advance.id),
+  );
+  state.arsenal.scrip += refund;
+  if (removedTotem) {
+    state.leader.totem = null;
+    state.loadout.assignments = state.loadout.assignments.filter(
+      (assignment) => assignment.targetKind !== "totem",
+    );
+  }
+  return { removed, refund, removedTotem };
+}
+
+function setLeaderXp(nextXp, ask = true) {
+  const next = Math.max(0, Math.min(xpTiers.length, Number(nextXp) || 0));
+  if (next === state.leader.xp) return true;
+  const ids = advancementIdsForXpRollback(next);
+  const affected = state.leader.advances.filter((advance) => ids.has(advance.id));
+  if (
+    ask &&
+    affected.length &&
+    !window.confirm(
+      localized(
+        `Снизить XP до ${next}? Будут удалены продвижения: ${affected
+          .map((advance) => advance.name)
+          .join(", ")}. Потраченный скрип будет возвращён.`,
+        `Lower XP to ${next}? These advancements will be removed: ${affected
+          .map((advance) => advance.name)
+          .join(", ")}. Spent scrip will be refunded.`,
+      ),
+    )
+  ) {
+    return false;
+  }
+  const before = clone(state);
+  state.leader.xp = next;
+  const cleanup = removeAdvancementIds(ids);
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return false;
+  }
+  renderAll();
+  toast(
+    cleanup.removed.length
+      ? localized(
+          `XP: ${next}. Удалено продвижений: ${cleanup.removed.length}; возвращено ${cleanup.refund} скрип.`,
+          `XP: ${next}. Removed advancements: ${cleanup.removed.length}; refunded ${cleanup.refund} scrip.`,
+        )
+      : message("experienceSet", { n: next }),
+  );
+  return true;
+}
+
+function gameLoadoutHtml(snapshot) {
+  if (!snapshot) return "";
+  const members = [
+    snapshot.leader,
+    ...(snapshot.models || []),
+    ...(snapshot.totem ? [snapshot.totem] : []),
+  ].filter(Boolean);
+  const equipmentCount = members.reduce(
+    (sum, member) => sum + (member.equipment?.length || 0),
+    0,
+  );
+  return `
+    <details class="game-loadout-snapshot">
+      <summary>
+        <span>${message("recordedCrew")}</span>
+        <small>${members.length} · ${message("loadoutEquipmentCount", {
+          n: equipmentCount,
+        })}</small>
+      </summary>
+      <div class="game-loadout-members">
+        ${members.map((member) => loadoutMemberHtml(member, { compact: true })).join("")}
+      </div>
+    </details>`;
+}
+
 function renderChronicle() {
   const log = document.querySelector("#gameLog");
   document.querySelector("#gameCount").textContent = message("gameCount", {
@@ -3049,6 +4858,7 @@ function renderChronicle() {
             <span>
               <b>${escapeHtml(opponent)}</b>
               <p>${message("week", { n: escapeHtml(game.week) })} · ${escapeHtml(game.vp)} VP · ${game.won ? message("resultWin") : game.lost ? message("resultLoss") : message("resultDraw")}</p>
+              ${gameLoadoutHtml(game.loadoutSnapshot)}
             </span>
             <span class="game-entry-actions">
               <span class="game-entry-gain">+${escapeHtml(game.scrip)} ${localized("скрип", "scrip")}<br>+${escapeHtml(creditedXp)} XP</span>
@@ -3076,18 +4886,35 @@ function renderChronicle() {
           ? Math.min(storedXp, state.leader.xp)
           : Math.min(Math.max(0, Number(game.creditedXp) || 0), state.leader.xp);
       const opponent = game.opponent || message("unknownOpponent");
-      if (!window.confirm(message("deleteGameConfirm", { opponent, scrip, xp }))) return;
+      const nextXp = Math.max(0, state.leader.xp - xp);
+      const affectedIds = advancementIdsForXpRollback(nextXp);
+      const affected = state.leader.advances.filter((advance) =>
+        affectedIds.has(advance.id),
+      );
+      const cleanupNotice = affected.length
+        ? localized(
+            `\n\nТакже будут удалены продвижения: ${affected
+              .map((advance) => advance.name)
+              .join(", ")}. Их доплата скрип будет возвращена.`,
+            `\n\nThe following advancements will also be removed: ${affected
+              .map((advance) => advance.name)
+              .join(", ")}. Their scrip surcharge will be refunded.`,
+          )
+        : "";
+      if (
+        !window.confirm(
+          `${message("deleteGameConfirm", { opponent, scrip, xp })}${cleanupNotice}`,
+        )
+      )
+        return;
 
-      const gamesBefore = clone(state.games);
-      const scripBefore = state.arsenal.scrip;
-      const xpBefore = state.leader.xp;
+      const before = clone(state);
       state.games.splice(index, 1);
       state.arsenal.scrip -= scrip;
-      state.leader.xp = Math.max(0, state.leader.xp - xp);
+      state.leader.xp = nextXp;
+      removeAdvancementIds(affectedIds);
       if (!saveState()) {
-        state.games = gamesBefore;
-        state.arsenal.scrip = scripBefore;
-        state.leader.xp = xpBefore;
+        state = before;
         renderAll();
         return;
       }
@@ -3100,10 +4927,19 @@ function renderChronicle() {
 
 function renderXpTrack() {
   const track = document.querySelector("#xpTrack");
+  const completed = new Set(
+    state.leader.advances.map((advance) => Number(advance.xp)).filter(Boolean),
+  );
   track.innerHTML = xpTiers
     .map(
       (tier, index) => `
-        <button class="xp-box ${index < state.leader.xp ? "is-earned" : ""} ${index === state.leader.xp ? "is-current" : ""}"
+        <button class="xp-box ${index < state.leader.xp ? "is-earned" : ""} ${index === state.leader.xp - 1 ? "is-current" : ""} ${
+          tier && index < state.leader.xp && !completed.has(index + 1)
+            ? "is-pending"
+            : tier && completed.has(index + 1)
+              ? "has-advancement"
+              : ""
+        }"
           type="button" data-xp-index="${index}" title="${message("setExperience", { n: index + 1 })}">
           ${tier || ""}
         </button>`,
@@ -3111,12 +4947,1426 @@ function renderXpTrack() {
     .join("");
   track.querySelectorAll("[data-xp-index]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.leader.xp = Number(button.dataset.xpIndex) + 1;
-      saveState();
-      renderXpTrack();
-      toast(message("experienceSet", { n: state.leader.xp }));
+      const cellXp = Number(button.dataset.xpIndex) + 1;
+      const nextXp = cellXp === state.leader.xp ? cellXp - 1 : cellXp;
+      if (setLeaderXp(nextXp)) {
+        window.setTimeout(() => openNextAdvancementIfAvailable(), 0);
+      }
     });
   });
+}
+
+function pendingAdvancementSlots() {
+  const completed = new Set(
+    state.leader.advances.map((advance) => Number(advance.xp)).filter(Boolean),
+  );
+  return advancementThresholds().filter(
+    (slot) => slot.xp <= state.leader.xp && !completed.has(slot.xp),
+  );
+}
+
+function advancementTableLabel(tableId) {
+  const labels = {
+    "attack-modification": ["Модификация атаки", "Attack Modification"],
+    "tactical-modification": ["Модификация тактики", "Tactical Modification"],
+    action: ["Новое действие", "Action Advancement"],
+    ability: ["Новая способность", "Ability Advancement"],
+    totem: ["Создание тотема", "Totem Advancement"],
+    summoning: ["Действие призыва", "Summoning Advancement"],
+    "crew-card": ["Эффект карты команды", "Crew Card Advancement"],
+    legacy: ["Старая запись", "Legacy entry"],
+  };
+  const label = labels[tableId];
+  return label ? localized(label[0], label[1]) : tableId;
+}
+
+function advancementRecipientLabel(recipient) {
+  if (recipient === "totem") {
+    return state.leader.totem?.name || localized("Тотем", "Totem");
+  }
+  return state.leader.name || localized("Лидер", "Leader");
+}
+
+function abilityAdvancements(recipient, advances = state.leader.advances) {
+  return (Array.isArray(advances) ? advances : []).filter(
+    (advance) =>
+      !advance?.legacy &&
+      advance?.recipient === recipient &&
+      (advance.tableId === "ability" || advance.resultType === "ability"),
+  );
+}
+
+function abilityRecordFromAdvancement(advance) {
+  const snapshot = advance?.snapshot?.entry || advance?.snapshot || {};
+  return {
+    id: advance.id,
+    advancementId: advance.id,
+    choiceId: advance.choiceId || snapshot.id || "",
+    name: advance.name || snapshot.name || localized("Способность", "Ability"),
+    effect:
+      snapshot.description ||
+      snapshot.text ||
+      snapshot.effect ||
+      advance.notes ||
+      "",
+    source: advance.source || snapshot.source || "",
+    tableId: advance.tableId,
+    flip: clone(advance.flip || {}),
+    scripPaid: Math.max(0, Number(advance.scripPaid) || 0),
+    snapshot: clone(snapshot),
+  };
+}
+
+function abilityRecords(recipient, advances = state.leader.advances) {
+  return abilityAdvancements(recipient, advances).map(abilityRecordFromAdvancement);
+}
+
+function abilityChoiceAlreadyUsed(recipient, choice, selectedName = "") {
+  if (!choice && !selectedName) return false;
+  const choiceId = String(choice?.id || "");
+  const nameKey = canonical(selectedName || choice?.name || "");
+  return abilityAdvancements(recipient).some((advance) => {
+    const snapshot = advance.snapshot?.entry || advance.snapshot || {};
+    if (choiceId) {
+      return String(advance.choiceId || snapshot.id || "") === choiceId;
+    }
+    return Boolean(nameKey && canonical(advance.name || snapshot.name || "") === nameKey);
+  });
+}
+
+function abilityListHtml(records, { removable = false, showEmpty = true } = {}) {
+  const items = Array.isArray(records) ? records : [];
+  if (!items.length && showEmpty) {
+    return `<p class="permanent-empty">${localized(
+      "Способностей пока нет.",
+      "No abilities yet.",
+    )}</p>`;
+  }
+  if (!items.length) return "";
+  return `<div class="ability-list">${items
+    .map(
+      (ability) => `
+        <article class="ability-record" data-ability-record="${escapeHtml(ability.id)}">
+          <div>
+            <b>${escapeHtml(ability.name)}</b>
+            <small>${escapeHtml(
+              [
+                ability.source,
+                ability.flip?.card ? flipLabel(ability.flip.card) : "",
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            )}</small>
+            ${ability.effect ? `<p>${cardText(ability.effect)}</p>` : ""}
+          </div>
+          ${
+            removable
+              ? `<button type="button" data-delete-ability-advancement="${escapeHtml(
+                  ability.advancementId,
+                )}" aria-label="${localized(
+                  "Удалить способность",
+                  "Delete ability",
+                )} ${escapeHtml(ability.name)}">×</button>`
+              : ""
+          }
+        </article>`,
+    )
+    .join("")}</div>`;
+}
+
+function flipLabel(card) {
+  if (card === "black-joker") return localized("Чёрный джокер", "Black Joker");
+  if (card === "red-joker") return localized("Красный джокер", "Red Joker");
+  return String(card || "—");
+}
+
+function availableAdvancementTables(slot) {
+  if (!slot || !advancementData?.tables) return [];
+  const summoningUsed = state.leader.advances.some(
+    (advance) => !advance.legacy && advance.tableId === "summoning",
+  );
+  return Object.values(advancementData.tables).filter((table) => {
+    if (table.tier > slot.maxTier) return false;
+    if (table.id === "totem" && state.leader.totem) return false;
+    if (table.id === "summoning" && summoningUsed) return false;
+    return true;
+  });
+}
+
+function advancementChoices(tableId, flip, cheatedJoker) {
+  if (!advancementData) return [];
+  if (tableId === "attack-modification" || tableId === "tactical-modification") {
+    const collection =
+      tableId === "attack-modification"
+        ? advancementData.tier1?.attackModification
+        : advancementData.tier1?.tacticalModification;
+    if (!Array.isArray(collection)) return [];
+    const numeric = Number(flip);
+    if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 13) {
+      return collection.filter(
+        (entry) => typeof entry.value === "number" && entry.value <= numeric,
+      );
+    }
+    return collection.filter(
+      (entry) =>
+        entry.value === flip ||
+        (entry.value === "any-joker" &&
+          (flip === "black-joker" || flip === "red-joker")),
+    );
+  }
+  if (tableId === "action" || tableId === "ability") {
+    const catalog =
+      tableId === "action"
+        ? advancementData.tier2?.actions
+        : advancementData.tier2?.abilities;
+    if (!catalog) return [];
+    if (
+      (flip === "black-joker" || flip === "red-joker") &&
+      !cheatedJoker
+    ) {
+      return catalog.naturalJoker ? [catalog.naturalJoker] : [];
+    }
+    const effectiveValue =
+      flip === "black-joker"
+        ? 0
+        : flip === "red-joker"
+          ? 14
+          : Number(flip);
+    if (!Number.isFinite(effectiveValue)) return [];
+    return [
+      ...(Array.isArray(catalog.always) ? catalog.always : []),
+      ...Object.entries(catalog.byValue || {}).flatMap(([value, entries]) =>
+        Number(value) <= effectiveValue && Array.isArray(entries) ? entries : [],
+      ),
+    ];
+  }
+  if (tableId === "totem") {
+    return (advancementData.tier3?.totems || []).filter(
+      (profile) => String(profile.flip) === String(flip),
+    );
+  }
+  if (tableId === "summoning") {
+    return Array.isArray(advancementData.tier3?.summoning)
+      ? advancementData.tier3.summoning
+      : [];
+  }
+  return [];
+}
+
+function advancementKnownActionsFrom({
+  recipient,
+  kind,
+  talents = [],
+  totem = null,
+  advances = [],
+}) {
+  const actions = [];
+  if (recipient === "leader") {
+    talents
+      .filter((talent) => talent.kind === kind && (talent.name || talent.snapshot?.entry?.name))
+      .forEach((talent) => {
+        const entry = talent.snapshot?.entry;
+        actions.push({
+          name: entry?.name || talent.name,
+          triggers:
+            entry?.triggers?.length ||
+            (talent.snapshot?.selectedTrigger ? 1 : 0),
+          skill: entry?.skill ?? (Number.parseInt(entry?.stat, 10) || null),
+          resist: entry?.resist || entry?.resistedBy || null,
+          triggerNames: [
+            ...(entry?.triggers || []).map((trigger) => trigger.name),
+            talent.snapshot?.selectedTrigger?.name,
+          ].filter(Boolean),
+        });
+      });
+  } else if (totem) {
+    const profile = totem.profile || totem.snapshot || totem || {};
+    const source = kind === "attack" ? profile.attacks : profile.tacticals;
+    (Array.isArray(source) ? source : []).forEach((action) =>
+      actions.push({
+        name: action.name,
+        triggers: Array.isArray(action.triggers) ? action.triggers.length : 0,
+        skill: action.skill ?? null,
+        resist: action.resist || null,
+        triggerNames: (action.triggers || []).map((trigger) => trigger.name).filter(Boolean),
+      }),
+    );
+  }
+  advances
+    .filter(
+      (advance) => {
+        const snapshot = advance.snapshot?.entry || advance.snapshot;
+        return (
+          !advance.legacy &&
+          advance.recipient === recipient &&
+          snapshot?.type === kind &&
+          snapshot?.name
+        );
+      },
+    )
+    .forEach((advance) => {
+      const snapshot = advance.snapshot?.entry || advance.snapshot;
+      actions.push({
+        name: snapshot.name,
+        triggers: Array.isArray(snapshot.triggers)
+          ? snapshot.triggers.length
+          : 0,
+        skill: snapshot.skill ?? (Number.parseInt(snapshot.stat, 10) || null),
+        resist: snapshot.resist || snapshot.resistedBy || null,
+        triggerNames: (snapshot.triggers || []).map((trigger) => trigger.name).filter(Boolean),
+      });
+    });
+  const merged = new Map();
+  actions.forEach((action) => {
+    if (!action.name) return;
+    const existing = merged.get(action.name);
+    merged.set(action.name, {
+      name: action.name,
+      triggers: Math.max(existing?.triggers || 0, action.triggers || 0),
+      skill: existing?.skill ?? action.skill ?? null,
+      resist: existing?.resist || action.resist || null,
+      triggerNames: [...new Set([
+        ...(existing?.triggerNames || []),
+        ...(action.triggerNames || []),
+      ])],
+    });
+  });
+  advances
+    .filter(
+      (advance) =>
+        !advance.legacy &&
+        advance.recipient === recipient &&
+        advance.tableId === `${kind}-modification` &&
+        advance.resultType === "trigger" &&
+        advance.appliesTo,
+    )
+    .forEach((advance) => {
+      const action = merged.get(advance.appliesTo);
+      if (action) {
+        action.triggers += 1;
+        action.triggerNames = [...new Set([...(action.triggerNames || []), advance.name])];
+      }
+    });
+  return [...merged.values()];
+}
+
+function advancementKnownActions(recipient, kind) {
+  return advancementKnownActionsFrom({
+    recipient,
+    kind,
+    talents: state.leader.talents,
+    totem: state.leader.totem,
+    advances: state.leader.advances,
+  });
+}
+
+function advancementValidationFailure(code, ru, en) {
+  return { ok: false, code, message: localized(ru, en) };
+}
+
+function advancementResultAlreadyUsed({
+  tableId,
+  recipient,
+  choice,
+  name,
+  appliesTo,
+  selectedBiggerHat,
+}) {
+  if (tableId === "totem") return Boolean(state.leader.totem);
+  if (tableId === "summoning") {
+    return state.leader.advances.some(
+      (advance) => !advance.legacy && advance.tableId === "summoning",
+    );
+  }
+  if (["attack-modification", "tactical-modification"].includes(tableId)) {
+    return state.leader.advances.some(
+      (advance) =>
+        !advance.legacy &&
+        advance.tableId === tableId &&
+        advance.recipient === recipient &&
+        advance.choiceId === choice?.id &&
+        canonical(advance.appliesTo) === canonical(appliesTo),
+    );
+  }
+  if (["action", "ability"].includes(tableId)) {
+    return state.leader.advances.some((advance) => {
+      if (advance.legacy || advance.tableId !== tableId || advance.recipient !== recipient) return false;
+      const snapshot = advance.snapshot?.entry || advance.snapshot || {};
+      if (selectedBiggerHat) {
+        if (selectedBiggerHat.entryId && advance.entryId) {
+          return selectedBiggerHat.entryId === advance.entryId;
+        }
+        if (selectedBiggerHat.cardId && advance.cardId) {
+          return (
+            String(selectedBiggerHat.cardId) === String(advance.cardId) &&
+            canonical(selectedBiggerHat.name) === canonical(advance.name || snapshot.name)
+          );
+        }
+        return (
+          canonical(selectedBiggerHat.name) === canonical(advance.name || snapshot.name) &&
+          canonical(selectedBiggerHat.source) === canonical(advance.source || snapshot.source)
+        );
+      }
+      if (choice && choice.value !== "natural-joker") {
+        return String(advance.choiceId || snapshot.id || "") === String(choice.id);
+      }
+      return canonical(advance.name || snapshot.name) === canonical(name);
+    });
+  }
+  if (tableId === "crew-card") {
+    return state.leader.advances.some(
+      (advance) =>
+        !advance.legacy &&
+        advance.tableId === "crew-card" &&
+        canonical(advance.name) === canonical(name),
+    );
+  }
+  return false;
+}
+
+function validateAdvancementSelection({
+  xp,
+  tableId,
+  recipient,
+  flip,
+  cheated,
+  choiceId,
+  name,
+  appliesTo = "",
+  selectedBiggerHat = null,
+}) {
+  const slot = pendingAdvancementSlots().find((entry) => entry.xp === Number(xp));
+  const table = availableAdvancementTables(slot).find((entry) => entry.id === tableId);
+  if (!slot || !table || table.tier > slot.maxTier) {
+    return advancementValidationFailure(
+      "slot-or-tier",
+      "Ячейка XP уже использована или таблица превышает допустимый Tier.",
+      "The XP slot is already used or the table exceeds its allowed Tier.",
+    );
+  }
+  const allowedRecipients =
+    tableId === "totem" || tableId === "crew-card"
+      ? ["leader"]
+      : state.leader.totem
+        ? ["leader", "totem"]
+        : ["leader"];
+  if (!allowedRecipients.includes(recipient)) {
+    return advancementValidationFailure(
+      "recipient",
+      "Продвижение можно назначить только лидеру или существующему тотему.",
+      "An advancement can only be assigned to the leader or an existing Totem.",
+    );
+  }
+  const usesFlip = !["summoning", "crew-card"].includes(tableId);
+  if (usesFlip && !/^(?:[1-9]|1[0-3]|black-joker|red-joker)$/u.test(String(flip))) {
+    return advancementValidationFailure(
+      "flip",
+      "Укажите допустимый результат флипа.",
+      "Choose a valid flip result.",
+    );
+  }
+  if (
+    cheated &&
+    (!["action", "ability"].includes(tableId) ||
+      !["black-joker", "red-joker"].includes(flip))
+  ) {
+    return advancementValidationFailure(
+      "cheated-joker",
+      "Cheated Joker допустим только в таблицах Action и Ability.",
+      "A cheated Joker is only valid for the Action and Ability tables.",
+    );
+  }
+  const choices = tableId === "crew-card" ? [] : advancementChoices(tableId, flip, cheated);
+  const choice = choices.find((entry) => entry.id === choiceId) || null;
+  const naturalJoker = choice?.value === "natural-joker";
+  const manualName = tableId === "crew-card" || naturalJoker;
+  const normalizedName = manualName
+    ? safeText(name, 200).trim()
+    : safeText(choice?.name, 200).trim();
+  if ((!manualName && !choice) || !normalizedName) {
+    return advancementValidationFailure(
+      "result",
+      "Выберите и назовите результат продвижения.",
+      "Choose and name the advancement result.",
+    );
+  }
+  const isModification = ["attack-modification", "tactical-modification"].includes(tableId);
+  const actionKind = tableId === "attack-modification" ? "attack" : "tactical";
+  const action = isModification
+    ? advancementKnownActions(recipient, actionKind).find(
+        (entry) => entry.name === appliesTo,
+      )
+    : null;
+  if (isModification && !action) {
+    return advancementValidationFailure(
+      "action-target",
+      "Выберите существующее действие получателя.",
+      "Choose an existing action belonging to the recipient.",
+    );
+  }
+  if (choice?.requirements?.currentSkill) {
+    const currentSkill = Number(action?.skill);
+    if (!choice.requirements.currentSkill.includes(currentSkill)) {
+      return advancementValidationFailure(
+        "skill-requirement",
+        "Текущий Skill выбранного действия не соответствует результату.",
+        "The selected action's current Skill does not meet this result's requirement.",
+      );
+    }
+  }
+  if (
+    choice?.requirements?.resist &&
+    !choice.requirements.resist.includes(action?.resist)
+  ) {
+    return advancementValidationFailure(
+      "resist-requirement",
+      "Resist выбранного действия не соответствует результату.",
+      "The selected action's Resist does not meet this result's requirement.",
+    );
+  }
+  if (
+    isModification &&
+    choice?.type === "trigger" &&
+    (action?.triggerNames || []).some(
+      (triggerName) => canonical(triggerName) === canonical(choice.name),
+    )
+  ) {
+    return advancementValidationFailure(
+      "duplicate-trigger",
+      "На выбранном действии уже есть такой триггер.",
+      "The selected action already has that trigger.",
+    );
+  }
+  if (
+    advancementResultAlreadyUsed({
+      tableId,
+      recipient,
+      choice,
+      name: normalizedName,
+      appliesTo,
+      selectedBiggerHat,
+    })
+  ) {
+    return advancementValidationFailure(
+      "duplicate",
+      "Эта способность или другой неповторяемый результат уже назначена выбранному получателю.",
+      "This ability or another non-repeatable result is already assigned to the selected recipient.",
+    );
+  }
+  const scripPaid =
+    isModification && choice?.type === "trigger" && Number(action?.triggers || 0) >= 2
+      ? Number(table.triggerSurcharge?.scrip || 2)
+      : 0;
+  if (scripPaid > Number(state.arsenal.scrip)) {
+    return advancementValidationFailure(
+      "scrip",
+      `Нужно ${scripPaid} скрип, доступно ${state.arsenal.scrip}.`,
+      `This requires ${scripPaid} scrip; ${state.arsenal.scrip} is available.`,
+    );
+  }
+  if (tableId === "totem") {
+    const profile = (advancementData?.tier3?.totems || []).find(
+      (entry) => entry.id === choice?.id && String(entry.flip) === String(flip),
+    );
+    if (!profile) {
+      return advancementValidationFailure(
+        "totem-profile",
+        "Профиль тотема не соответствует точному флипу каталога.",
+        "The Totem profile does not match the catalog's exact flip.",
+      );
+    }
+  }
+  return {
+    ok: true,
+    slot,
+    table,
+    choice,
+    naturalJoker,
+    manualName,
+    name: normalizedName,
+    appliesTo,
+    action,
+    scripPaid,
+  };
+}
+
+function setSelectOptions(select, options, preferredValue) {
+  select.innerHTML = options
+    .map(
+      (option) =>
+        `<option value="${escapeHtml(option.value)}"${option.disabled ? " disabled" : ""}>${escapeHtml(option.label)}</option>`,
+    )
+    .join("");
+  if (options.some((option) => String(option.value) === String(preferredValue))) {
+    select.value = String(preferredValue);
+  }
+}
+
+function advancementChoiceLabel(choice) {
+  const value =
+    choice.value === "always"
+      ? localized("всегда", "always")
+      : choice.value === "natural-joker"
+        ? localized("natural Joker", "natural Joker")
+        : choice.value === "any-joker"
+          ? localized("любой Joker", "any Joker")
+          : flipLabel(choice.value ?? choice.flip);
+  const type = choice.type ? ` · ${choice.type}` : "";
+  return `${value} · ${choice.name}${type}`;
+}
+
+function renderTotemProfilePreview(profile) {
+  const preview = document.querySelector("#totemProfilePreview");
+  if (!profile) {
+    preview.innerHTML = "";
+    return;
+  }
+  const stats = profile.stats || {};
+  preview.innerHTML = `
+    <div class="totem-preview-head">
+      <b>${escapeHtml(profile.name)}</b>
+      <span>${localized("точный флип", "exact flip")}: ${escapeHtml(flipLabel(profile.flip))}</span>
+    </div>
+    <div class="totem-preview-stats">
+      ${[
+        ["Df", stats.df],
+        ["Wp", stats.wp],
+        ["Sp", stats.sp],
+        ["Health", stats.health],
+      ]
+        .map(
+          ([label, value]) =>
+            `<span><small>${label}</small><b>${escapeHtml(value ?? "—")}</b></span>`,
+        )
+        .join("")}
+    </div>
+    <p>${escapeHtml(
+      [
+        ...(profile.abilities || []).map((entry) => entry.name),
+        ...(profile.attacks || []).map((entry) => entry.name),
+        ...(profile.tacticals || []).map((entry) => entry.name),
+      ].join(" · "),
+    )}</p>`;
+}
+
+function clearPendingAdvancementTalent() {
+  pendingAdvancementTalent = null;
+}
+
+function renderAdvancementBiggerHatPicker(naturalJoker, tableId) {
+  const field = document.querySelector("#advancementBiggerHatField");
+  const title = document.querySelector("#advancementBiggerHatTitle");
+  const button = document.querySelector("#advancementBiggerHatButton");
+  const preview = document.querySelector("#advancementBiggerHatPreview");
+  if (!field || !button || !preview) return;
+  const visible = naturalJoker && ["action", "ability"].includes(tableId);
+  field.hidden = !visible;
+  if (title) {
+    title.textContent = localized(
+      "Запись с карточки модели",
+      "Entry from a model card",
+    );
+  }
+  if (!visible) {
+    clearPendingAdvancementTalent();
+    preview.innerHTML = "";
+    return;
+  }
+  const selected =
+    pendingAdvancementTalent?.tableId === tableId
+      ? pendingAdvancementTalent
+      : null;
+  button.disabled = !cardCatalog;
+  button.textContent = selected
+    ? localized("Изменить выбор BiggerHat", "Change BiggerHat selection")
+    : localized("Выбрать с BiggerHat", "Choose with BiggerHat");
+  if (selected) {
+    const entry = selected.snapshot?.entry || {};
+    const meta =
+      tableId === "ability"
+        ? abilityMeta(entry)
+        : actionMeta(entry);
+    preview.innerHTML = `
+      <article class="advancement-biggerhat-card">
+        <div>
+          <span>${localized("Источник", "Source")} · BiggerHat</span>
+          <b>${escapeHtml(selected.name)}</b>
+          <small>${escapeHtml([selected.source, meta].filter(Boolean).join(" · "))}</small>
+        </div>
+        <button type="button" data-clear-advancement-talent aria-label="${localized(
+          "Очистить выбор BiggerHat",
+          "Clear BiggerHat selection",
+        )}">×</button>
+      </article>`;
+    preview
+      .querySelector("[data-clear-advancement-talent]")
+      ?.addEventListener("click", () => {
+        clearPendingAdvancementTalent();
+        const nameInput = document.querySelector("#advancementName");
+        nameInput.value = "";
+        renderAdvancementForm();
+      });
+  } else {
+    preview.innerHTML = `<p>${escapeHtml(
+      cardCatalog
+        ? localized(
+            "Можно выбрать запись с карточки или вписать её вручную ниже.",
+            "Choose an entry from a card, or enter it manually below.",
+          )
+        : localized(
+            "Каталог недоступен — впишите действие или способность вручную ниже.",
+            "The catalog is unavailable — enter the action or ability manually below.",
+          ),
+    )}</p>`;
+  }
+}
+
+function renderAdvancementForm() {
+  const form = document.querySelector("#advancementForm");
+  const xpSelect = document.querySelector("#advancementXpIndex");
+  const targetSelect = document.querySelector("#advancementTarget");
+  const tableSelect = document.querySelector("#advancementTable");
+  const flipSelect = document.querySelector("#advancementFlip");
+  const choiceSelect = document.querySelector("#advancementChoice");
+  const nameInput = document.querySelector("#advancementName");
+  const pending = pendingAdvancementSlots();
+  const oldXp = xpSelect.value;
+  setSelectOptions(
+    xpSelect,
+    pending.map((slot) => ({
+      value: slot.xp,
+      label: `XP ${slot.xp} · ${localized("до Tier", "up to Tier")} ${slot.maxTier}`,
+    })),
+    oldXp,
+  );
+  const slot = pending.find((entry) => entry.xp === Number(xpSelect.value));
+  if (!slot) return;
+
+  const oldTable = tableSelect.value;
+  const tables = availableAdvancementTables(slot);
+  setSelectOptions(
+    tableSelect,
+    tables.map((table) => ({
+      value: table.id,
+      label: `Tier ${table.tier} · ${advancementTableLabel(table.id)}`,
+    })),
+    oldTable,
+  );
+  const table = advancementData?.tables?.[tableSelect.value];
+  if (!table) return;
+
+  const oldTarget = targetSelect.value;
+  const recipients =
+    table.id === "totem" || table.id === "crew-card"
+      ? [{ value: "leader", label: advancementRecipientLabel("leader") }]
+      : [
+          { value: "leader", label: advancementRecipientLabel("leader") },
+          ...(state.leader.totem
+            ? [{ value: "totem", label: advancementRecipientLabel("totem") }]
+            : []),
+        ];
+  setSelectOptions(targetSelect, recipients, oldTarget);
+
+  const flipField = document.querySelector("#advancementFlipField");
+  const usesFlip = !["summoning", "crew-card"].includes(table.id);
+  flipField.hidden = !usesFlip;
+  if (usesFlip) {
+    const oldFlip = flipSelect.value;
+    setSelectOptions(
+      flipSelect,
+      [
+        ...Array.from({ length: 13 }, (_, index) => ({
+          value: index + 1,
+          label: String(index + 1),
+        })),
+        { value: "black-joker", label: localized("Чёрный джокер", "Black Joker") },
+        { value: "red-joker", label: localized("Красный джокер", "Red Joker") },
+      ],
+      oldFlip || "1",
+    );
+  } else {
+    flipSelect.innerHTML = "";
+  }
+
+  const cheatedField = document.querySelector("#advancementCheatedJokerField");
+  const cheatedInput = document.querySelector("#advancementCheatedJoker");
+  const tierTwoJoker =
+    ["action", "ability"].includes(table.id) &&
+    ["black-joker", "red-joker"].includes(flipSelect.value);
+  cheatedField.hidden = !tierTwoJoker;
+  if (!tierTwoJoker) cheatedInput.checked = false;
+
+  const oldChoice = choiceSelect.value;
+  const choices =
+    table.id === "crew-card"
+      ? []
+      : advancementChoices(table.id, flipSelect.value, cheatedInput.checked);
+  const choiceField = document.querySelector("#advancementChoiceField");
+  choiceField.hidden = table.id === "crew-card";
+  setSelectOptions(
+    choiceSelect,
+    choices.map((choice) => {
+      const duplicate =
+        table.id === "ability" &&
+        choice.value !== "natural-joker" &&
+        abilityChoiceAlreadyUsed(targetSelect.value, choice);
+      return {
+        value: choice.id,
+        label: `${advancementChoiceLabel(choice)}${
+          duplicate
+            ? localized(" · уже выбрана", " · already selected")
+            : ""
+        }`,
+        disabled: duplicate,
+      };
+    }),
+    oldChoice,
+  );
+  const choice = choices.find((entry) => entry.id === choiceSelect.value) || null;
+  const naturalJoker = choice?.value === "natural-joker";
+  if (
+    pendingAdvancementTalent &&
+    (!naturalJoker || pendingAdvancementTalent.tableId !== table.id)
+  ) {
+    clearPendingAdvancementTalent();
+  }
+  const selectedBiggerHat =
+    naturalJoker && pendingAdvancementTalent?.tableId === table.id
+      ? pendingAdvancementTalent
+      : null;
+  const manualName = table.id === "crew-card" || naturalJoker;
+  nameInput.readOnly = !manualName || Boolean(selectedBiggerHat);
+  nameInput.placeholder = manualName
+    ? table.id === "crew-card"
+      ? localized("Название эффекта карты команды", "Crew card effect name")
+      : localized(
+          "Действие/способность модели Cost ≤ 10 с общим ключом",
+          "Action/ability from a Cost ≤ 10 model sharing a keyword",
+        )
+    : "";
+  if (!manualName) nameInput.value = choice?.name || "";
+  if (manualName && nameInput.dataset.manualMode !== `${table.id}:${flipSelect.value}`) {
+    nameInput.value = "";
+  }
+  if (selectedBiggerHat) nameInput.value = selectedBiggerHat.name;
+  nameInput.dataset.manualMode = manualName ? `${table.id}:${flipSelect.value}` : "";
+  renderAdvancementBiggerHatPicker(naturalJoker, table.id);
+
+  const appliesField = document.querySelector("#advancementAppliesField");
+  const appliesSelect = document.querySelector("#advancementAppliesTo");
+  const isModification = [
+    "attack-modification",
+    "tactical-modification",
+  ].includes(table.id);
+  appliesField.hidden = !isModification;
+  const kind = table.id === "attack-modification" ? "attack" : "tactical";
+  const actions = isModification
+    ? advancementKnownActions(targetSelect.value, kind)
+    : [];
+  const oldApplies = appliesSelect.value;
+  setSelectOptions(
+    appliesSelect,
+    actions.length
+      ? actions.map((action) => ({
+          value: action.name,
+          label: `${action.name} · ${action.triggers} ${localized("триг.", "trg.")}`,
+        }))
+      : [
+          {
+            value: "",
+            label: localized(
+              "Нет записанного подходящего действия",
+              "No eligible recorded action",
+            ),
+            disabled: true,
+          },
+        ],
+    oldApplies,
+  );
+  const selectedAction = actions.find((action) => action.name === appliesSelect.value);
+  const existingTriggersField = document.querySelector(
+    "#advancementExistingTriggersField",
+  );
+  const existingTriggers = document.querySelector("#advancementExistingTriggers");
+  const triggerResult = isModification && choice?.type === "trigger";
+  existingTriggersField.hidden = !triggerResult;
+  existingTriggers.value = selectedAction?.triggers || 0;
+  const surcharge = triggerResult && Number(existingTriggers.value) >= 2 ? 2 : 0;
+  document.querySelector("#advancementScripCost").value = surcharge;
+
+  const totemSetup = document.querySelector("#totemSetup");
+  totemSetup.hidden = table.id !== "totem";
+  if (table.id === "totem" && choice) {
+    if (form.dataset.totemProfile !== choice.id) {
+      form.elements.totemName.value = choice.name;
+      form.elements.totemSize.value = 1;
+      form.elements.totemBase.value = "30";
+      form.elements.totemCharacteristic1.value = "";
+      form.elements.totemCharacteristic2.value = "";
+    }
+    form.dataset.totemProfile = choice.id;
+    renderTotemProfilePreview(choice);
+  } else {
+    form.dataset.totemProfile = "";
+    renderTotemProfilePreview(null);
+  }
+
+  const hints = {
+    "attack-modification": localized(
+      "Выберите результат не выше флипа и существующую Attack action. Новый триггер на действии с 2+ триггерами стоит 2 скрип.",
+      "Choose a result at or below the flip and an existing Attack action. A new trigger on an action with 2+ triggers costs 2 scrip.",
+    ),
+    "tactical-modification": localized(
+      "Выберите результат не выше флипа и существующую Tactical action. Новый триггер на действии с 2+ триггерами стоит 2 скрип.",
+      "Choose a result at or below the flip and an existing Tactical action. A new trigger on an action with 2+ triggers costs 2 scrip.",
+    ),
+    action: naturalJoker
+      ? localized(
+          "Natural Joker: вручную запишите действие модели Cost ≤ 10 с общим ключевым словом; Master и Totem не подходят.",
+          "Natural Joker: manually record an action from a Cost ≤ 10 model sharing a keyword; Masters and Totems are ineligible.",
+        )
+      : localized(
+          "Выберите действие из campaign-каталога не выше значения карты. Cheated Joker использует значение карты.",
+          "Choose an action from the campaign catalog at or below the card value. A cheated Joker uses its card value.",
+        ),
+    ability: naturalJoker
+      ? localized(
+          "Natural Joker: вручную запишите способность модели Cost ≤ 10 с общим ключевым словом; Master и Totem не подходят.",
+          "Natural Joker: manually record an ability from a Cost ≤ 10 model sharing a keyword; Masters and Totems are ineligible.",
+        )
+      : localized(
+          "Выберите способность из campaign-каталога не выше значения карты. Cheated Joker использует значение карты.",
+          "Choose an ability from the campaign catalog at or below the card value. A cheated Joker uses its card value.",
+        ),
+    totem: localized(
+      "Только точный результат флипа. Тотем создаётся с Cost 0, всегда считается нанятым и получает ключи лидера.",
+      "Exact flip only. The Totem is created at Cost 0, is always hired, and shares the leader’s keywords.",
+    ),
+    summoning: localized(
+      "Свободно выберите одно действие призыва. Это продвижение доступно один раз за кампанию.",
+      "Freely choose one Summoning action. This advancement is available once per campaign.",
+    ),
+    "crew-card": localized(
+      "Вручную запишите выбранный эффект карты команды.",
+      "Manually record the chosen crew card effect.",
+    ),
+  };
+  document.querySelector("#advancementRuleHint").textContent =
+    `XP ${slot.xp} · Tier ≤ ${slot.maxTier}. ${hints[table.id] || ""}`;
+  const rulesButton = document.querySelector("#advancementRulesButton");
+  rulesButton.dataset.rulesPages = table.pages?.join(",") || "31";
+  rulesButton.textContent = localized("Открыть правило", "Open rule");
+  const formValidation = validateAdvancementSelection({
+    xp: slot.xp,
+    tableId: table.id,
+    recipient: targetSelect.value,
+    flip: flipSelect.value,
+    cheated: cheatedInput.checked,
+    choiceId: choiceSelect.value,
+    name: selectedBiggerHat?.name || nameInput.value,
+    appliesTo: appliesSelect.value,
+    selectedBiggerHat,
+  });
+  document.querySelector("#advancementSubmit").disabled = !formValidation.ok;
+  document.querySelector("#advancementSubmit").title = formValidation.ok
+    ? ""
+    : formValidation.message;
+}
+
+function openAdvancementDialog(xp = null) {
+  if (!advancementData) {
+    toast(
+      localized(
+        "Справочник продвижений не загружен.",
+        "Advancement reference data is not loaded.",
+      ),
+    );
+    return;
+  }
+  const pending = pendingAdvancementSlots();
+  if (!pending.length) return;
+  clearPendingAdvancementTalent();
+  const form = document.querySelector("#advancementForm");
+  form.reset();
+  form.dataset.totemProfile = "";
+  form.querySelector("#advancementName").dataset.manualMode = "";
+  document.querySelector("#advancementXpIndex").innerHTML = pending
+    .map(
+      (slot) =>
+        `<option value="${slot.xp}">XP ${slot.xp} · Tier ≤ ${slot.maxTier}</option>`,
+    )
+    .join("");
+  if (pending.some((slot) => slot.xp === Number(xp))) {
+    document.querySelector("#advancementXpIndex").value = String(xp);
+  }
+  renderAdvancementForm();
+  const dialog = document.querySelector("#advancementDialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+function openNextAdvancementIfAvailable() {
+  const dialog = document.querySelector("#advancementDialog");
+  if (dialog.open || !pendingAdvancementSlots().length) return;
+  openAdvancementDialog();
+}
+
+function deleteAdvancement(id) {
+  const selected = state.leader.advances.find((advance) => advance.id === id);
+  if (!selected) return;
+  const ids = new Set([id]);
+  const removesTotem =
+    selected.tableId === "totem" ||
+    [
+      state.leader.totem?.sourceAdvancementId,
+      state.leader.totem?.acquiredBy,
+    ].filter(Boolean).includes(selected.id);
+  if (removesTotem) {
+    state.leader.advances
+      .filter((advance) => advance.recipient === "totem")
+      .forEach((advance) => ids.add(advance.id));
+  }
+  const removed = state.leader.advances.filter((advance) => ids.has(advance.id));
+  const refund = removed.reduce(
+    (sum, advance) => sum + Math.max(0, Number(advance.scripPaid) || 0),
+    0,
+  );
+  if (
+    !window.confirm(
+      localized(
+        `Удалить продвижение «${selected.name}»? ${
+          removed.length > 1
+            ? `Также будут удалены ${removed.length - 1} зависимых продвижений тотема. `
+            : ""
+        }Будет возвращено ${refund} скрип.`,
+        `Delete “${selected.name}”? ${
+          removed.length > 1
+            ? `${removed.length - 1} dependent Totem advancement(s) will also be removed. `
+            : ""
+        }${refund} scrip will be refunded.`,
+      ),
+    )
+  )
+    return;
+  const before = clone(state);
+  removeAdvancementIds(ids);
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return;
+  }
+  renderAll();
+  toast(
+    localized(
+      `Продвижение удалено. Возвращено ${refund} скрип.`,
+      `Advancement removed. Refunded ${refund} scrip.`,
+    ),
+  );
+}
+
+function renderAdvancementLedger() {
+  const pending = pendingAdvancementSlots();
+  const completed = state.leader.advances.filter((advance) => advance.xp).length;
+  const earned = advancementThresholds().filter(
+    (slot) => slot.xp <= state.leader.xp,
+  ).length;
+  const status = document.querySelector("#advancementStatus");
+  status.textContent = localized(
+    `XP ${state.leader.xp} · оформлено ${completed}/${earned}${
+      pending.length ? ` · ждут выбора: ${pending.map((slot) => slot.xp).join(", ")}` : ""
+    }`,
+    `XP ${state.leader.xp} · recorded ${completed}/${earned}${
+      pending.length ? ` · awaiting choice: ${pending.map((slot) => slot.xp).join(", ")}` : ""
+    }`,
+  );
+  const addButton = document.querySelector("#addAdvancementButton");
+  addButton.disabled = !pending.length || !advancementData;
+  addButton.textContent = pending.length
+    ? localized(
+        `+ Оформить продвижение (${pending.length})`,
+        `+ Record advancement (${pending.length})`,
+      )
+    : localized("Все доступные оформлены", "All available recorded");
+
+  const ledger = document.querySelector("#advancementLedger");
+  if (!state.leader.advances.length) {
+    ledger.innerHTML = `
+      <div class="empty-state compact-empty">
+        <div>
+          <strong>${localized("Продвижений пока нет", "No advancements yet")}</strong>
+          <p>${localized(
+            "Когда будет отмечена пронумерованная ячейка XP, здесь появится постоянная запись.",
+            "When a numbered XP box is earned, its permanent record will appear here.",
+          )}</p>
+        </div>
+      </div>`;
+    return;
+  }
+  ledger.innerHTML = [...state.leader.advances]
+    .sort((left, right) => (Number(left.xp) || 999) - (Number(right.xp) || 999))
+    .map(
+      (advance) => `
+        <article class="advancement-entry">
+          <div class="advancement-entry-index">${advance.xp ? `XP ${escapeHtml(advance.xp)}` : "—"}</div>
+          <div class="advancement-entry-main">
+            <span class="kicker">Tier ${escapeHtml(advance.tier || "—")} · ${escapeHtml(
+              advancementTableLabel(advance.tableId),
+            )}</span>
+            <h4>${escapeHtml(advance.name)}</h4>
+            <p>${escapeHtml(
+              [
+                advancementRecipientLabel(advance.recipient),
+                advance.appliesTo
+                  ? `${localized("для", "for")} ${advance.appliesTo}`
+                  : "",
+                advance.flip?.card
+                  ? `${flipLabel(advance.flip.card)}${
+                      advance.flip.cheated
+                        ? ` · ${localized("cheated", "cheated")}`
+                        : ""
+                    }`
+                  : "",
+                advance.resultType,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            )}</p>
+            ${advance.notes ? `<small>${escapeHtml(advance.notes)}</small>` : ""}
+          </div>
+          <div class="advancement-entry-cost">
+            <span>${advance.scripPaid ? `−${escapeHtml(advance.scripPaid)} ${localized("скрип", "scrip")}` : localized("без доплаты", "no surcharge")}</span>
+            <button class="row-delete" type="button" data-delete-advancement="${escapeHtml(
+              advance.id,
+            )}" aria-label="${localized("Удалить продвижение", "Delete advancement")}">×</button>
+          </div>
+        </article>`,
+    )
+    .join("");
+  ledger.querySelectorAll("[data-delete-advancement]").forEach((button) => {
+    button.addEventListener("click", () =>
+      deleteAdvancement(button.dataset.deleteAdvancement),
+    );
+  });
+}
+
+function totemActionHtml(action) {
+  const meta = [
+    action.type,
+    action.range ? `Rg ${action.range}` : "",
+    action.skill !== null && action.skill !== undefined
+      ? `Skl ${action.skill}${action.resist ? ` vs ${action.resist}` : ""}`
+      : "",
+    action.tn ? `TN ${action.tn}` : "",
+    action.damage ? `Dmg ${action.damage}` : "",
+    action.signature ? "Signature" : "",
+    action.stoneCost ? `${action.stoneCost} SS` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+    <article class="totem-rule">
+      <div><b>${escapeHtml(action.name)}</b><small>${escapeHtml(meta)}</small></div>
+      ${action.text ? `<p>${cardText(action.text)}</p>` : ""}
+    </article>`;
+}
+
+function renderTotemCard(selector = "#totemCard") {
+  const wrap = document.querySelector(selector);
+  if (!wrap) return;
+  const totem = state.leader.totem;
+  if (!totem) {
+    wrap.innerHTML = `
+      <div class="empty-state compact-empty totem-empty">
+        <div>
+          <strong>${localized("Связь ещё не создана", "The bond has not been formed")}</strong>
+          <p>${localized(
+            "Тотем появляется только через Tier III Totem Advancement и точный флип.",
+            "A Totem is created only through the Tier III Totem Advancement and an exact flip.",
+          )}</p>
+        </div>
+      </div>`;
+    return;
+  }
+  const profile = totem.profile || {};
+  const keywords = state.crew.keywords.filter(Boolean);
+  const profileAbilities = Array.isArray(profile.abilities) ? profile.abilities : [];
+  const campaignAbilities = abilityRecords("totem");
+  const actions = [
+    ...(Array.isArray(profile.attacks) ? profile.attacks : []),
+    ...(Array.isArray(profile.tacticals) ? profile.tacticals : []),
+  ];
+  const totemAdvances = state.leader.advances.filter(
+    (advance) =>
+      advance.recipient === "totem" &&
+      advance.tableId !== "ability" &&
+      advance.resultType !== "ability",
+  );
+  const totemEquipment = equipmentAssignedTo("totem");
+  wrap.innerHTML = `
+    <section class="totem-dossier">
+      <header class="totem-dossier-head">
+        <div>
+          <span class="kicker">${escapeHtml(profile.name || localized("Тотем", "Totem"))}</span>
+          <h3>${escapeHtml(totem.name)}</h3>
+          <p>${escapeHtml(
+            [
+              ...keywords,
+              ...totem.characteristics,
+              localized("Всегда нанят · Cost 0", "Always hired · Cost 0"),
+            ].join(" · "),
+          )}</p>
+        </div>
+      </header>
+      <div class="permanent-record-grid totem-permanent-grid">
+        <section class="permanent-record-section" data-permanent-section="abilities">
+          <div class="permanent-record-heading">
+            <span>${localized("Способности", "Abilities")}</span>
+            <b>${profileAbilities.length + campaignAbilities.length}</b>
+          </div>
+          ${
+            profileAbilities.length
+              ? `<div class="ability-list profile-ability-list">${profileAbilities
+                  .map(
+                    (ability) => `
+                      <article class="ability-record is-profile">
+                        <div><b>${escapeHtml(ability.name)}</b>
+                        ${ability.text ? `<p>${cardText(ability.text)}</p>` : ""}</div>
+                      </article>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }
+          ${abilityListHtml(campaignAbilities, {
+            removable: true,
+            showEmpty: !profileAbilities.length,
+          })}
+        </section>
+        <section class="permanent-record-section" data-permanent-section="injuries">
+          <div class="permanent-record-heading">
+            <span>${localized("Травмы", "Injuries")}</span>
+            <b>${injuryCount(totem.injuries)}</b>
+          </div>
+          ${injuryListHtml(totem.injuries, {
+            targetKind: "totem",
+            removable: true,
+          }) || `<p class="permanent-empty">${localized("Травм пока нет.", "No injuries yet.")}</p>`}
+          <button type="button" class="injury-add-button" data-add-injury-totem>
+            ${message("addInjury")}
+          </button>
+        </section>
+      </div>
+      <div class="totem-stat-strip">
+        ${[
+          ["Df", totem.stats.df],
+          ["Wp", totem.stats.wp],
+          ["Sp", totem.stats.sp],
+          ["Health", totem.stats.health],
+          ["Sz", totem.size],
+          ["Base", `${totem.base}mm`],
+        ]
+          .map(
+            ([label, value]) =>
+              `<span><small>${label}</small><b>${escapeHtml(value)}</b></span>`,
+          )
+          .join("")}
+      </div>
+      ${actions.length ? `<div class="totem-rules">${actions.map(totemActionHtml).join("")}</div>` : ""}
+      <div class="totem-loadout-equipment">
+        <b>${localized("Снаряжение на текущую встречу", "Equipment for the current encounter")}</b>
+        ${loadoutEquipmentHtml(totemEquipment)}
+      </div>
+      ${
+        totemAdvances.length
+          ? `<div class="totem-advances"><b>${localized(
+              "Продвижения тотема",
+              "Totem advancements",
+            )}</b><p>${escapeHtml(totemAdvances.map((advance) => advance.name).join(" · "))}</p></div>`
+          : ""
+      }
+    </section>`;
+  wrap.querySelector("[data-add-injury-totem]")?.addEventListener("click", () => {
+    openInjuryDialog("totem");
+  });
+  bindPermanentRecordActions(wrap);
+}
+
+function submitAdvancement(form) {
+  const xp = Number(document.querySelector("#advancementXpIndex").value);
+  const tableId = document.querySelector("#advancementTable").value;
+  const recipient = document.querySelector("#advancementTarget").value;
+  const flip = document.querySelector("#advancementFlip").value;
+  const cheated = document.querySelector("#advancementCheatedJoker").checked;
+  const choiceId = document.querySelector("#advancementChoice").value;
+  const previewChoice = advancementChoices(tableId, flip, cheated).find(
+    (entry) => entry.id === choiceId,
+  );
+  const naturalJoker = previewChoice?.value === "natural-joker";
+  const selectedBiggerHat =
+    naturalJoker && pendingAdvancementTalent?.tableId === tableId
+      ? pendingAdvancementTalent
+      : null;
+  const data = new FormData(form);
+  const enteredName =
+    selectedBiggerHat?.name || safeText(data.get("name"), 200).trim();
+  const appliesTo = safeText(data.get("appliesTo"), 200).trim();
+  const validation = validateAdvancementSelection({
+    xp,
+    tableId,
+    recipient,
+    flip,
+    cheated,
+    choiceId,
+    name: enteredName,
+    appliesTo,
+    selectedBiggerHat,
+  });
+  if (!validation.ok) {
+    toast(validation.message);
+    renderAdvancementForm();
+    return;
+  }
+  const { slot, table, choice, name, scripPaid } = validation;
+  const isModification = [
+    "attack-modification",
+    "tactical-modification",
+  ].includes(tableId);
+  const before = clone(state);
+  const id = uid();
+  const resultType =
+    choice?.type ||
+    ({
+      action: "action",
+      ability: "ability",
+      totem: "totem",
+      summoning: "action",
+      "crew-card": "crew-card-effect",
+    }[tableId] ??
+      "");
+  const advance = {
+    id,
+    xp: slot.xp,
+    maxTier: slot.maxTier,
+    tier: table.tier,
+    tableId,
+    recipient,
+    choiceId: choice?.id || "",
+    name,
+    resultType,
+    flip: {
+      card: ["summoning", "crew-card"].includes(tableId) ? "" : flip,
+      cheated:
+        ["action", "ability"].includes(tableId) &&
+        ["black-joker", "red-joker"].includes(flip) &&
+        cheated,
+    },
+    appliesTo: isModification ? appliesTo : "",
+    notes: safeText(data.get("notes"), 4_000).trim(),
+    snapshot: selectedBiggerHat
+      ? clone(selectedBiggerHat.snapshot)
+      : choice
+        ? clone(choice)
+        : {
+            manual: true,
+            rule:
+              tableId === "crew-card"
+                ? "Crew Card Advancement"
+                : "Natural Joker: shared keyword, Cost 10 or less, non-Master, non-Totem",
+          },
+    cardId: selectedBiggerHat?.cardId || null,
+    cardSlug: selectedBiggerHat?.cardSlug || null,
+    entryId: selectedBiggerHat?.entryId || null,
+    source: selectedBiggerHat?.source || null,
+    scripPaid,
+    acquiredTotemId: null,
+    legacy: false,
+    createdAt: new Date().toISOString(),
+  };
+  if (tableId === "ability") {
+    if (advance.snapshot?.entry) {
+      advance.snapshot.entry = {
+        ...advance.snapshot.entry,
+        type: "ability",
+        name,
+      };
+    } else {
+      advance.snapshot = {
+        ...(advance.snapshot || {}),
+        type: "ability",
+        name,
+      };
+    }
+  }
+
+  if (tableId === "totem") {
+    const totemTable = advancementData?.tables?.totem;
+    const exactProfile = (advancementData?.tier3?.totems || []).find(
+      (profile) =>
+        profile.id === choice?.id && String(profile.flip) === String(flip),
+    );
+    if (
+      state.leader.totem ||
+      table !== totemTable ||
+      totemTable?.tier !== 3 ||
+      totemTable?.selection !== "exact" ||
+      !exactProfile
+    ) {
+      toast(
+        localized(
+          "В досье уже есть тотем или профиль недоступен.",
+          "A Totem already exists or the profile is unavailable.",
+        ),
+      );
+      return;
+    }
+    const totemId = `totem-${uid()}`;
+    const base = Number(data.get("totemBase"));
+    const totemSnapshot = clone(exactProfile);
+    const enteredTotemName = safeText(data.get("totemName"), 200).trim();
+    const customName = enteredTotemName && enteredTotemName !== exactProfile.name
+      ? enteredTotemName
+      : "";
+    state.leader.totem = {
+      id: totemId,
+      profileId: exactProfile.id,
+      snapshot: totemSnapshot,
+      profile: clone(totemSnapshot),
+      customName,
+      name: customName || exactProfile.name,
+      stats: clone(totemSnapshot.stats || {}),
+      size: Math.max(1, Math.min(4, Number(data.get("totemSize")) || 1)),
+      base: [30, 40, 50].includes(base) ? base : 30,
+      characteristics: [
+        safeText(data.get("totemCharacteristic1"), 100).trim(),
+        safeText(data.get("totemCharacteristic2"), 100).trim(),
+      ].filter(Boolean),
+      injuries: [],
+      sourceAdvancementId: id,
+      acquiredBy: id,
+      cost: 0,
+      permanentHired: true,
+      keywords: state.crew.keywords.filter(Boolean),
+    };
+    advance.acquiredTotemId = totemId;
+    advance.recipient = "leader";
+  }
+
+  state.arsenal.scrip -= scripPaid;
+  state.leader.advances.push(advance);
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return;
+  }
+  clearPendingAdvancementTalent();
+  document.querySelector("#advancementDialog").close();
+  renderAll();
+  toast(
+    localized(
+      `Продвижение «${name}» записано для ${advancementRecipientLabel(
+        advance.recipient,
+      )}.`,
+      `“${name}” recorded for ${advancementRecipientLabel(advance.recipient)}.`,
+    ),
+  );
 }
 
 function renderReference() {
@@ -3301,6 +6551,7 @@ function renderEquipmentPurchasePreview() {
   const customName = String(data.get("customName") || "").trim();
   const selected = equipment[Number(data.get("catalog"))];
   const receivedFree = data.get("freeAcquisition") === "on";
+  const ratingExempt = data.get("ratingExempt") === "on";
   const available = Number(state.arsenal.scrip) || 0;
   const cost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
 
@@ -3429,6 +6680,7 @@ function fillModelFormFromCard(card) {
   const form = document.querySelector("#modelForm");
   form.elements.name.value = card.displayName;
   form.elements.cost.value = card.cost;
+  form.elements.modelLimit.value = Math.max(1, Number(card.count || 1));
   form.elements.type.value = stationToModelType(card);
   form.elements.keywords.value = characterKeywordNames(card).join(", ");
   form.elements.henchman.checked = characterIsHenchman(card);
@@ -3525,6 +6777,21 @@ function emptyTalentEntryPanel() {
     </div>`;
 }
 
+function setTalentPickerRuleText() {
+  if (!activeTalentSlot) return;
+  const { mode, slot } = activeTalentSlot;
+  document.querySelector("#talentPickerRule").textContent =
+    mode === "advancement"
+      ? localized(
+          `${talentKindLabel(slot)} · Cost ${slot.limit} или меньше · общий ключ команды · не Master/Totem.`,
+          `${talentKindLabel(slot)} · Cost ${slot.limit} or less · shared crew keyword · not a Master/Totem.`,
+        )
+      : message("talentPickerRule", {
+          kind: talentKindLabel(slot),
+          limit: slot.limit,
+        });
+}
+
 function resetTalentPicker() {
   talentSearchRequest += 1;
   talentSourceRequest += 1;
@@ -3544,17 +6811,53 @@ function openTalentPicker(index) {
   if (!slot) return;
   talentSearchRequest += 1;
   talentSourceRequest += 1;
-  activeTalentSlot = { index, slot };
+  activeTalentSlot = { mode: "initial", index, slot };
   selectedTalentSource = null;
   document.querySelector("#talentCardSearch").value = "";
   document.querySelector("#talentSearchResults").innerHTML = "";
-  document.querySelector("#talentPickerRule").textContent = message("talentPickerRule", {
-    kind: talentKindLabel(slot),
-    limit: slot.limit,
-  });
+  setTalentPickerRuleText();
   emptyTalentEntryPanel();
   const dialog = document.querySelector("#talentDialog");
   if (!dialog.open) dialog.showModal();
+  runTalentCardSearch();
+  document.querySelector("#talentCardSearch").focus();
+}
+
+function openAdvancementTalentPicker() {
+  if (!cardCatalog) {
+    toast(message("catalogUnavailable"));
+    return;
+  }
+  const tableId = document.querySelector("#advancementTable").value;
+  const flip = document.querySelector("#advancementFlip").value;
+  const cheated = document.querySelector("#advancementCheatedJoker").checked;
+  const choice = advancementChoices(tableId, flip, cheated).find(
+    (entry) => entry.id === document.querySelector("#advancementChoice").value,
+  );
+  if (!["action", "ability"].includes(tableId) || choice?.value !== "natural-joker") {
+    return;
+  }
+  const slot = {
+    id: `advancement-natural-joker-${tableId}`,
+    kind: tableId,
+    type: tableId === "ability" ? "Способность" : "Действие",
+    typeEn: tableId === "ability" ? "Ability" : "Action",
+    limit: 10,
+    chooseTrigger: false,
+  };
+  talentSearchRequest += 1;
+  talentSourceRequest += 1;
+  activeTalentSlot = { mode: "advancement", index: null, slot };
+  selectedTalentSource = null;
+  document.querySelector("#talentCardSearch").value = "";
+  document.querySelector("#talentSearchResults").innerHTML = "";
+  setTalentPickerRuleText();
+  emptyTalentEntryPanel();
+  returnToAdvancementAfterTalent = true;
+  const advancementDialog = document.querySelector("#advancementDialog");
+  if (advancementDialog.open) advancementDialog.close();
+  const talentDialog = document.querySelector("#talentDialog");
+  if (!talentDialog.open) talentDialog.showModal();
   runTalentCardSearch();
   document.querySelector("#talentCardSearch").focus();
 }
@@ -3585,10 +6888,8 @@ async function runTalentCardSearch(force = false) {
       state.arsenal.models.map((model) => model.cardSlug).filter(Boolean),
     );
     const eligible = sortCharactersForCrew(
-      found.filter(
-        (character) =>
-          isHireableCard(character) &&
-          Number(character.cost) <= activeTalentSlot.slot.limit,
+      found.filter((character) =>
+        isTalentSourceCard(character, activeTalentSlot.slot.limit),
       ),
     ).sort((a, b) => Number(arsenalSlugs.has(b.slug)) - Number(arsenalSlugs.has(a.slug)));
     const visible = eligible.slice(0, 20);
@@ -3615,6 +6916,9 @@ async function runTalentCardSearch(force = false) {
 
 function eligibleTalentEntries(card, slot) {
   if (slot.kind === "ability") return Array.isArray(card.abilities) ? card.abilities : [];
+  if (activeTalentSlot?.mode === "advancement") {
+    return Array.isArray(card.actions) ? card.actions : [];
+  }
   return (card.actions || []).filter((action) => action.type === slot.kind);
 }
 
@@ -3642,7 +6946,16 @@ function renderTalentEntries(card) {
         .map((entry) => {
           const requiresTrigger = Boolean(slot.chooseTrigger);
           const triggers = Array.isArray(entry.triggers) ? entry.triggers : [];
-          const unavailable = requiresTrigger && !triggers.length;
+          const previouslyChosen =
+            activeTalentSlot?.mode === "advancement" &&
+            slot.kind === "ability" &&
+            abilityChoiceAlreadyUsed(
+              document.querySelector("#advancementTarget").value,
+              null,
+              entry.name,
+            );
+          const unavailable =
+            (requiresTrigger && !triggers.length) || previouslyChosen;
           const kindLabel =
             slot.kind === "ability" ? "Ability" : entry.typeLabel || talentKindLabel(slot);
           return `
@@ -3696,7 +7009,12 @@ function renderTalentEntries(card) {
                             .join("")}
                         </select>
                       </label>`
-                  : ""}
+                  : previouslyChosen
+                    ? `<span class="talent-trigger-warning">${localized(
+                        "Уже выбрана для получателя",
+                        "Already selected for this recipient",
+                      )}</span>`
+                    : ""}
                 <button class="entry-select-button" type="button" data-select-talent-entry="${escapeHtml(entry.id)}" ${unavailable ? "disabled" : ""}>
                   ${message("chooseFromCard")}
                 </button>
@@ -3722,10 +7040,7 @@ async function selectTalentSourceCard(slug) {
   try {
     const card = await cardCatalog.getCharacter(slug, { signal: controller.signal });
     if (request !== talentSourceRequest || !activeTalentSlot) return;
-    if (
-      !isHireableCard(card) ||
-      Number(card.cost) > Number(activeTalentSlot.slot.limit)
-    ) {
+    if (!isTalentSourceCard(card, activeTalentSlot.slot.limit)) {
       throw new Error("This source exceeds the slot limit");
     }
     selectedTalentSource = card;
@@ -3752,6 +7067,23 @@ function chooseTalentEntry(entryId) {
   const entries = eligibleTalentEntries(selectedTalentSource, slot);
   const entry = entries.find((item) => String(item.id) === String(entryId));
   if (!entry) return;
+  if (
+    activeTalentSlot.mode === "advancement" &&
+    slot.kind === "ability" &&
+    abilityChoiceAlreadyUsed(
+      document.querySelector("#advancementTarget").value,
+      null,
+      entry.name,
+    )
+  ) {
+    toast(
+      localized(
+        "Эта способность уже назначена выбранному получателю.",
+        "This ability is already assigned to the selected recipient.",
+      ),
+    );
+    return;
+  }
   let selectedTrigger = null;
   if (slot.chooseTrigger) {
     const select = document.querySelector(`[data-trigger-choice="${CSS.escape(String(entry.id))}"]`);
@@ -3767,6 +7099,30 @@ function chooseTalentEntry(entryId) {
   const entrySnapshot = clone(entry);
   if (slot.kind !== "ability") {
     entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
+  }
+  if (activeTalentSlot.mode === "advancement") {
+    pendingAdvancementTalent = {
+      tableId: slot.kind,
+      cardId: selectedTalentSource.id,
+      cardSlug: selectedTalentSource.slug,
+      entryId: entry.id,
+      name: entry.name,
+      source: selectedTalentSource.displayName,
+      snapshot: {
+        sourceCard: compactTalentSourceCard(selectedTalentSource, entrySnapshot, slot),
+        entry: entrySnapshot,
+        selectedTrigger: null,
+      },
+    };
+    document.querySelector("#advancementName").value = entry.name;
+    document.querySelector("#talentDialog").close();
+    toast(
+      localized(
+        `${entry.name} выбран для продвижения.`,
+        `${entry.name} selected for the advancement.`,
+      ),
+    );
+    return;
   }
   const talentsBefore = clone(state.leader.talents);
   state.leader.talents[index] = {
@@ -4145,9 +7501,12 @@ function renderAll() {
   [0, 1].forEach(renderKeywordValidation);
   renderArchetypes();
   renderTalents();
+  renderLeaderPermanentRecords();
   renderCrewCards();
   renderArsenal();
   renderChronicle();
+  renderAdvancementLedger();
+  renderTotemCard();
   renderReference();
   renderEquipmentCatalog();
   renderEquipmentPurchasePreview();
@@ -4612,10 +7971,15 @@ document
 document
   .querySelector("#talentCardSearch")
   .addEventListener("input", debounce(() => runTalentCardSearch(), 280));
+document.querySelector("#injurySearch").addEventListener("input", (event) => {
+  renderInjuryCatalog(event.currentTarget.value);
+});
 document.querySelector("#modelForm").addEventListener("input", (event) => {
   if (
     pendingModelCard &&
-    ["name", "cost", "type", "keywords", "henchman"].includes(event.target.name)
+    ["name", "cost", "modelLimit", "type", "keywords", "henchman"].includes(
+      event.target.name,
+    )
   ) {
     clearPendingModelCard(true);
   }
@@ -4632,12 +7996,13 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     id: uid(),
     name: data.get("name").trim(),
     cost: Number(data.get("cost")),
+    modelLimit: Math.max(1, Number(data.get("modelLimit") || 1)),
     type: data.get("type"),
     henchman: data.get("henchman") === "on",
     keywords: data.get("keywords").trim(),
     versatile: data.get("versatile") === "on",
     outOfKeyword: data.get("outOfKeyword") === "on",
-    injuries: 0,
+    injuries: [],
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
     cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,
@@ -4652,6 +8017,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     return;
   }
   const arsenalBefore = clone(state.arsenal);
+  const loadoutBefore = clone(state.loadout);
   if (state.campaign.week > 1) {
     const alreadyHired = state.arsenal.models.some((item) => item.addedWeek === state.campaign.week);
     const keywordTax = model.outOfKeyword && !model.versatile ? 1 : 0;
@@ -4668,11 +8034,13 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     model.scripPaid = 0;
   }
   state.arsenal.models.push(model);
+  state.loadout.hiredModelIds.push(model.id);
   if (state.campaign.week === 1) {
     state.arsenal.scrip = startingScripBalance(projected);
   }
   if (!saveState()) {
     state.arsenal = arsenalBefore;
+    state.loadout = loadoutBefore;
     renderArsenal();
     return;
   }
@@ -4687,6 +8055,44 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
 });
 
 const equipmentForm = document.querySelector("#equipmentForm");
+const advancementForm = document.querySelector("#advancementForm");
+
+document.querySelector("#addAdvancementButton").addEventListener("click", () => {
+  openAdvancementDialog();
+});
+[
+  "advancementTarget",
+  "advancementChoice",
+  "advancementAppliesTo",
+].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", renderAdvancementForm);
+});
+[
+  "advancementXpIndex",
+  "advancementTable",
+  "advancementFlip",
+  "advancementCheatedJoker",
+].forEach((id) => {
+  document.querySelector(`#${id}`).addEventListener("change", () => {
+    clearPendingAdvancementTalent();
+    renderAdvancementForm();
+  });
+});
+document
+  .querySelector("#advancementBiggerHatButton")
+  .addEventListener("click", openAdvancementTalentPicker);
+document.querySelector("#advancementExistingTriggers").addEventListener("input", () => {
+  renderAdvancementForm();
+});
+advancementForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitAdvancement(event.currentTarget);
+});
+document.querySelector("#advancementRulesButton").addEventListener("click", () => {
+  const dialog = document.querySelector("#advancementDialog");
+  if (dialog.open) dialog.close();
+});
+
 document.querySelector("#addEquipmentButton").addEventListener("click", () => {
   equipmentForm.reset();
   renderEquipmentPurchasePreview();
@@ -4702,6 +8108,7 @@ equipmentForm.addEventListener("submit", (event) => {
   const customName = data.get("customName").trim();
   const selected = equipment[Number(data.get("catalog"))];
   const receivedFree = data.get("freeAcquisition") === "on";
+  const ratingExempt = data.get("ratingExempt") === "on";
   const purchaseCost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
   const available = Number(state.arsenal.scrip) || 0;
   if (!customName && !selected) return;
@@ -4712,7 +8119,14 @@ equipmentForm.addEventListener("submit", (event) => {
   }
   const arsenalBefore = clone(state.arsenal);
   const item = customName
-    ? { id: uid(), name: customName, scripPaid: 0, acquisition: "custom" }
+    ? {
+        id: uid(),
+        name: customName,
+        scripPaid: 0,
+        acquisition: "custom",
+        ratingExempt,
+        assignmentRules: null,
+      }
     : {
         id: uid(),
         name: selected[0],
@@ -4720,8 +8134,12 @@ equipmentForm.addEventListener("submit", (event) => {
         cc: selected[2],
         scripPaid: purchaseCost,
         acquisition: receivedFree ? "free" : "purchase",
+        ratingExempt,
+        assignmentRules: normalizeEquipmentAssignmentRules(null, selected[0]),
       };
   state.arsenal.scrip = available - purchaseCost;
+  state.arsenal.equipmentScripSpent =
+    purchasedEquipmentScrip() + purchaseCost;
   state.arsenal.equipment.push(item);
   if (!saveState()) {
     state.arsenal = arsenalBefore;
@@ -4773,21 +8191,38 @@ document.querySelector("#gameForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const calculation = renderGamePreview();
   const data = new FormData(event.currentTarget);
+  const before = clone(state);
+  const loadoutSnapshot = currentLoadoutSnapshot();
   state.games.push({
     id: uid(),
     week: state.campaign.week,
     opponent: data.get("opponent").trim(),
     ...calculation,
+    loadoutSnapshot,
   });
   state.arsenal.scrip += calculation.scrip;
   state.leader.xp += calculation.creditedXp;
-  saveState();
+  state.loadout = {
+    hiredModelIds: [],
+    assignments: [],
+  };
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return;
+  }
   event.currentTarget.reset();
   event.currentTarget.elements.vp.value = 0;
   event.currentTarget.elements.ratingGap.value = 0;
   event.currentTarget.elements.schemes.value = 0;
   renderAll();
-  toast(message("gameSaved", { scrip: calculation.scrip, xp: calculation.creditedXp }));
+  toast(
+    `${message("gameSaved", {
+      scrip: calculation.scrip,
+      xp: calculation.creditedXp,
+    })} ${message("loadoutResetAfterGame")}`,
+  );
+  window.setTimeout(() => openNextAdvancementIfAvailable(), 0);
 });
 
 document.querySelector("#exportButton").addEventListener("click", () => {
@@ -4808,7 +8243,7 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
   try {
     state = mergeDefaults(JSON.parse(await file.text()));
     saveState();
-    ["modelDialog", "talentDialog", "cardDialog"].forEach((id) => {
+    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
     });
@@ -4839,7 +8274,7 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
-  ["modelDialog", "talentDialog", "cardDialog"].forEach((id) => {
+  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog"].forEach((id) => {
     const dialog = document.querySelector(`#${id}`);
     if (dialog.open) dialog.close();
   });
@@ -4878,10 +8313,7 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
       runModelCardSearch();
     }
     if (document.querySelector("#talentDialog").open && activeTalentSlot) {
-      document.querySelector("#talentPickerRule").textContent = message("talentPickerRule", {
-        kind: talentKindLabel(activeTalentSlot.slot),
-        limit: activeTalentSlot.slot.limit,
-      });
+      setTalentPickerRuleText();
       if (selectedTalentSource) renderTalentEntries(selectedTalentSource);
       runTalentCardSearch();
     }
@@ -4889,6 +8321,12 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
       document.querySelector("#cardDialogTitle").textContent =
         activeCardView.displayName || activeCardView.name || message("openCard");
       document.querySelector("#cardDialogContent").innerHTML = modelCardHtml(activeCardView);
+    }
+    if (document.querySelector("#advancementDialog").open) {
+      renderAdvancementForm();
+    }
+    if (document.querySelector("#injuryDialog").open) {
+      renderInjuryCatalog(document.querySelector("#injurySearch").value);
     }
   });
 });
@@ -4898,9 +8336,27 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   });
 });
 document.querySelector("#modelDialog").addEventListener("close", () => resetModelPicker());
-document.querySelector("#talentDialog").addEventListener("close", () => resetTalentPicker());
+document.querySelector("#talentDialog").addEventListener("close", () => {
+  const shouldReturn = returnToAdvancementAfterTalent;
+  resetTalentPicker();
+  if (shouldReturn) {
+    returnToAdvancementAfterTalent = false;
+    const dialog = document.querySelector("#advancementDialog");
+    if (!dialog.open && pendingAdvancementSlots().length) {
+      renderAdvancementForm();
+      dialog.showModal();
+    }
+  }
+});
+document.querySelector("#advancementDialog").addEventListener("close", () => {
+  if (!returnToAdvancementAfterTalent) clearPendingAdvancementTalent();
+});
 document.querySelector("#cardDialog").addEventListener("close", () => {
   activeCardView = null;
+});
+document.querySelector("#injuryDialog").addEventListener("close", () => {
+  activeInjuryTarget = null;
+  document.querySelector("#injurySearch").value = "";
 });
 
 bindFields();

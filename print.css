@@ -346,17 +346,90 @@
   }
 
   .print-model-table th:nth-child(2) {
-    width: 35mm;
+    width: 30mm;
   }
 
   .print-model-table th:nth-child(3) {
-    width: 46mm;
+    width: 35mm;
   }
 
   .print-model-table th:nth-child(5),
   .print-model-table td:nth-child(5) {
-    width: 17mm;
-    text-align: center;
+    width: 46mm;
+  }
+
+  .print-injury-list {
+    display: grid;
+    gap: 1.2mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .print-injury-list li {
+    break-inside: avoid;
+  }
+
+  .print-injury-list b,
+  .print-injury-list small {
+    display: block;
+    text-align: left;
+  }
+
+  .print-injury-list b {
+    color: var(--print-red);
+    font-size: 7pt;
+  }
+
+  .print-injury-list small {
+    margin-top: 0.4mm;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.25;
+  }
+
+  .print-permanent-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3mm;
+    margin-top: 3mm;
+    break-inside: avoid;
+  }
+
+  .print-permanent-block {
+    padding: 2.5mm;
+    border: 0.7pt solid var(--print-line);
+  }
+
+  .print-permanent-block h3 {
+    margin: 0 0 1.5mm;
+    color: var(--print-red);
+    font-size: 10pt;
+  }
+
+  .print-ability-list {
+    display: grid;
+    gap: 1.5mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .print-ability-list li {
+    break-inside: avoid;
+  }
+
+  .print-ability-list b,
+  .print-ability-list small {
+    display: block;
+  }
+
+  .print-ability-list small,
+  .print-ability-list p {
+    margin: 0.4mm 0 0;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.25;
   }
 
   .print-cost {

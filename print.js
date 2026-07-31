@@ -35,6 +35,96 @@
     return isEnglishPrint() ? en : ru;
   }
 
+  function printInjuryCount(value) {
+    return Array.isArray(value) ? value.length : Math.max(0, Number(value) || 0);
+  }
+
+  function renderPrintInjuries(value) {
+    const items = Array.isArray(value) ? value : [];
+    if (!items.length) return escapePrintHtml(printInjuryCount(value) || "—");
+    return `<ul class="print-injury-list">${items
+      .map((injury) => {
+        const name =
+          (isEnglishPrint() && injury.nameEn ? injury.nameEn : injury.name) ||
+          injury.nameEn ||
+          printText("Не указана", "Unspecified");
+        const effect =
+          (isEnglishPrint() && injury.effectEn ? injury.effectEn : injury.effect) ||
+          injury.effectEn ||
+          "";
+        const flip = injury.flip ? `${injury.flip} · ` : "";
+        return `<li><b>${escapePrintHtml(`${flip}${name}`)}</b>${
+          effect ? `<small>${escapePrintHtml(effect)}</small>` : ""
+        }</li>`;
+      })
+      .join("")}</ul>`;
+  }
+
+  function printAbilityRecords(advances, recipient) {
+    return (Array.isArray(advances) ? advances : [])
+      .filter(
+        (advance) =>
+          advance?.recipient === recipient &&
+          (advance.tableId === "ability" || advance.resultType === "ability"),
+      )
+      .map((advance) => {
+        const snapshot = advance.snapshot?.entry || advance.snapshot || {};
+        return {
+          name: advance.name || snapshot.name || printText("Способность", "Ability"),
+          effect:
+            snapshot.description ||
+            snapshot.text ||
+            snapshot.effect ||
+            advance.notes ||
+            "",
+          source: advance.source || snapshot.source || "",
+          flip: advance.flip?.card || "",
+        };
+      });
+  }
+
+  function renderPrintAbilitySection(advances, recipient, profileAbilities = []) {
+    const items = [
+      ...(Array.isArray(profileAbilities)
+        ? profileAbilities.map((ability) => ({
+            name: ability.name,
+            effect: ability.text || ability.description || "",
+            source: printText("Профиль", "Profile"),
+            flip: "",
+          }))
+        : []),
+      ...printAbilityRecords(advances, recipient),
+    ];
+    return `<section class="print-permanent-block" data-print-section="abilities">
+      <h3>${printText("Способности", "Abilities")}</h3>
+      ${
+        items.length
+          ? `<ul class="print-ability-list">${items
+              .map(
+                (ability) => `<li><b>${escapePrintHtml(ability.name)}</b>
+                  ${
+                    ability.source || ability.flip
+                      ? `<small>${escapePrintHtml(
+                          [ability.source, ability.flip].filter(Boolean).join(" · "),
+                        )}</small>`
+                      : ""
+                  }
+                  ${ability.effect ? `<p>${richPrintText(ability.effect)}</p>` : ""}
+                </li>`,
+              )
+              .join("")}</ul>`
+          : `<p class="print-empty">${printText("Способностей нет.", "No abilities.")}</p>`
+      }
+    </section>`;
+  }
+
+  function renderPrintInjurySection(injuries) {
+    return `<section class="print-permanent-block" data-print-section="injuries">
+      <h3>${printText("Травмы", "Injuries")}</h3>
+      ${renderPrintInjuries(injuries)}
+    </section>`;
+  }
+
   function richPrintText(value) {
     try {
       if (typeof cardText === "function") return cardText(value);
@@ -153,7 +243,7 @@
       </section>`;
   }
 
-  function renderModels(models) {
+  function renderModels(models, loadout) {
     if (!models.length) {
       return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
     }
@@ -166,6 +256,7 @@
             <th>${printText("Станция и характеристики", "Station & characteristics")}</th>
             <th>${printText("Ключи", "Keywords")}</th>
             <th>${printText("Травмы", "Injuries")}</th>
+            <th>${printText("Состав", "Crew")}</th>
           </tr>
         </thead>
         <tbody>
@@ -182,7 +273,8 @@
                   <td><b>${escapePrintHtml(model.name || "—")}</b></td>
                   <td>${escapePrintHtml(traits.join(" · ") || "—")}</td>
                   <td>${escapePrintHtml(model.keywords || "—")}</td>
-                  <td>${escapePrintHtml(model.injuries || 0)}</td>
+                  <td>${renderPrintInjuries(model.injuries)}</td>
+                  <td>${(loadout?.hiredModelIds || []).includes(model.id) ? "✓" : "—"}</td>
                 </tr>`;
             })
             .join("")}
@@ -190,7 +282,7 @@
       </table>`;
   }
 
-  function renderEquipment(items) {
+  function renderEquipment(items, data) {
     if (!items.length) {
       return `<p class="print-empty">${printText("Снаряжение отсутствует.", "No equipment.")}</p>`;
     }
@@ -201,18 +293,33 @@
             <th>${printText("Предмет", "Item")}</th>
             <th>BR</th>
             <th>CC</th>
+            <th>${printText("Назначено", "Assigned to")}</th>
           </tr>
         </thead>
         <tbody>
           ${items
-            .map(
-              (item) => `
+            .map((item) => {
+              const assignment = (data.loadout?.assignments || []).find(
+                (entry) => entry.equipmentId === item.id,
+              );
+              const target =
+                assignment?.targetKind === "leader"
+                  ? data.leader?.name || printText("Лидер", "Leader")
+                  : assignment?.targetKind === "totem"
+                    ? data.leader?.totem?.name || printText("Тотем", "Totem")
+                    : assignment?.targetKind === "model"
+                      ? (data.arsenal?.models || []).find(
+                          (model) => model.id === assignment.targetId,
+                        )?.name
+                      : "";
+              return `
                 <tr>
                   <td><b>${escapePrintHtml(item.name || "—")}</b></td>
                   <td>${escapePrintHtml(item.br || "—")}</td>
                   <td>${escapePrintHtml(item.cc ?? "—")}</td>
-                </tr>`,
-            )
+                  <td>${escapePrintHtml(target || "—")}${item.ratingExempt ? ` · ${printText("вне CR", "CR-exempt")}` : ""}</td>
+                </tr>`;
+            })
             .join("")}
         </tbody>
       </table>`;
@@ -265,7 +372,7 @@
       <section class="print-section print-advances">
         <div class="print-section-heading">
           <span class="print-kicker">XP</span>
-          <h2>${printText("Продвижения лидера", "Leader advancements")}</h2>
+          <h2>${printText("Продвижения лидера и тотема", "Leader and Totem advancements")}</h2>
         </div>
         <ul>
           ${advances
@@ -274,10 +381,105 @@
                 typeof advance === "string"
                   ? advance
                   : advance?.name || advance?.label || JSON.stringify(advance);
-              return `<li>${escapePrintHtml(label)}</li>`;
+              const details =
+                typeof advance === "object" && advance
+                  ? [
+                      advance.xp ? `XP ${advance.xp}` : "",
+                      advance.tier ? `Tier ${advance.tier}` : "",
+                      advance.recipient === "totem"
+                        ? printText("Тотем", "Totem")
+                        : printText("Лидер", "Leader"),
+                      advance.appliesTo
+                        ? `${printText("для", "for")} ${advance.appliesTo}`
+                        : "",
+                      advance.flip?.card
+                        ? `${advance.flip.card}${advance.flip.cheated ? " · cheated" : ""}`
+                        : "",
+                      advance.scripPaid
+                        ? `${advance.scripPaid} ${printText("скрип", "scrip")}`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "";
+              return `<li><b>${escapePrintHtml(label)}</b>${details ? `<small> · ${escapePrintHtml(details)}</small>` : ""}${advance?.notes ? `<p>${escapePrintHtml(advance.notes)}</p>` : ""}</li>`;
             })
             .join("")}
         </ul>
+      </section>`;
+  }
+
+  function renderTotem(totem, keywords, advances, equipment, loadout) {
+    if (!totem) return "";
+    const profile = totem.snapshot || totem.profile || {};
+    const stats = totem.stats || profile.stats || {};
+    const rules = [
+      ...(profile.attacks || []),
+      ...(profile.tacticals || []),
+    ];
+    const totemAdvances = advances.filter(
+      (advance) =>
+        advance?.recipient === "totem" &&
+        advance.tableId !== "ability" &&
+        advance.resultType !== "ability",
+    );
+    const equipmentById = new Map(equipment.map((item) => [item.id, item]));
+    const totemEquipment = (loadout.assignments || [])
+      .filter((assignment) => assignment.targetKind === "totem")
+      .map((assignment) => equipmentById.get(assignment.equipmentId))
+      .filter(Boolean);
+    return `
+      <section class="print-section print-totem">
+        <div class="print-section-heading">
+          <span class="print-kicker">${printText("Тотем · всегда нанят · Cost 0", "Totem · always hired · Cost 0")}</span>
+          <h2>${escapePrintHtml(totem.name || profile.name || "—")}</h2>
+        </div>
+        <p>${escapePrintHtml(
+          [
+            ...keywords,
+            ...(totem.characteristics || []),
+            `Sz ${totem.size || 1}`,
+            `${totem.base || 30}mm`,
+            `${printText("травмы", "injuries")} ${printInjuryCount(totem.injuries)}`,
+          ].join(" · "),
+        )}</p>
+        <div class="print-permanent-grid">
+          ${renderPrintAbilitySection(advances, "totem", profile.abilities || [])}
+          ${renderPrintInjurySection(totem.injuries)}
+        </div>
+        <div class="print-stat-strip">
+          ${[
+            ["Df", stats.df],
+            ["Wp", stats.wp],
+            ["Sp", stats.sp],
+            ["Health", stats.health],
+          ]
+            .map(
+              ([label, value]) =>
+                `<span><small>${label}</small><b>${escapePrintHtml(value ?? "—")}</b></span>`,
+            )
+            .join("")}
+        </div>
+        ${
+          rules.length
+            ? `<ul>${rules
+                .map(
+                  (rule) =>
+                    `<li><b>${escapePrintHtml(rule.name)}</b>${rule.text ? `<p>${richPrintText(rule.text)}</p>` : ""}</li>`,
+                )
+                .join("")}</ul>`
+            : ""
+        }
+        <p class="print-totem-equipment"><b>${printText("Снаряжение", "Equipment")}:</b> ${escapePrintHtml(
+          totemEquipment.map((item) => item.name).join(" · ") || "—",
+        )}</p>
+        ${
+          totemAdvances.length
+            ? `<p><b>${printText("Продвижения", "Advancements")}:</b> ${escapePrintHtml(
+                totemAdvances.map((advance) => advance.name).join(" · "),
+              )}</p>`
+            : ""
+        }
       </section>`;
   }
 
@@ -291,6 +493,7 @@
     const equipment = Array.isArray(arsenal.equipment) ? arsenal.equipment : [];
     const games = Array.isArray(data.games) ? data.games : [];
     const advances = Array.isArray(leader.advances) ? leader.advances : [];
+    const loadout = data.loadout || {};
     const archetype = printArchetype(leader.archetype);
     const talents = Array.isArray(leader.talents) ? leader.talents : [];
     const stats = archetype?.stats || {};
@@ -299,10 +502,10 @@
       ? leader.characteristics.filter(Boolean)
       : [];
     const totalCost = models.reduce((sum, model) => sum + Number(model.cost || 0), 0);
-    const totalInjuries = models.reduce(
-      (sum, model) => sum + Number(model.injuries || 0),
-      0,
-    );
+    const totalInjuries =
+      printInjuryCount(leader.injuries) +
+      models.reduce((sum, model) => sum + printInjuryCount(model.injuries), 0) +
+      printInjuryCount(leader.totem?.injuries);
     const archetypeName = archetype
       ? isEnglishPrint()
         ? archetype.labelEn
@@ -374,6 +577,11 @@
           </div>
         </section>
 
+        <div class="print-permanent-grid print-leader-permanent">
+          ${renderPrintAbilitySection(advances, "leader")}
+          ${renderPrintInjurySection(leader.injuries)}
+        </div>
+
         <section class="print-section print-talents">
           <div class="print-section-heading">
             <span class="print-kicker">${printText("Заимствованные таланты", "Borrowed talents")}</span>
@@ -415,7 +623,7 @@
             <span class="print-kicker">${printText("Состав", "Roster")}</span>
             <h2>${printText("Модели в арсенале", "Models in the arsenal")}</h2>
           </div>
-          ${renderModels(models)}
+          ${renderModels(models, loadout)}
         </section>
 
         <section class="print-section print-equipment">
@@ -423,9 +631,10 @@
             <span class="print-kicker">${printText("Хранилище", "Storage")}</span>
             <h2>${printText("Снаряжение", "Equipment")}</h2>
           </div>
-          ${renderEquipment(equipment)}
+          ${renderEquipment(equipment, data)}
         </section>
 
+        ${renderTotem(leader.totem, keywords, advances, equipment, loadout)}
         ${renderAdvances(advances)}
         ${renderGames(games)}
         <footer class="print-footer">
