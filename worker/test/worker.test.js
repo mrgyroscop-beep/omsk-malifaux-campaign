@@ -12,6 +12,7 @@ function environment(overrides = {}) {
     CLOUDFLARE_ACCOUNT_ID: "account-id",
     AI_GATEWAY_ID: "default",
     DEEPSEEK_API_KEY: "test-secret",
+    AI_GATEWAY_TOKEN: "test-gateway-token",
     DEEPSEEK_MODEL: "deepseek-v4-flash",
     SESSION_SIGNING_KEY: "test-session-signing-key-with-enough-entropy",
     CHAT_RATE_LIMITER: {
@@ -178,6 +179,10 @@ test("routes DeepSeek through AI Gateway without logging payloads", async (conte
       "https://gateway.ai.cloudflare.com/v1/account-id/default/deepseek/chat/completions",
     );
     assert.equal(options.headers.Authorization, "Bearer test-secret");
+    assert.equal(
+      options.headers["cf-aig-authorization"],
+      "Bearer test-gateway-token",
+    );
     assert.equal(options.headers["cf-aig-collect-log-payload"], "false");
     assert.equal(options.headers["cf-aig-cache-ttl"], "86400");
     assert.equal(options.headers["cf-aig-request-timeout"], "18000");
@@ -223,8 +228,47 @@ test("falls back directly to DeepSeek when AI Gateway is unavailable", async (co
     }
     assert.equal(url, "https://api.deepseek.com/chat/completions");
     assert.equal(options.headers["cf-aig-cache-ttl"], undefined);
+    assert.equal(options.headers["cf-aig-authorization"], undefined);
     return Response.json({
       choices: [{ message: { content: "Use a Barter Flip. [стр. 21]" } }],
+    });
+  };
+
+  const env = environment();
+  const response = await worker.fetch(
+    await request(
+      { message: "How does barter work?", history: [], locale: "en" },
+      { env },
+    ),
+    env,
+  );
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.answer, "Use a Barter Flip. [p. 21]");
+  assert.deepEqual(endpoints, [
+    "https://gateway.ai.cloudflare.com/v1/account-id/default/deepseek/chat/completions",
+    "https://api.deepseek.com/chat/completions",
+  ]);
+});
+
+test("falls back directly when AI Gateway rejects gateway authentication", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
+  });
+  console.warn = () => {};
+  const endpoints = [];
+  globalThis.fetch = async (url, options) => {
+    endpoints.push(url);
+    assert.equal(options.headers.Authorization, "Bearer test-secret");
+    if (endpoints.length === 1) {
+      return new Response("gateway authentication required", { status: 401 });
+    }
+    assert.equal(url, "https://api.deepseek.com/chat/completions");
+    return Response.json({
+      choices: [{ message: { content: "Use a Barter Flip. [p. 21]" } }],
     });
   };
 

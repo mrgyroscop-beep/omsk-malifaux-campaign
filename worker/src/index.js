@@ -133,6 +133,9 @@ function gatewayRequestHeaders(env, cacheTtl) {
     "cf-aig-max-attempts": "3",
     "cf-aig-retry-delay": "500",
     "cf-aig-backoff": "exponential",
+    ...(env.AI_GATEWAY_TOKEN
+      ? { "cf-aig-authorization": `Bearer ${env.AI_GATEWAY_TOKEN}` }
+      : {}),
   };
 }
 
@@ -155,7 +158,7 @@ function shouldUseDirectFallback(error) {
   if (error?.source !== "gateway") return false;
   if (!Number.isFinite(error?.status)) return true;
   return (
-    [404, 408, 425].includes(error.status) ||
+    [401, 403, 404, 408, 425].includes(error.status) ||
     (error.status >= 500 && error.status <= 599)
   );
 }

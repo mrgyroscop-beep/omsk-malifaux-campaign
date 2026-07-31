@@ -30,9 +30,13 @@ Never put real secret values in `wrangler.jsonc`, source code, or Git:
 
 ```powershell
 npx wrangler secret put DEEPSEEK_API_KEY
+npx wrangler secret put AI_GATEWAY_TOKEN
 npx wrangler secret put SESSION_SIGNING_KEY
 npx wrangler secret put TURNSTILE_SECRET
 ```
+
+`AI_GATEWAY_TOKEN` is a Cloudflare API token with `AI Gateway: Run` permission.
+It is sent in `cf-aig-authorization` when Authenticated Gateway is enabled.
 
 `SESSION_SIGNING_KEY` should be a long random value. For local development,
 place values in the ignored `worker/.dev.vars` file.
