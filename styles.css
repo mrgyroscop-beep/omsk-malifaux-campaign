@@ -1008,6 +1008,8 @@ h1 {
 .talent-fields {
   display: grid;
   gap: 15px;
+  container-name: talent-list;
+  container-type: inline-size;
 }
 
 .talent-row {
@@ -1015,6 +1017,12 @@ h1 {
   grid-template-columns: 120px 1fr 74px;
   gap: 10px;
   align-items: end;
+}
+
+.talent-row > .field,
+.talent-input-line > input,
+.talent-picked-summary > span {
+  min-width: 0;
 }
 
 .talent-row .field:last-child input {
@@ -1074,6 +1082,46 @@ h1 {
   padding: 0 8px;
   background: transparent;
   color: var(--ink-soft);
+}
+
+@container talent-list (max-width: 460px) {
+  .talent-row {
+    grid-template-columns: minmax(0, 1fr) 64px;
+    align-items: start;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .talent-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .talent-type {
+    grid-column: 1 / -1;
+    align-self: auto;
+  }
+
+  .talent-input-line,
+  .talent-picked-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .talent-pick-button,
+  .talent-picked-summary .talent-card-button {
+    width: fit-content;
+    justify-self: start;
+  }
+
+  .talent-pick-button {
+    min-height: 34px;
+  }
+
+  .talent-picked-summary > span {
+    overflow-wrap: anywhere;
+  }
 }
 
 .crew-card-section {
