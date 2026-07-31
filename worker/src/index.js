@@ -8,6 +8,9 @@ const MAX_REQUEST_BYTES = 32_000;
 const MAX_MESSAGE_CHARS = 3_000;
 const MAX_HISTORY_ITEMS = 8;
 const MAX_HISTORY_ITEM_CHARS = 2_400;
+const DEEPSEEK_DIRECT_URL = "https://api.deepseek.com/chat/completions";
+const ANSWER_CACHE_TTL_SECONDS = 24 * 60 * 60;
+const SEARCH_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const SEARCH_PROMPT = `You convert questions about Malifaux campaign rules into English
 search terms for the official rulebook. Return JSON only in the form
@@ -120,45 +123,120 @@ async function gatewayUrl(env) {
   )}/${encodeURIComponent(gatewayId)}/deepseek/chat/completions`;
 }
 
-async function deepSeek(env, messages, options = {}) {
-  const endpoint = await gatewayUrl(env);
-  if (!endpoint) {
-    const error = new Error("AI Gateway is not configured");
-    error.status = 503;
-    throw error;
-  }
+function gatewayRequestHeaders(env, cacheTtl) {
+  return {
+    Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+    "Content-Type": "application/json",
+    "cf-aig-collect-log-payload": "false",
+    "cf-aig-cache-ttl": String(cacheTtl),
+    "cf-aig-request-timeout": "18000",
+    "cf-aig-max-attempts": "3",
+    "cf-aig-retry-delay": "500",
+    "cf-aig-backoff": "exponential",
+  };
+}
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
-      "Content-Type": "application/json",
-      "cf-aig-collect-log-payload": "false",
-      "cf-aig-skip-cache": "true",
-    },
-    body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL || "deepseek-v4-flash",
-      messages,
-      max_tokens: options.maxTokens || 700,
-      stream: false,
-      temperature: 0.1,
-      thinking: { type: "disabled" },
-      ...(options.json ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
+function directRequestHeaders(env) {
+  return {
+    Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
+
+function upstreamError(source, status, cause) {
+  const error = new Error(`${source} request failed${status ? ` with ${status}` : ""}`);
+  error.status = status;
+  error.source = source;
+  if (cause) error.cause = cause;
+  return error;
+}
+
+function shouldUseDirectFallback(error) {
+  if (error?.source !== "gateway") return false;
+  if (!Number.isFinite(error?.status)) return true;
+  return (
+    [404, 408, 425].includes(error.status) ||
+    (error.status >= 500 && error.status <= 599)
+  );
+}
+
+async function requestDeepSeek(endpoint, env, body, options = {}) {
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers:
+        options.source === "gateway"
+          ? gatewayRequestHeaders(env, options.cacheTtl)
+          : directRequestHeaders(env),
+      body,
+    });
+  } catch (error) {
+    throw upstreamError(options.source, undefined, error);
+  }
 
   if (!response.ok) {
-    const error = new Error(`DeepSeek request failed with ${response.status}`);
-    error.status = response.status;
-    throw error;
+    throw upstreamError(options.source, response.status);
   }
 
-  const payload = await response.json();
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    throw upstreamError(options.source, 502, error);
+  }
   const content = payload?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content.trim()) {
-    throw new Error("DeepSeek returned an empty response");
+    throw upstreamError(options.source, 502);
   }
   return content.trim();
+}
+
+async function deepSeek(env, messages, options = {}) {
+  const cacheTtl = options.cacheTtl || ANSWER_CACHE_TTL_SECONDS;
+  const body = JSON.stringify({
+    model: env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+    messages,
+    max_tokens: options.maxTokens || 700,
+    stream: false,
+    temperature: 0.1,
+    thinking: { type: "disabled" },
+    ...(options.json ? { response_format: { type: "json_object" } } : {}),
+  });
+
+  let gatewayEndpoint = "";
+  try {
+    gatewayEndpoint = await gatewayUrl(env);
+  } catch (error) {
+    if (env.DEEPSEEK_DIRECT_FALLBACK === "false") {
+      throw upstreamError("gateway", undefined, error);
+    }
+  }
+
+  if (gatewayEndpoint) {
+    try {
+      return await requestDeepSeek(gatewayEndpoint, env, body, {
+        source: "gateway",
+        cacheTtl,
+      });
+    } catch (error) {
+      if (
+        env.DEEPSEEK_DIRECT_FALLBACK === "false" ||
+        !shouldUseDirectFallback(error)
+      ) {
+        throw error;
+      }
+      console.warn("AI Gateway unavailable; using direct DeepSeek fallback", {
+        status: error.status || 0,
+      });
+    }
+  } else if (env.DEEPSEEK_DIRECT_FALLBACK === "false") {
+    throw upstreamError("gateway", 503);
+  }
+
+  return requestDeepSeek(DEEPSEEK_DIRECT_URL, env, body, {
+    source: "deepseek",
+  });
 }
 
 async function englishSearchTerms(env, question) {
@@ -171,7 +249,11 @@ async function englishSearchTerms(env, question) {
         { role: "system", content: SEARCH_PROMPT },
         { role: "user", content: question },
       ],
-      { maxTokens: 140, json: true },
+      {
+        maxTokens: 140,
+        json: true,
+        cacheTtl: SEARCH_CACHE_TTL_SECONDS,
+      },
     );
     const parsed = JSON.parse(content);
     return Array.isArray(parsed.terms)
@@ -264,7 +346,7 @@ async function requireApiSession(request, env, origin) {
 }
 
 async function handleChat(request, env, origin) {
-  if (!env.DEEPSEEK_API_KEY || (!env.AI?.gateway && !env.CLOUDFLARE_ACCOUNT_ID)) {
+  if (!env.DEEPSEEK_API_KEY) {
     return jsonResponse({ error: "not_configured" }, 503);
   }
 
@@ -314,6 +396,10 @@ async function handleChat(request, env, origin) {
     });
   } catch (error) {
     const status = error?.status === 429 ? 429 : 502;
+    console.error("Archivist upstream request failed", {
+      source: error?.source || "unknown",
+      status: Number.isFinite(error?.status) ? error.status : 0,
+    });
     return jsonResponse(
       { error: status === 429 ? "upstream_rate_limited" : "upstream_error" },
       status,

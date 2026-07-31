@@ -74,6 +74,13 @@ HTML, JavaScript или сетевые запросы браузера. Worker �
 печатных страниц 14–56 и требует от модели отвечать только по найденному
 контексту. Источники ответа открываются непосредственно в разделе «Правила».
 
+AI Gateway кеширует только полностью идентичные запросы: поисковые переводы на
+семь дней, ответы Архивариуса на сутки. Перед отправкой к DeepSeek Gateway делает
+до трёх попыток с экспоненциальной задержкой. При инфраструктурной ошибке Gateway
+Worker один раз обращается к DeepSeek напрямую; ошибки ключа, баланса и лимитов
+этот аварийный маршрут не обходит. В логах Gateway сохраняются метрики, но не
+тексты вопросов и ответов.
+
 История диалога хранится только в `sessionStorage` текущей вкладки. Содержимое
 досье, имена игроков и данные арсенала не отправляются. Чат работает на
 опубликованном сайте и через `localhost`; небезопасный источник `file://`
@@ -201,6 +208,13 @@ Cloudflare AI Gateway. The DeepSeek key stays in Cloudflare Secrets and is never
 embedded in browser code or browser network requests. The Worker retrieves
 relevant text from printed pages 14–56 and instructs the model to answer only
 from that context. Every returned source opens directly in the Rules section.
+
+AI Gateway caches exact requests only: search translations for seven days and
+Archivist answers for one day. It retries DeepSeek up to three times with
+exponential backoff. If Gateway itself has an infrastructure failure, the Worker
+makes one direct DeepSeek request; authentication, billing, and rate-limit errors
+do not use this fallback. Gateway logs retain metrics without storing question or
+answer payloads.
 
 Conversation history stays in the current tab's `sessionStorage`. Dossier,
 player, and arsenal data is not sent. Chat works on the published site and

@@ -11,7 +11,8 @@
     "ALLOWED_ORIGINS": "https://mrgyroscop-beep.github.io,http://localhost:4173,http://127.0.0.1:4173",
     "CLOUDFLARE_ACCOUNT_ID": "d714d517dea4f66b938faaf76b7bf38b",
     "AI_GATEWAY_ID": "default",
-    "DEEPSEEK_MODEL": "deepseek-v4-flash"
+    "DEEPSEEK_MODEL": "deepseek-v4-flash",
+    "DEEPSEEK_DIRECT_FALLBACK": "true"
   },
   "ai": {
     "binding": "AI"

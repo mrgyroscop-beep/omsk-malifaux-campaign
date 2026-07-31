@@ -3,7 +3,8 @@
 Cloudflare API for the Malifaux Campaign Builder. The static site stays on
 GitHub Pages; this Worker provides:
 
-- DeepSeek access through Cloudflare AI Gateway;
+- DeepSeek access through Cloudflare AI Gateway with exact-request caching,
+  metadata-only logs, automatic retries, and a direct emergency fallback;
 - Turnstile-verified anonymous API sessions;
 - a KV read-through cache and Cron prewarming for BiggerHat;
 - D1 cloud dossiers, a shared player table, and a shared chronicle.

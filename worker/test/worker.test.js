@@ -179,7 +179,12 @@ test("routes DeepSeek through AI Gateway without logging payloads", async (conte
     );
     assert.equal(options.headers.Authorization, "Bearer test-secret");
     assert.equal(options.headers["cf-aig-collect-log-payload"], "false");
-    assert.equal(options.headers["cf-aig-skip-cache"], "true");
+    assert.equal(options.headers["cf-aig-cache-ttl"], "86400");
+    assert.equal(options.headers["cf-aig-request-timeout"], "18000");
+    assert.equal(options.headers["cf-aig-max-attempts"], "3");
+    assert.equal(options.headers["cf-aig-retry-delay"], "500");
+    assert.equal(options.headers["cf-aig-backoff"], "exponential");
+    assert.equal(options.headers["cf-aig-skip-cache"], undefined);
     const payload = JSON.parse(options.body);
     assert.ok(payload.messages[0].content.includes("RULE_CONTEXT"));
     return Response.json({
@@ -201,11 +206,83 @@ test("routes DeepSeek through AI Gateway without logging payloads", async (conte
   assert.ok(payload.sources.includes(21));
 });
 
-test("does not expose secrets when upstream fails", async (context) => {
+test("falls back directly to DeepSeek when AI Gateway is unavailable", async (context) => {
   const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
   context.after(() => {
     globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
   });
+  console.warn = () => {};
+  const endpoints = [];
+  globalThis.fetch = async (url, options) => {
+    endpoints.push(url);
+    assert.equal(options.headers.Authorization, "Bearer test-secret");
+    if (endpoints.length === 1) {
+      return new Response("gateway unavailable", { status: 503 });
+    }
+    assert.equal(url, "https://api.deepseek.com/chat/completions");
+    assert.equal(options.headers["cf-aig-cache-ttl"], undefined);
+    return Response.json({
+      choices: [{ message: { content: "Use a Barter Flip. [стр. 21]" } }],
+    });
+  };
+
+  const env = environment();
+  const response = await worker.fetch(
+    await request(
+      { message: "How does barter work?", history: [], locale: "en" },
+      { env },
+    ),
+    env,
+  );
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.answer, "Use a Barter Flip. [p. 21]");
+  assert.deepEqual(endpoints, [
+    "https://gateway.ai.cloudflare.com/v1/account-id/default/deepseek/chat/completions",
+    "https://api.deepseek.com/chat/completions",
+  ]);
+});
+
+test("does not bypass provider rate limits through the direct fallback", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const originalError = console.error;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  });
+  console.error = () => {};
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return new Response("rate limited", { status: 429 });
+  };
+
+  const env = environment();
+  const response = await worker.fetch(
+    await request(
+      { message: "How does barter work?", history: [], locale: "en" },
+      { env },
+    ),
+    env,
+  );
+  assert.equal(response.status, 429);
+  assert.deepEqual(await response.json(), { error: "upstream_rate_limited" });
+  assert.equal(calls, 1);
+});
+
+test("does not expose secrets when upstream fails", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
+    console.error = originalError;
+  });
+  console.warn = () => {};
+  console.error = () => {};
   globalThis.fetch = async () => new Response("failure", { status: 500 });
 
   const env = environment();
@@ -232,6 +309,7 @@ test("instructs the answer model to recover Russian slang", async (context) => {
     call += 1;
     const payload = JSON.parse(options.body);
     if (call === 1) {
+      assert.equal(options.headers["cf-aig-cache-ttl"], "604800");
       assert.ok(payload.messages[0].content.includes('"ростер"'));
       return Response.json({
         choices: [
@@ -245,6 +323,7 @@ test("instructs the answer model to recover Russian slang", async (context) => {
         ],
       });
     }
+    assert.equal(options.headers["cf-aig-cache-ttl"], "86400");
     assert.ok(payload.messages[0].content.includes("Do not say that a user's word is absent"));
     return Response.json({
       choices: [
