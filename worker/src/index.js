@@ -1,6 +1,11 @@
 import { issueSession, validateTurnstile, verifySession } from "./auth.js";
 import { handleBiggerHat, refreshBiggerHatCache } from "./biggerhat-cache.js";
 import { handleCampaignRequest } from "./campaigns.js";
+import {
+  handleFeedbackAutomationRequest,
+  handleFeedbackRequest,
+  isFeedbackAutomationPath,
+} from "./feedback.js";
 import { rulesContext, searchRules } from "./search.js";
 
 const MAX_REQUEST_CHARS = 18_000;
@@ -443,11 +448,27 @@ async function dispatch(request, env, context, origin) {
     return handleChat(request, env, origin);
   }
 
+  if (request.method === "POST" && url.pathname === "/api/feedback") {
+    const session = await requireApiSession(request, env, origin);
+    if (session.error) return session.error;
+    if (
+      !(await rateLimit(
+        env.FEEDBACK_RATE_LIMITER,
+        clientKey(request, "feedback"),
+      ))
+    ) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    return handleFeedbackRequest(request, env);
+  }
+
   return jsonResponse({ error: "not_found" }, 404);
 }
 
 function routeLabel(pathname) {
   if (pathname === "/api/chat") return "chat";
+  if (pathname === "/api/feedback") return "feedback";
+  if (isFeedbackAutomationPath(pathname)) return "feedback_automation";
   if (pathname === "/api/session") return "session";
   if (pathname.startsWith("/api/biggerhat/")) return "biggerhat";
   if (pathname.startsWith("/api/campaigns")) return "campaigns";
@@ -459,10 +480,13 @@ export default {
     const startedAt = Date.now();
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
+    const automationRequest = isFeedbackAutomationPath(url.pathname);
     let response;
 
     try {
-      if (!allowedOrigins(env).has(origin)) {
+      if (automationRequest) {
+        response = await handleFeedbackAutomationRequest(request, env);
+      } else if (!allowedOrigins(env).has(origin)) {
         response = new Response("Forbidden", { status: 403 });
       } else if (request.method === "OPTIONS") {
         response = new Response(null, { status: 204 });
@@ -480,7 +504,7 @@ export default {
       response = jsonResponse({ error: "internal_error" }, 500);
     }
 
-    const finalResponse = withCors(response, origin);
+    const finalResponse = automationRequest ? response : withCors(response, origin);
     console.log(
       JSON.stringify({
         event: "request",

@@ -45,6 +45,7 @@ python -m http.server 4173
   кликабельными ссылками на использованные страницы;
 - необязательные облачные досье в Cloudflare D1: публичная хроника и таблица игроков с отдельным ключом организатора;
 - Turnstile-защита запросов к ИИ и изменений облачных данных;
+- встроенная двуязычная обратная связь с защищённой D1-очередью для автоматизации;
 - кликабельные номера страниц во всех разделах и возврат к исходному месту;
 - автосохранение, импорт/экспорт JSON и печать.
 
@@ -110,6 +111,19 @@ BiggerHat временно недоступен, Worker может вернут�
 копию. Cloudflare Web Analytics работает без cookies и не записывает параметры
 публичной ссылки.
 
+### Обратная связь
+
+Кнопка «Обратная связь» открывает встроенную доступную форму на русском или
+английском языке. В D1 отправляются категория, сообщение, необязательный контакт,
+версия приложения, язык и текущий раздел. Отправка использует ту же
+Turnstile-сессию, что и остальные защищённые действия, но имеет отдельный лимит
+частоты. Повтор одного `requestId` с теми же данными безопасно возвращает
+существующую квитанцию; повтор с изменёнными данными отклоняется.
+
+Очередь не имеет публичного API чтения. Внешняя автоматизация получает записи
+только через закрытые `claim`/`ack`/`retry`/`ignored` маршруты с
+`FEEDBACK_AUTOMATION_TOKEN`; стандартная аренда записи длится 15 минут.
+
 Для первого развёртывания Worker:
 
 ```powershell
@@ -119,7 +133,8 @@ npx wrangler d1 migrations apply DB --remote
 npx wrangler deploy
 ```
 
-Значения `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY` и `TURNSTILE_SECRET` должны
+Значения `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY`, `TURNSTILE_SECRET` и
+`FEEDBACK_AUTOMATION_TOKEN` должны
 задаваться через Cloudflare Secrets, а не через Git. Идентификаторы D1, KV,
 публичный Turnstile sitekey и расписание Cron находятся в `worker/wrangler.jsonc`.
 
@@ -183,6 +198,7 @@ Then open `http://localhost:4173`.
   clickable source-page citations;
 - optional Cloudflare D1 dossiers with a shared chronicle and player table;
 - Turnstile protection for AI requests and cloud-data mutations;
+- embedded bilingual feedback with a protected D1 automation queue;
 - clickable page references throughout the builder with contextual back navigation;
 - browser autosave, JSON import/export, and print layout.
 
@@ -244,6 +260,18 @@ by Cron every six hours. A stale KV copy is used if the upstream service is
 temporarily unavailable. Cloudflare Web Analytics uses no cookies and does not
 record the public link's query parameters.
 
+### Feedback
+
+The Feedback button opens an accessible embedded form in Russian or English. D1
+stores the category, message, optional contact, app version, locale, and current
+section. Submission uses the existing Turnstile session and a dedicated rate
+limit. Reusing a `requestId` with an identical payload safely returns the
+existing receipt; changing the payload produces a conflict.
+
+The queue has no public read endpoint. External automation can consume it only
+through secret-protected `claim`/`ack`/`retry`/`ignored` routes using
+`FEEDBACK_AUTOMATION_TOKEN`; the default claim lease is 15 minutes.
+
 Initial Worker deployment:
 
 ```powershell
@@ -253,7 +281,8 @@ npx wrangler d1 migrations apply DB --remote
 npx wrangler deploy
 ```
 
-Set `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY`, and `TURNSTILE_SECRET` as
+Set `DEEPSEEK_API_KEY`, `SESSION_SIGNING_KEY`, `TURNSTILE_SECRET`, and
+`FEEDBACK_AUTOMATION_TOKEN` as
 Cloudflare Secrets, never in Git. D1/KV IDs, the public Turnstile sitekey, and
 the Cron schedule live in `worker/wrangler.jsonc`.
 
