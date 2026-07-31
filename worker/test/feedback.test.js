@@ -81,12 +81,7 @@ function jsonRequest(url, body, token = "") {
   });
 }
 
-function streamingJsonRequest(body, options = {}) {
-  const bytes = new TextEncoder().encode(JSON.stringify(body));
-  const splitAt = Math.min(options.splitAt ?? Math.ceil(bytes.length / 2), bytes.length);
-  const chunks = [bytes.slice(0, splitAt), bytes.slice(splitAt)].filter(
-    (chunk) => chunk.byteLength,
-  );
+function streamingBytesRequest(chunks, options = {}) {
   let chunkIndex = 0;
   let cancelled = false;
   const stream = new ReadableStream({
@@ -116,6 +111,15 @@ function streamingJsonRequest(body, options = {}) {
     }),
     wasCancelled: () => cancelled,
   };
+}
+
+function streamingJsonRequest(body, options = {}) {
+  const bytes = new TextEncoder().encode(JSON.stringify(body));
+  const splitAt = Math.min(options.splitAt ?? Math.ceil(bytes.length / 2), bytes.length);
+  const chunks = [bytes.slice(0, splitAt), bytes.slice(splitAt)].filter(
+    (chunk) => chunk.byteLength,
+  );
+  return streamingBytesRequest(chunks, options);
 }
 
 test("stores feedback with a secure stable ID and idempotent receipt", async () => {
@@ -186,6 +190,34 @@ test("decodes UTF-8 correctly when a code point crosses stream chunks", async ()
     env.DB.database.prepare("SELECT message FROM feedback").get().message,
     value.message,
   );
+});
+
+test("rejects malformed UTF-8 mid-stream and cancels the reader", async () => {
+  const streamed = streamingBytesRequest(
+    [
+      new TextEncoder().encode('{"message":"valid prefix'),
+      Uint8Array.of(0xc3, 0x28),
+    ],
+    { keepOpenOnExhaustion: true },
+  );
+  const response = await handleFeedbackRequest(streamed.request, {
+    DB: new FakeD1(),
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: "invalid_json" });
+  assert.equal(streamed.wasCancelled(), true);
+});
+
+test("rejects an incomplete UTF-8 sequence at end of stream", async () => {
+  const streamed = streamingBytesRequest([
+    new TextEncoder().encode('{"message":"valid prefix'),
+    Uint8Array.of(0xd0),
+  ]);
+  const response = await handleFeedbackRequest(streamed.request, {
+    DB: new FakeD1(),
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: "invalid_json" });
 });
 
 test("rejects request ID reuse with a different payload", async () => {
