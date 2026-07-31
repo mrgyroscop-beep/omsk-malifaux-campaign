@@ -23,11 +23,13 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
+    <meta name="app-version" content="2026.07.31" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=7" />
     <link rel="stylesheet" href="dossier-theme.css?v=16" />
+    <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="print.css?v=1" media="print" />
   </head>
   <body class="theme-dossier">
@@ -160,13 +162,12 @@
               <span class="cloud-button-sigil" aria-hidden="true">☁</span>
               <span>Облачная кампания</span>
             </button>
-            <a
+            <button
               class="button button-ghost feedback-link"
-              href="https://forms.gle/wsZyZQyGNRYg8pEJ9"
-              target="_blank"
-              rel="noopener noreferrer"
+              id="openFeedbackButton"
+              type="button"
               aria-label="Открыть форму обратной связи"
-            >Обратная связь</a>
+            >Обратная связь</button>
             <button class="button button-ink" id="printButton" type="button">Печать</button>
           </div>
           <input id="importFile" type="file" accept="application/json" hidden />
@@ -1040,6 +1041,100 @@
     </dialog>
 
     <dialog
+      id="feedbackDialog"
+      class="modal feedback-dialog"
+      aria-labelledby="feedbackDialogTitle"
+    >
+      <div class="modal-panel feedback-panel">
+        <div class="feedback-stamp" aria-hidden="true">FIELD NOTE</div>
+        <div class="modal-heading feedback-heading">
+          <div>
+            <span class="kicker" id="feedbackKicker">Записка разработчику</span>
+            <h2 id="feedbackDialogTitle">Обратная связь</h2>
+          </div>
+          <button
+            class="modal-close"
+            id="feedbackCloseButton"
+            type="button"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+
+        <p class="feedback-intro" id="feedbackIntro">
+          Опишите проблему или идею. Текущий раздел и версия приложения
+          приложатся автоматически.
+        </p>
+
+        <form class="feedback-form" id="feedbackForm" novalidate>
+          <label class="feedback-field" for="feedbackCategory">
+            <span id="feedbackCategoryLabel">Категория</span>
+            <select id="feedbackCategory" name="category" required>
+              <option value="bug">Ошибка</option>
+              <option value="idea">Идея</option>
+              <option value="data">Данные и правила</option>
+              <option value="other">Другое</option>
+            </select>
+          </label>
+
+          <label class="feedback-field" for="feedbackMessage">
+            <span id="feedbackMessageLabel">Сообщение</span>
+            <textarea
+              id="feedbackMessage"
+              name="message"
+              minlength="10"
+              maxlength="2000"
+              rows="7"
+              required
+              aria-describedby="feedbackMessageHint feedbackMessageCount"
+            ></textarea>
+            <span class="feedback-field-meta">
+              <small id="feedbackMessageHint">От 10 до 2000 символов</small>
+              <small id="feedbackMessageCount">0 / 2000</small>
+            </span>
+          </label>
+
+          <label class="feedback-field" for="feedbackContact">
+            <span id="feedbackContactLabel">Контакт для ответа <small>(необязательно)</small></span>
+            <input
+              id="feedbackContact"
+              name="contact"
+              type="text"
+              maxlength="180"
+              autocomplete="email"
+              aria-describedby="feedbackContactHint"
+            />
+            <small id="feedbackContactHint">Email, Telegram или другой удобный контакт</small>
+          </label>
+
+          <div class="feedback-context" aria-label="Контекст сообщения">
+            <span id="feedbackContextLabel">Контекст</span>
+            <code id="feedbackContextValue">—</code>
+          </div>
+
+          <p
+            class="feedback-status"
+            id="feedbackStatus"
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <div class="feedback-actions">
+            <button
+              class="button button-ghost"
+              id="feedbackCancelButton"
+              type="button"
+            >Отмена</button>
+            <button
+              class="button button-red"
+              id="feedbackSubmitButton"
+              type="submit"
+            >Отправить</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <dialog
       id="securityDialog"
       class="modal security-dialog"
       aria-labelledby="securityDialogTitle"
@@ -1466,6 +1561,7 @@
     <script src="advancement-data.js?v=1"></script>
     <script src="app.js?v=22"></script>
     <script src="cloud.js?v=1"></script>
+    <script src="feedback.js?v=1"></script>
     <script src="print.js?v=1"></script>
   </body>
 </html>
