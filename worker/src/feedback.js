@@ -28,8 +28,40 @@ async function readJson(request, maximum = 8_000) {
   if (Number.isFinite(length) && length > maximum) {
     throw new HttpError(413, "request_too_large");
   }
-  const raw = await request.text();
-  if (raw.length > maximum) throw new HttpError(413, "request_too_large");
+  const reader = request.body?.getReader();
+  if (!reader) throw new HttpError(400, "invalid_json");
+
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let receivedBytes = 0;
+  let raw = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    receivedBytes += value.byteLength;
+    if (receivedBytes > maximum) {
+      try {
+        await reader.cancel("request_too_large");
+      } catch {
+        // The 413 response still takes precedence over a source cancellation error.
+      }
+      throw new HttpError(413, "request_too_large");
+    }
+    try {
+      raw += decoder.decode(value, { stream: true });
+    } catch {
+      try {
+        await reader.cancel("invalid_utf8");
+      } catch {
+        // Preserve the stable invalid_json API response.
+      }
+      throw new HttpError(400, "invalid_json");
+    }
+  }
+  try {
+    raw += decoder.decode();
+  } catch {
+    throw new HttpError(400, "invalid_json");
+  }
   try {
     return JSON.parse(raw);
   } catch {

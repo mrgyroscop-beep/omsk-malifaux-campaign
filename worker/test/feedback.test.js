@@ -81,6 +81,43 @@ function jsonRequest(url, body, token = "") {
   });
 }
 
+function streamingJsonRequest(body, options = {}) {
+  const bytes = new TextEncoder().encode(JSON.stringify(body));
+  const splitAt = Math.min(options.splitAt ?? Math.ceil(bytes.length / 2), bytes.length);
+  const chunks = [bytes.slice(0, splitAt), bytes.slice(splitAt)].filter(
+    (chunk) => chunk.byteLength,
+  );
+  let chunkIndex = 0;
+  let cancelled = false;
+  const stream = new ReadableStream({
+    pull(controller) {
+      if (chunkIndex < chunks.length) {
+        controller.enqueue(chunks[chunkIndex]);
+        chunkIndex += 1;
+      } else if (!options.keepOpenOnExhaustion) {
+        controller.close();
+      }
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  return {
+    request: new Request("https://worker.example/api/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.contentLength === undefined
+          ? {}
+          : { "Content-Length": String(options.contentLength) }),
+      },
+      body: stream,
+      duplex: "half",
+    }),
+    wasCancelled: () => cancelled,
+  };
+}
+
 test("stores feedback with a secure stable ID and idempotent receipt", async () => {
   const env = { DB: new FakeD1() };
   const first = await handleFeedbackRequest(
@@ -115,6 +152,39 @@ test("stores feedback with a secure stable ID and idempotent receipt", async () 
       status: "pending",
       attempts: 0,
     },
+  );
+});
+
+test("bounds streamed bodies without trusting Content-Length", async () => {
+  for (const contentLength of [undefined, 10]) {
+    const streamed = streamingJsonRequest(
+      feedbackBody({ message: "x".repeat(9_000) }),
+      { contentLength, splitAt: 4_000, keepOpenOnExhaustion: true },
+    );
+    const response = await handleFeedbackRequest(streamed.request, {
+      DB: new FakeD1(),
+    });
+    assert.equal(response.status, 413);
+    assert.deepEqual(await response.json(), { error: "request_too_large" });
+    assert.equal(streamed.wasCancelled(), true);
+  }
+});
+
+test("decodes UTF-8 correctly when a code point crosses stream chunks", async () => {
+  const value = feedbackBody({
+    message: "Ошибка в хронике после второго раунда.",
+    locale: "ru",
+  });
+  const encoded = new TextEncoder().encode(JSON.stringify(value));
+  const firstMultibyte = encoded.findIndex((byte) => byte >= 0xc0);
+  assert.notEqual(firstMultibyte, -1);
+  const streamed = streamingJsonRequest(value, { splitAt: firstMultibyte + 1 });
+  const env = { DB: new FakeD1() };
+  const response = await handleFeedbackRequest(streamed.request, env);
+  assert.equal(response.status, 201);
+  assert.equal(
+    env.DB.database.prepare("SELECT message FROM feedback").get().message,
+    value.message,
   );
 });
 
