@@ -2568,7 +2568,8 @@ h1 {
 }
 
 .manual-upgrade-actions button {
-  min-height: 29px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 5px 8px;
   color: var(--red);
   border: 1px solid rgba(156, 40, 36, 0.32);
@@ -2589,6 +2590,26 @@ h1 {
   position: relative;
   z-index: 1;
   margin-top: 10px;
+}
+
+.manual-upgrade-add.button-ghost {
+  color: var(--red);
+  border-color: rgba(156, 40, 36, 0.56);
+  background: #eee3d4;
+}
+
+.manual-upgrade-add.button-ghost:hover {
+  color: var(--paper-bright);
+  border-color: var(--red);
+  background: var(--red);
+}
+
+.manual-upgrade-add.button-ghost:focus-visible {
+  color: var(--red);
+  border-color: var(--red);
+  background: #e6d4c3;
+  outline: 3px solid var(--brass-deep);
+  outline-offset: 3px;
 }
 
 .loadout-permanent-section .manual-upgrade-entry {

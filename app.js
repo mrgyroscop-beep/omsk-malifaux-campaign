@@ -503,6 +503,10 @@ const UI_MESSAGES = {
   backupExported: { ru: "Резервная копия экспортирована.", en: "Backup exported." },
   dossierImported: { ru: "Досье импортировано.", en: "Dossier imported." },
   importFailed: { ru: "Не удалось прочитать файл досье.", en: "Could not read the dossier file." },
+  importSaveFailed: {
+    ru: "Не удалось сохранить импортированное досье. Предыдущее досье восстановлено.",
+    en: "Could not save the imported dossier. The previous dossier has been restored.",
+  },
   resetConfirm: {
     ru: "Создать новое пустое досье? Текущие данные будут удалены из браузера.",
     en: "Create a new empty dossier? Current browser data will be deleted.",
@@ -4768,6 +4772,16 @@ function updateManualUpgradeDialogTranslations() {
     : localized("Добавить запись", "Add record");
 }
 
+function focusManualUpgradeRecord(id = "") {
+  window.requestAnimationFrame(() => {
+    const wrap = document.querySelector("#leaderPermanentRecords");
+    const target = id
+      ? wrap?.querySelector(`[data-edit-manual-upgrade="${CSS.escape(id)}"]`)
+      : wrap?.querySelector("[data-add-manual-upgrade]");
+    target?.focus();
+  });
+}
+
 function deleteManualUpgrade(id) {
   const upgrade = state.leader.manualUpgrades.find((item) => item.id === id);
   if (!upgrade) return;
@@ -4776,6 +4790,8 @@ function deleteManualUpgrade(id) {
     `Delete upgrade “${upgrade.title}”?`,
   ))) return;
   const before = clone(state.leader.manualUpgrades);
+  const removedIndex = before.findIndex((item) => item.id === id);
+  const focusId = before[removedIndex + 1]?.id || before[removedIndex - 1]?.id || "";
   state.leader.manualUpgrades = state.leader.manualUpgrades.filter((item) => item.id !== id);
   if (!saveState()) {
     state.leader.manualUpgrades = before;
@@ -4783,6 +4799,7 @@ function deleteManualUpgrade(id) {
   }
   renderLeaderPermanentRecords();
   renderActiveLoadoutSummary();
+  focusManualUpgradeRecord(focusId);
   toast(localized("Улучшение удалено.", "Upgrade deleted."));
 }
 
@@ -8385,6 +8402,7 @@ manualUpgradeForm.addEventListener("submit", (event) => {
   document.querySelector("#manualUpgradeDialog").close();
   renderLeaderPermanentRecords();
   renderActiveLoadoutSummary();
+  focusManualUpgradeRecord(record.id);
   toast(existingIndex >= 0
     ? localized("Улучшение обновлено.", "Upgrade updated.")
     : localized("Улучшение добавлено.", "Upgrade added."));
@@ -8575,9 +8593,23 @@ document.querySelector("#importButton").addEventListener("click", () => document
 document.querySelector("#importFile").addEventListener("change", async (event) => {
   const [file] = event.target.files;
   if (!file) return;
+  const before = clone(state);
   try {
     state = mergeDefaults(JSON.parse(await file.text()));
-    saveState();
+    if (!saveState()) {
+      state = before;
+      document.querySelectorAll("[data-bind]").forEach((input) => {
+        input.value = getAtPath(input.dataset.bind) ?? "";
+      });
+      document.querySelectorAll("[data-path-choice]").forEach((input) => {
+        input.checked = state.leader.path === input.value;
+      });
+      resetKeywordValidationState();
+      renderAll();
+      validateAllKeywords();
+      toast(message("importSaveFailed"));
+      return;
+    }
     ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
