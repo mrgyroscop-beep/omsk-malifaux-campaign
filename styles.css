@@ -2443,6 +2443,192 @@ h1 {
   margin-top: 10px;
 }
 
+.manual-upgrade-section {
+  grid-column: 1 / -1;
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(181, 151, 83, 0.72);
+  background:
+    linear-gradient(115deg, rgba(181, 151, 83, 0.11), transparent 48%),
+    rgba(255, 255, 255, 0.2);
+}
+
+.manual-upgrade-section::after {
+  content: "MANUAL";
+  position: absolute;
+  top: 17px;
+  right: 52px;
+  color: rgba(156, 40, 36, 0.08);
+  font-family: var(--display);
+  font-size: clamp(24px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  pointer-events: none;
+  transform: rotate(-3deg);
+}
+
+.manual-upgrade-notice,
+.manual-upgrade-empty {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--brass-deep);
+  background: rgba(181, 151, 83, 0.08);
+}
+
+.manual-upgrade-notice {
+  margin-bottom: 10px;
+}
+
+.manual-upgrade-notice b,
+.manual-upgrade-empty b {
+  color: var(--brass-deep);
+  font-family: var(--sans);
+  font-size: 8px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.manual-upgrade-notice p,
+.manual-upgrade-empty p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.manual-upgrade-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.manual-upgrade-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brass-deep);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.manual-upgrade-copy {
+  min-width: 0;
+}
+
+.manual-upgrade-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--red);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.manual-upgrade-entry h4,
+.manual-upgrade-entry p,
+.manual-upgrade-entry small {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.manual-upgrade-entry h4 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.manual-upgrade-entry small {
+  display: block;
+  margin-top: 3px;
+  color: var(--brass-deep);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.manual-upgrade-entry p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.manual-upgrade-actions {
+  display: flex;
+  align-items: start;
+  gap: 5px;
+}
+
+.manual-upgrade-actions button {
+  min-height: 29px;
+  padding: 5px 8px;
+  color: var(--red);
+  border: 1px solid rgba(156, 40, 36, 0.32);
+  background: transparent;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.manual-upgrade-actions button:hover,
+.manual-upgrade-actions button:focus-visible {
+  color: white;
+  background: var(--red);
+  outline: none;
+}
+
+.manual-upgrade-add {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+}
+
+.loadout-permanent-section .manual-upgrade-entry {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 6px 7px;
+}
+
+.loadout-permanent-section .manual-upgrade-label,
+.loadout-permanent-section .manual-upgrade-entry p {
+  font-size: 7px;
+}
+
+.loadout-permanent-section .manual-upgrade-entry h4 {
+  font-size: 11px;
+}
+
+.manual-upgrade-dialog-note {
+  margin: -10px 0 20px;
+  padding: 10px 12px;
+  color: var(--muted);
+  border-left: 3px solid var(--brass-deep);
+  background: rgba(181, 151, 83, 0.08);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.manual-upgrade-dialog .field + .field {
+  margin-top: 12px;
+}
+
+.form-error {
+  margin: 12px 0;
+  padding: 9px 11px;
+  color: var(--red);
+  border: 1px solid rgba(156, 40, 36, 0.42);
+  background: rgba(156, 40, 36, 0.06);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .totem-dossier-head h3,
 .totem-dossier-head p {
   margin: 0;
@@ -4010,6 +4196,19 @@ h1 {
 
   .advancement-entry-cost {
     grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .manual-upgrade-section::after {
+    right: 14px;
+    font-size: 30px;
+  }
+
+  .manual-upgrade-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manual-upgrade-actions {
     justify-content: flex-end;
   }
 

@@ -80,6 +80,17 @@ const STATIC_TEXT_EN = {
     "1 Experience Point if your leader is a Strategist and resolves one or more Interact actions within 6\" of the enemy deployment zone.",
   "Заимствованные таланты": "Borrowed talents",
   "Действия и способности": "Actions & abilities",
+  "Постоянные записи лидера": "Permanent leader records",
+  "Способности, травмы и улучшения": "Abilities, injuries & upgrades",
+  "Ручные записи · вне расчётов": "Manual records · excluded from calculations",
+  "Добавить улучшение": "Add upgrade",
+  "Запись появится в досье лидера и составе на игру, но не изменит характеристики, XP, скрип или рейтинг кампании.":
+    "The record will appear in the leader dossier and game loadout, but will not change stats, XP, scrip, or Campaign Rating.",
+  "Название улучшения *": "Upgrade title *",
+  "Связанное действие": "Associated action",
+  "Необязательно": "Optional",
+  "Эффект или заметка *": "Effect or note *",
+  "Добавить запись": "Add record",
   "Выберите архетип. Билдер покажет допустимое число талантов и предел стоимости модели-источника.":
     "Choose an archetype to see the allowed talents and source-model Cost limits.",
   "Стартовая карта команды": "Starting crew card",
@@ -1164,7 +1175,7 @@ const xpTiers = Array.isArray(advancementData?.xpTrack)
     ];
 
 const defaultState = {
-  version: 4,
+  version: 5,
   crew: {
     name: "",
     player: "",
@@ -1187,6 +1198,7 @@ const defaultState = {
     crewCard: "",
     xp: 0,
     advances: [],
+    manualUpgrades: [],
     injuries: [],
     totem: null,
   },
@@ -1754,6 +1766,7 @@ function normalizeStoredLoadoutMember(member, fallbackRole) {
           .map(normalizeStoredLoadoutAbility)
           .filter((ability) => ability.name)
       : [],
+    manualUpgrades: normalizeStoredManualUpgrades(source.manualUpgrades),
     equipment: Array.isArray(source.equipment)
       ? source.equipment
           .slice(0, 100)
@@ -1761,6 +1774,39 @@ function normalizeStoredLoadoutMember(member, fallbackRole) {
           .filter((item) => item.name)
       : [],
   };
+}
+
+function normalizeStoredManualUpgrade(upgrade, index = 0) {
+  const source = upgrade && typeof upgrade === "object" && !Array.isArray(upgrade)
+    ? upgrade
+    : {};
+  return {
+    id: safeIdentifier(source.id, `manual-upgrade-${index + 1}`),
+    title: safeText(source.title || source.name, 200).trim(),
+    effect: safeText(source.effect || source.notes || source.description, 4_000).trim(),
+    action: safeText(source.action || source.appliesTo, 300).trim(),
+    createdAt: safeText(source.createdAt, 64),
+    updatedAt: safeText(source.updatedAt, 64),
+  };
+}
+
+function normalizeStoredManualUpgrades(value) {
+  if (!Array.isArray(value)) return [];
+  const usedIds = new Set();
+  return value
+    .slice(0, 100)
+    .map(normalizeStoredManualUpgrade)
+    .filter((upgrade) => upgrade.title && upgrade.effect)
+    .map((upgrade, index) => {
+      let id = upgrade.id;
+      let suffix = index + 1;
+      while (usedIds.has(id)) {
+        id = `${upgrade.id}-${suffix}`;
+        suffix += 1;
+      }
+      usedIds.add(id);
+      return { ...upgrade, id };
+    });
 }
 
 function normalizeStoredGameLoadout(loadout) {
@@ -2499,6 +2545,7 @@ function mergeDefaults(saved) {
       crewCard: safeText(savedLeader.crewCard, 100),
       xp: leaderXp,
       advances,
+      manualUpgrades: normalizeStoredManualUpgrades(savedLeader.manualUpgrades),
       injuries: normalizeStoredInjuries(savedLeader.injuries, "leader"),
       totem,
     },
@@ -4128,6 +4175,7 @@ function currentLoadoutSnapshot() {
       henchman: false,
       injuries: clone(state.leader.injuries),
       abilities: abilityRecords("leader"),
+      manualUpgrades: clone(state.leader.manualUpgrades),
       equipment: snapshotEquipment(equipmentAssignedTo("leader")),
     },
     models: state.loadout.hiredModelIds
@@ -4252,6 +4300,14 @@ function loadoutMemberHtml(member, { compact = false } = {}) {
               </div>`
             : ""
         }
+        ${
+          member.role === "leader" && member.manualUpgrades?.length
+            ? `<div class="loadout-permanent-section" data-loadout-section="manual-upgrades">
+                <b>${localized("Ручные улучшения", "Manual upgrades")}</b>
+                ${manualUpgradeListHtml(member.manualUpgrades, { compact: true })}
+              </div>`
+            : ""
+        }
         <div class="loadout-permanent-section" data-loadout-section="injuries">
           <b>${localized("Травмы", "Injuries")}</b>
           ${injuryListHtml(member.injuries) || `<span class="permanent-empty">—</span>`}
@@ -4283,7 +4339,12 @@ function renderActiveLoadoutSummary() {
       <i>${String(members.length).padStart(2, "0")}</i>
     </div>
     ${
-      snapshot.models.length || snapshot.totem || assignedCount
+      snapshot.models.length ||
+      snapshot.totem ||
+      assignedCount ||
+      snapshot.leader.manualUpgrades.length ||
+      snapshot.leader.abilities.length ||
+      snapshot.leader.injuries.length
         ? `<div class="active-loadout-members">${members
             .map((member) => loadoutMemberHtml(member, { compact: true }))
             .join("")}</div>`
@@ -4640,6 +4701,103 @@ function bindPermanentRecordActions(wrap) {
   });
 }
 
+function manualUpgradeListHtml(records, { editable = false, compact = false } = {}) {
+  const items = Array.isArray(records) ? records : [];
+  if (!items.length) return "";
+  return `<div class="manual-upgrade-list${compact ? " is-compact" : ""}">${items
+    .map(
+      (upgrade) => `<article class="manual-upgrade-entry" data-manual-upgrade="${escapeHtml(
+        upgrade.id,
+      )}">
+        <div class="manual-upgrade-copy">
+          <span class="manual-upgrade-label">${localized("Ручная запись", "Manual record")}</span>
+          <h4>${escapeHtml(upgrade.title)}</h4>
+          ${upgrade.action ? `<small>${localized("Действие", "Action")}: ${escapeHtml(upgrade.action)}</small>` : ""}
+          <p>${escapeHtml(upgrade.effect)}</p>
+        </div>
+        ${
+          editable
+            ? `<div class="manual-upgrade-actions">
+                <button type="button" data-edit-manual-upgrade="${escapeHtml(upgrade.id)}">${localized("Изменить", "Edit")}</button>
+                <button type="button" data-delete-manual-upgrade="${escapeHtml(upgrade.id)}" aria-label="${localized("Удалить улучшение", "Delete upgrade")} ${escapeHtml(upgrade.title)}">×</button>
+              </div>`
+            : ""
+        }
+      </article>`,
+    )
+    .join("")}</div>`;
+}
+
+let activeManualUpgradeId = null;
+
+function setManualUpgradeError(text = "") {
+  const error = document.querySelector("#manualUpgradeError");
+  error.textContent = text;
+  error.hidden = !text;
+}
+
+function openManualUpgradeDialog(upgradeId = null) {
+  const dialog = document.querySelector("#manualUpgradeDialog");
+  const form = document.querySelector("#manualUpgradeForm");
+  const upgrade = upgradeId
+    ? state.leader.manualUpgrades.find((item) => item.id === upgradeId)
+    : null;
+  activeManualUpgradeId = upgrade?.id || null;
+  form.reset();
+  form.elements.title.value = upgrade?.title || "";
+  form.elements.action.value = upgrade?.action || "";
+  form.elements.effect.value = upgrade?.effect || "";
+  document.querySelector("#manualUpgradeDialogTitle").textContent = upgrade
+    ? localized("Изменить улучшение", "Edit upgrade")
+    : localized("Добавить улучшение", "Add upgrade");
+  document.querySelector("#manualUpgradeSubmit").textContent = upgrade
+    ? localized("Сохранить изменения", "Save changes")
+    : localized("Добавить запись", "Add record");
+  setManualUpgradeError();
+  if (!dialog.open) dialog.showModal();
+  form.elements.title.focus();
+}
+
+function updateManualUpgradeDialogTranslations() {
+  if (!document.querySelector("#manualUpgradeDialog")?.open) return;
+  document.querySelector("#manualUpgradeDialogTitle").textContent = activeManualUpgradeId
+    ? localized("Изменить улучшение", "Edit upgrade")
+    : localized("Добавить улучшение", "Add upgrade");
+  document.querySelector("#manualUpgradeSubmit").textContent = activeManualUpgradeId
+    ? localized("Сохранить изменения", "Save changes")
+    : localized("Добавить запись", "Add record");
+}
+
+function deleteManualUpgrade(id) {
+  const upgrade = state.leader.manualUpgrades.find((item) => item.id === id);
+  if (!upgrade) return;
+  if (!window.confirm(localized(
+    `Удалить улучшение «${upgrade.title}»?`,
+    `Delete upgrade “${upgrade.title}”?`,
+  ))) return;
+  const before = clone(state.leader.manualUpgrades);
+  state.leader.manualUpgrades = state.leader.manualUpgrades.filter((item) => item.id !== id);
+  if (!saveState()) {
+    state.leader.manualUpgrades = before;
+    return;
+  }
+  renderLeaderPermanentRecords();
+  renderActiveLoadoutSummary();
+  toast(localized("Улучшение удалено.", "Upgrade deleted."));
+}
+
+function bindManualUpgradeActions(wrap) {
+  wrap.querySelectorAll("[data-edit-manual-upgrade]").forEach((button) => {
+    button.addEventListener("click", () => openManualUpgradeDialog(button.dataset.editManualUpgrade));
+  });
+  wrap.querySelectorAll("[data-delete-manual-upgrade]").forEach((button) => {
+    button.addEventListener("click", () => deleteManualUpgrade(button.dataset.deleteManualUpgrade));
+  });
+  wrap.querySelector("[data-add-manual-upgrade]")?.addEventListener("click", () => {
+    openManualUpgradeDialog();
+  });
+}
+
 function renderLeaderPermanentRecords() {
   const wrap = document.querySelector("#leaderPermanentRecords");
   if (!wrap) return;
@@ -4663,11 +4821,29 @@ function renderLeaderPermanentRecords() {
       <button type="button" class="injury-add-button" data-add-injury-leader>
         ${message("addInjury")}
       </button>
+    </section>
+    <section class="permanent-record-section manual-upgrade-section" data-permanent-section="manual-upgrades">
+      <div class="permanent-record-heading">
+        <span>${localized("Улучшения", "Upgrades")}</span>
+        <b>${state.leader.manualUpgrades.length}</b>
+      </div>
+      <div class="manual-upgrade-notice">
+        <b>${localized("Ручные записи", "Manual records")}</b>
+        <p>${localized(
+          "Справочные заметки: не меняют характеристики, XP, скрип или рейтинг кампании.",
+          "Reference notes only: they do not change stats, XP, scrip, or Campaign Rating.",
+        )}</p>
+      </div>
+      ${manualUpgradeListHtml(state.leader.manualUpgrades, { editable: true }) || `<div class="manual-upgrade-empty"><b>${localized("Записей пока нет", "No records yet")}</b><p>${localized("Добавьте собственное улучшение лидера и его точный эффект.", "Add a custom leader upgrade and its exact effect.")}</p></div>`}
+      <button type="button" class="button button-ghost manual-upgrade-add" data-add-manual-upgrade>
+        ${localized("+ Добавить улучшение", "+ Add upgrade")}
+      </button>
     </section>`;
   wrap.querySelector("[data-add-injury-leader]")?.addEventListener("click", () => {
     openInjuryDialog("leader");
   });
   bindPermanentRecordActions(wrap);
+  bindManualUpgradeActions(wrap);
 }
 
 function renderInjuryCatalog(query = "") {
@@ -8170,6 +8346,51 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
 
 const equipmentForm = document.querySelector("#equipmentForm");
 const advancementForm = document.querySelector("#advancementForm");
+const manualUpgradeForm = document.querySelector("#manualUpgradeForm");
+
+manualUpgradeForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const title = String(data.get("title") || "").trim();
+  const effect = String(data.get("effect") || "").trim();
+  const action = String(data.get("action") || "").trim();
+  if (!title || !effect) {
+    setManualUpgradeError(localized(
+      "Заполните название и эффект улучшения.",
+      "Enter both the upgrade title and effect.",
+    ));
+    form.elements[!title ? "title" : "effect"].focus();
+    return;
+  }
+  const before = clone(state.leader.manualUpgrades);
+  const now = new Date().toISOString();
+  const existingIndex = state.leader.manualUpgrades.findIndex(
+    (item) => item.id === activeManualUpgradeId,
+  );
+  const record = normalizeStoredManualUpgrade({
+    id: activeManualUpgradeId || `manual-upgrade-${uid()}`,
+    title,
+    effect,
+    action,
+    createdAt: existingIndex >= 0 ? state.leader.manualUpgrades[existingIndex].createdAt : now,
+    updatedAt: now,
+  });
+  if (existingIndex >= 0) state.leader.manualUpgrades.splice(existingIndex, 1, record);
+  else state.leader.manualUpgrades.push(record);
+  if (!saveState()) {
+    state.leader.manualUpgrades = before;
+    return;
+  }
+  document.querySelector("#manualUpgradeDialog").close();
+  renderLeaderPermanentRecords();
+  renderActiveLoadoutSummary();
+  toast(existingIndex >= 0
+    ? localized("Улучшение обновлено.", "Upgrade updated.")
+    : localized("Улучшение добавлено.", "Upgrade added."));
+});
+
+manualUpgradeForm.addEventListener("input", () => setManualUpgradeError());
 
 document.querySelector("#addAdvancementButton").addEventListener("click", () => {
   openAdvancementDialog();
@@ -8357,7 +8578,7 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
   try {
     state = mergeDefaults(JSON.parse(await file.text()));
     saveState();
-    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog"].forEach((id) => {
+    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
     });
@@ -8388,7 +8609,7 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
-  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog"].forEach((id) => {
+  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
     const dialog = document.querySelector(`#${id}`);
     if (dialog.open) dialog.close();
   });
@@ -8442,6 +8663,7 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
     if (document.querySelector("#injuryDialog").open) {
       renderInjuryCatalog(document.querySelector("#injurySearch").value);
     }
+    updateManualUpgradeDialogTranslations();
   });
 });
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
@@ -8464,6 +8686,10 @@ document.querySelector("#talentDialog").addEventListener("close", () => {
 });
 document.querySelector("#advancementDialog").addEventListener("close", () => {
   if (!returnToAdvancementAfterTalent) clearPendingAdvancementTalent();
+});
+document.querySelector("#manualUpgradeDialog").addEventListener("close", () => {
+  activeManualUpgradeId = null;
+  setManualUpgradeError();
 });
 document.querySelector("#cardDialog").addEventListener("close", () => {
   activeCardView = null;

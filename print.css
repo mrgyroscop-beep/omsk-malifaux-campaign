@@ -465,6 +465,56 @@
     font-size: 10pt;
   }
 
+  .print-manual-upgrades {
+    grid-column: 1 / -1;
+    border-left: 2pt solid var(--print-brass);
+  }
+
+  .print-manual-upgrades .print-kicker {
+    margin-bottom: 0.8mm;
+  }
+
+  .print-manual-note {
+    margin: 0 0 1.5mm;
+    color: var(--print-muted);
+    font-size: 6pt;
+  }
+
+  .print-manual-upgrade-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5mm 3mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .print-manual-upgrade-list li {
+    min-width: 0;
+    break-inside: avoid;
+  }
+
+  .print-manual-upgrade-list b,
+  .print-manual-upgrade-list small,
+  .print-manual-upgrade-list p {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .print-manual-upgrade-list b {
+    color: var(--print-red);
+    font-size: 7pt;
+  }
+
+  .print-manual-upgrade-list small,
+  .print-manual-upgrade-list p {
+    margin: 0.4mm 0 0;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.25;
+    white-space: pre-wrap;
+  }
+
   .print-ability-list {
     display: grid;
     gap: 1.5mm;

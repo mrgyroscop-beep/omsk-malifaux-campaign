@@ -506,7 +506,7 @@
             <div class="card-title">
               <div>
                 <span class="kicker">Постоянные записи лидера</span>
-                <h2>Способности и травмы</h2>
+                <h2>Способности, травмы и улучшения</h2>
               </div>
               <button
                 class="page-ref"
@@ -1421,6 +1421,43 @@
       </form>
     </dialog>
 
+    <dialog id="manualUpgradeDialog" class="modal manual-upgrade-dialog">
+      <form id="manualUpgradeForm" novalidate>
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Ручные записи · вне расчётов</span>
+            <h2 id="manualUpgradeDialogTitle">Добавить улучшение</h2>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="manualUpgradeDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <p class="manual-upgrade-dialog-note">
+          Запись появится в досье лидера и составе на игру, но не изменит характеристики,
+          XP, скрип или рейтинг кампании.
+        </p>
+        <label class="field">
+          <span>Название улучшения *</span>
+          <input name="title" maxlength="200" autocomplete="off" required />
+        </label>
+        <label class="field">
+          <span>Связанное действие</span>
+          <input name="action" maxlength="300" autocomplete="off" placeholder="Необязательно" />
+        </label>
+        <label class="field">
+          <span>Эффект или заметка *</span>
+          <textarea name="effect" rows="6" maxlength="4000" required></textarea>
+        </label>
+        <p class="form-error" id="manualUpgradeError" role="alert" hidden></p>
+        <button class="button button-red button-wide" id="manualUpgradeSubmit" type="submit">
+          Добавить запись
+        </button>
+      </form>
+    </dialog>
+
     <dialog id="advancementDialog" class="modal modal-wide">
       <form id="advancementForm">
         <div class="modal-heading">
@@ -1559,9 +1596,9 @@
     ></script>
     <script src="biggerhat.js?v=3"></script>
     <script src="advancement-data.js?v=1"></script>
-    <script src="app.js?v=23"></script>
+    <script src="app.js?v=24"></script>
     <script src="cloud.js?v=1"></script>
     <script src="feedback.js?v=1"></script>
-    <script src="print.js?v=2"></script>
+    <script src="print.js?v=3"></script>
   </body>
 </html>

@@ -429,6 +429,28 @@
       </section>`;
   }
 
+  function renderManualUpgrades(upgrades) {
+    const records = Array.isArray(upgrades) ? upgrades : [];
+    if (!records.length) return "";
+    return `
+      <section class="print-permanent-block print-manual-upgrades" data-print-manual-upgrades>
+        <span class="print-kicker">${printText("Ручные записи · вне расчётов", "Manual records · excluded from calculations")}</span>
+        <h3>${printText("Улучшения лидера", "Leader upgrades")}</h3>
+        <p class="print-manual-note">${printText(
+          "Не изменяют характеристики, XP, скрип или рейтинг кампании.",
+          "Do not change stats, XP, scrip, or Campaign Rating.",
+        )}</p>
+        <ul class="print-manual-upgrade-list">
+          ${records.map((upgrade) => `
+            <li data-print-manual-upgrade="${escapePrintHtml(upgrade.id || "")}">
+              <b>${escapePrintHtml(upgrade.title || upgrade.name || "—")}</b>
+              ${upgrade.action ? `<small>${printText("Действие", "Action")}: ${escapePrintHtml(upgrade.action)}</small>` : ""}
+              <p>${escapePrintHtml(upgrade.effect || upgrade.notes || "")}</p>
+            </li>`).join("")}
+        </ul>
+      </section>`;
+  }
+
   function renderTotem(totem, keywords, advances, equipment, loadout) {
     if (!totem) return "";
     const profile = totem.snapshot || totem.profile || {};
@@ -513,6 +535,7 @@
     const equipment = Array.isArray(arsenal.equipment) ? arsenal.equipment : [];
     const games = Array.isArray(data.games) ? data.games : [];
     const advances = Array.isArray(leader.advances) ? leader.advances : [];
+    const manualUpgrades = Array.isArray(leader.manualUpgrades) ? leader.manualUpgrades : [];
     const loadout = data.loadout || {};
     const archetype = printArchetype(leader.archetype);
     const talents = Array.isArray(leader.talents) ? leader.talents : [];
@@ -600,6 +623,7 @@
         <div class="print-permanent-grid print-leader-permanent">
           ${renderPrintAbilitySection(advances, "leader")}
           ${renderPrintInjurySection(leader.injuries)}
+          ${renderManualUpgrades(manualUpgrades)}
         </div>
 
         <section class="print-section print-talents">
