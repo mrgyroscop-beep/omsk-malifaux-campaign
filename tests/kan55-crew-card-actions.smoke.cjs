@@ -85,6 +85,68 @@ function expectedDisplay(value) {
   return value === NA ? "—" : String(value);
 }
 
+function rgbChannels(value) {
+  const normalized = String(value).trim();
+  const hex = normalized.match(/^#([\da-f]{6})$/i)?.[1];
+  const channels = hex
+    ? [0, 2, 4].map((index) => Number.parseInt(hex.slice(index, index + 2), 16))
+    : normalized.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+  assert.equal(channels?.length, 3, `Could not parse color ${value}.`);
+  return channels;
+}
+
+function relativeLuminance(value) {
+  const [red, green, blue] = rgbChannels(value).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(foreground, background) {
+  const first = relativeLuminance(foreground);
+  const second = relativeLuminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+async function assertCrewStatLabelContrast(page, label) {
+  const colors = await page.evaluate(() => {
+    const bodyStyle = getComputedStyle(document.body);
+    const variable = (name) => bodyStyle.getPropertyValue(name).trim();
+    return {
+      unselected: [...document.querySelectorAll(".crew-option:not(.is-selected) .crew-action-stats dt")]
+        .map((node) => getComputedStyle(node).color),
+      selected: [...document.querySelectorAll(".crew-option.is-selected .crew-action-stats dt")]
+        .map((node) => getComputedStyle(node).color),
+      lightSurfaces: [
+        variable("--dossier-paper-deep"),
+        variable("--dossier-paper"),
+        variable("--dossier-paper-light"),
+      ],
+      darkSurfaces: [variable("--folder"), variable("--folder-raised")],
+    };
+  });
+  assert.ok(colors.unselected.length > 0, `${label} has no unselected crew stat labels.`);
+  const unselectedRatios = colors.unselected.flatMap((foreground) =>
+    colors.lightSurfaces.map((background) => contrastRatio(foreground, background)),
+  );
+  assert.ok(
+    Math.min(...unselectedRatios) >= 4.5,
+    `${label} unselected stat-label contrast is ${Math.min(...unselectedRatios).toFixed(2)}:1.`,
+  );
+  if (colors.selected.length) {
+    const selectedRatios = colors.selected.flatMap((foreground) =>
+      colors.darkSurfaces.map((background) => contrastRatio(foreground, background)),
+    );
+    assert.ok(
+      Math.min(...selectedRatios) >= 4.5,
+      `${label} selected stat-label contrast is ${Math.min(...selectedRatios).toFixed(2)}:1.`,
+    );
+  }
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -140,6 +202,7 @@ function expectedDisplay(value) {
       });
     }
     assert.equal((await actionUi(page, "the-plan"))[1].value, "0", "Skl 0 was lost.");
+    await assertCrewStatLabelContrast(page, "1440x900 RU");
 
     const ruUnknowns = await page.evaluate(() => [
       window.MalifauxBuilder.getCrewStatPresentation(null),
@@ -173,6 +236,7 @@ function expectedDisplay(value) {
     await page.locator('[data-route="leader"]').first().click();
     assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).leader.crewCard, "forbidden-curse");
     assert.equal(await page.locator('[data-crew-card="forbidden-curse"]').getAttribute("aria-pressed"), "true");
+    await assertCrewStatLabelContrast(page, "1440x900 RU selected");
 
     if (screenshotDir) {
       fs.mkdirSync(screenshotDir, { recursive: true });
@@ -195,6 +259,7 @@ function expectedDisplay(value) {
       display: "No data",
       accessible: "No data",
     });
+    await assertCrewStatLabelContrast(page, "1440x900 EN");
     if (screenshotDir) {
       await page.locator(".crew-card-section").screenshot({ path: path.join(screenshotDir, "desktop-en.png") });
     }
@@ -217,13 +282,16 @@ function expectedDisplay(value) {
 
     await page.setViewportSize({ width: 768, height: 1024 });
     await assertNoHorizontalOverflow(page, "768x1024 EN");
+    await assertCrewStatLabelContrast(page, "768x1024 EN");
     await page.setViewportSize({ width: 390, height: 844 });
     await assertNoHorizontalOverflow(page, "390x844 EN");
+    await assertCrewStatLabelContrast(page, "390x844 EN");
     if (screenshotDir) {
       await page.locator(".crew-card-section").screenshot({ path: path.join(screenshotDir, "mobile-en.png") });
     }
     await page.locator('[data-locale="ru"]').click();
     await assertNoHorizontalOverflow(page, "390x844 RU");
+    await assertCrewStatLabelContrast(page, "390x844 RU");
     if (screenshotDir) {
       await page.locator(".crew-card-section").screenshot({ path: path.join(screenshotDir, "mobile-ru.png") });
     }
@@ -231,6 +299,7 @@ function expectedDisplay(value) {
     // A 195 CSS-pixel viewport is the layout-width equivalent of 390px at 200% browser zoom.
     await page.setViewportSize({ width: 195, height: 422 });
     await assertNoHorizontalOverflow(page, "390x844 at 200% zoom equivalent");
+    await assertCrewStatLabelContrast(page, "390x844 at 200% zoom equivalent RU");
     assert.equal(await page.locator(".crew-card-flipper, [data-card-face]").count(), 0, "KAN-27 flip UI returned.");
     assert.deepEqual(pageErrors, []);
 
