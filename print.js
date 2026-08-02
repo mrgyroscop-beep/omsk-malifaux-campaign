@@ -233,11 +233,31 @@
   function renderCrewCard(card) {
     if (!card) return "";
     const text = isEnglishPrint() ? card.textEn || card.text : card.text || card.textEn;
+    const isAction = card.effectType === "action";
+    const actionDetails = isAction
+      ? `<dl class="print-crew-action-stats">
+          ${CREW_ACTION_FIELDS.map(({ key, label }) => {
+            const presentation = crewStatPresentation(card.action?.[key]);
+            const accessibleLabel =
+              presentation.state === "value"
+                ? ""
+                : ` aria-label="${escapePrintHtml(presentation.accessible)}"`;
+            return `<div data-print-crew-stat="${key}" data-stat-state="${presentation.state}">
+              <dt>${label}</dt><dd${accessibleLabel}>${escapePrintHtml(presentation.display)}</dd>
+            </div>`;
+          }).join("")}
+        </dl>`
+      : `<p class="print-crew-no-actions">${printText("Действий нет", "No actions")}</p>`;
     return `
       <section class="print-crew-card">
         <div>
           <span class="print-kicker">${printText("Карта команды", "Crew card")}</span>
           <h3>${escapePrintHtml(card.name)}</h3>
+          <small class="print-crew-effect-type">${printText(
+            isAction ? "Действие" : "Способность",
+            isAction ? "Action" : "Ability",
+          )}</small>
+          ${actionDetails}
         </div>
         <p>${richPrintText(text)}</p>
       </section>`;

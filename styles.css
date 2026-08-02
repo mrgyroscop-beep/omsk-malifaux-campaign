@@ -26,7 +26,7 @@ html {
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 0;
   color: var(--ink);
   background:
     radial-gradient(circle at 84% 6%, rgba(181, 151, 83, 0.14), transparent 30%),
@@ -445,6 +445,7 @@ h1 {
 
 .ledger-card {
   position: relative;
+  min-width: 0;
   padding: clamp(22px, 3vw, 34px);
   border: 1px solid rgba(127, 105, 56, 0.42);
   background:
@@ -1130,13 +1131,19 @@ h1 {
 
 .crew-card-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
   gap: 10px;
 }
 
 .crew-option {
-  min-height: 138px;
+  min-width: 0;
+  min-height: 244px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   padding: 16px;
+  color: var(--ink);
+  text-align: left;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.24);
   cursor: pointer;
@@ -1151,17 +1158,119 @@ h1 {
   background: rgba(156, 40, 36, 0.06);
 }
 
+.crew-option:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.crew-effect-type {
+  width: fit-content;
+  margin-bottom: 8px;
+  padding: 3px 6px;
+  color: var(--paper-bright);
+  background: var(--ink-soft);
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.crew-option.is-selected .crew-effect-type {
+  background: var(--red);
+}
+
 .crew-option h3 {
   margin: 0 0 8px;
   font-size: 16px;
+  overflow-wrap: anywhere;
 }
 
-.crew-option p {
+.crew-effect-text {
+  margin-top: auto !important;
+}
+
+.crew-option .crew-effect-text {
   margin: 0;
-  color: #676257;
+  color: #5f5a50;
   font-family: var(--display);
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.crew-action-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 2px 0 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.crew-action-stats > div {
+  min-width: 0;
+  padding: 7px 3px 8px;
+  text-align: center;
+  border-right: 1px solid var(--line);
+}
+
+.crew-action-stats > div:last-child {
+  border-right: 0;
+}
+
+.crew-action-stats dt,
+.crew-action-stats dd {
+  margin: 0;
+}
+
+.crew-action-stats dt {
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.crew-action-stats dd {
+  margin-top: 3px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.crew-action-stats [data-stat-state="not-applicable"] dd {
+  color: #5f5a50;
+}
+
+.crew-action-stats [data-stat-state="unknown"] dd {
+  color: var(--red);
+  font-size: 10px;
+}
+
+.crew-no-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 14px;
+  padding: 9px 10px;
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.crew-no-actions span {
+  color: var(--red);
+  font-size: 15px;
 }
 
 .metric-strip {
@@ -3736,6 +3845,8 @@ h1 {
   .rail {
     position: sticky;
     top: 76px;
+    min-width: 0;
+    max-width: 100%;
     height: auto;
     border-right: 0;
     border-bottom: 1px solid rgba(233, 226, 210, 0.12);
@@ -3748,6 +3859,8 @@ h1 {
   }
 
   .primary-nav {
+    min-width: 0;
+    max-width: 100%;
     grid-template-columns: repeat(6, minmax(76px, 1fr));
     overflow-x: auto;
   }
@@ -3785,7 +3898,7 @@ h1 {
   .arsenal-layout,
   .chronicle-layout,
   .permanent-record-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .metric-strip {
@@ -4077,6 +4190,44 @@ h1 {
 
   .rules-toc {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 340px) {
+  .card-title {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .card-title > div {
+    min-width: 0;
+  }
+
+  .card-title h2 {
+    font-size: 23px;
+    overflow-wrap: anywhere;
+  }
+
+  .crew-card-section {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .crew-option {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .crew-action-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crew-action-stats > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .crew-action-stats > div:nth-child(-n + 4) {
+    border-bottom: 1px solid var(--line);
   }
 }
 

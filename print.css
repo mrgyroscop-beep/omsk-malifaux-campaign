@@ -307,6 +307,64 @@
     margin: 0;
   }
 
+  .print-crew-effect-type {
+    display: block;
+    margin-top: 1.2mm;
+    color: #d5b777;
+    font-size: 6.5pt;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .print-crew-action-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 1.5mm 0 0;
+    border-top: 0.5pt solid rgba(248, 242, 229, 0.38);
+    border-bottom: 0.5pt solid rgba(248, 242, 229, 0.38);
+  }
+
+  .print-crew-action-stats div {
+    min-width: 0;
+    padding: 1mm 0.5mm;
+    text-align: center;
+    border-right: 0.5pt solid rgba(248, 242, 229, 0.24);
+  }
+
+  .print-crew-action-stats div:last-child {
+    border-right: 0;
+  }
+
+  .print-crew-action-stats dt,
+  .print-crew-action-stats dd {
+    margin: 0;
+  }
+
+  .print-crew-action-stats dt {
+    color: #d5b777;
+    font-size: 5.5pt;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+  }
+
+  .print-crew-action-stats dd {
+    margin-top: 0.4mm;
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .print-crew-no-actions {
+    margin-top: 1.5mm !important;
+    padding-top: 1.2mm;
+    color: #fff;
+    border-top: 0.5pt solid rgba(248, 242, 229, 0.38);
+    font-size: 7pt;
+    font-weight: 800;
+  }
+
   .print-summary {
     grid-template-columns: repeat(4, 19mm);
   }

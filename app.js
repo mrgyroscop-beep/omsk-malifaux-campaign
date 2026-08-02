@@ -539,6 +539,12 @@ const UI_MESSAGES = {
   cardAbilities: { ru: "Способности", en: "Abilities" },
   cardNoActions: { ru: "На карточке нет действий.", en: "This card has no actions." },
   cardNoAbilities: { ru: "На карточке нет способностей.", en: "This card has no abilities." },
+  crewAction: { ru: "Действие", en: "Action" },
+  crewAbility: { ru: "Способность", en: "Ability" },
+  crewNoActions: { ru: "Действий нет", en: "No actions" },
+  crewActionStats: { ru: "Характеристики действия", en: "Action statistics" },
+  crewStatNotApplicable: { ru: "Не применяется", en: "Not applicable" },
+  crewStatUnknown: { ru: "Нет данных", en: "No data" },
   talentPickerRule: {
     ru: "{kind} · модель-источник Cost {limit} или меньше.",
     en: "{kind} · source model Cost {limit} or less.",
@@ -824,10 +830,21 @@ const archetypes = {
   },
 };
 
+const CREW_STAT_NOT_APPLICABLE = "not-applicable";
+const CREW_ACTION_FIELDS = Object.freeze([
+  Object.freeze({ key: "rg", label: "Rg" }),
+  Object.freeze({ key: "skl", label: "Skl" }),
+  Object.freeze({ key: "rst", label: "Rst" }),
+  Object.freeze({ key: "tn", label: "TN" }),
+  Object.freeze({ key: "dmg", label: "Dmg" }),
+]);
+
 const crewCards = [
   {
     id: "expert-coordination",
     name: "Expert Coordination",
+    effectType: "ability",
+    action: null,
     text: "При активации модель может drain Soulstone, чтобы пройти до 3″.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following ability: Expert Coordination: When this model activates, it may drain a Soulstone to move up to 3\".",
@@ -835,6 +852,8 @@ const crewCards = [
   {
     id: "shape-landscape",
     name: "Shape the Landscape",
+    effectType: "ability",
+    action: null,
     text: "При активации модель может drain Soulstone, чтобы создать выбранный маркер в 1″.",
     textEn:
       "When this crew card effect is selected, choose a marker listed on a crew card belonging to a master with either of this crew’s keywords. Non-peon models in this crew with either of your chosen keywords gain the following ability: Shape the Landscape: When this model activates, it may drain a Soulstone to make the chosen marker within 1\".",
@@ -842,6 +861,8 @@ const crewCards = [
   {
     id: "heavy-blow",
     name: "Heavy Blow",
+    effectType: "ability",
+    action: null,
     text: "После урона врагу действием можно drain Soulstone и нанести +1 урон.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following ability: Heavy Blow: When this model deals damage to an enemy with an action, it may drain a Soulstone to deal +1 damage.",
@@ -849,6 +870,8 @@ const crewCards = [
   {
     id: "unusual-specialty",
     name: "Unusual Specialty",
+    effectType: "ability",
+    action: null,
     text: "При активации можно drain Soulstone и получить выбранный разрешённый токен.",
     textEn:
       "When this crew card effect is selected, choose a token listed on a crew card belonging to a master with either of this crew’s keywords. Fast and Aetheric Surge tokens may not be chosen. Non-peon models in this crew with either of your chosen keywords gain the following ability: Unusual Specialty: When this model activates, it may drain a Soulstone to gain the chosen token.",
@@ -856,6 +879,14 @@ const crewCards = [
   {
     id: "the-plan",
     name: "The Plan Comes Together",
+    effectType: "action",
+    action: {
+      rg: "6″",
+      skl: 0,
+      rst: CREW_STAT_NOT_APPLICABLE,
+      tn: 5,
+      dmg: CREW_STAT_NOT_APPLICABLE,
+    },
     text: "Союзник в 6″ проходит до 3″, затем объявляет Interact по Strategy marker.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following action: The Plan Comes Together — Rg 6\"; Skl 0; Rst -; TN 5; Dmg -. Ally only. The target may move up to 3\", and then declare the Interact action targeting a Strategy marker.",
@@ -863,6 +894,14 @@ const crewCards = [
   {
     id: "forbidden-curse",
     name: "Forbidden Curse",
+    effectType: "action",
+    action: {
+      rg: "6″",
+      skl: 5,
+      rst: "Wp",
+      tn: CREW_STAT_NOT_APPLICABLE,
+      dmg: CREW_STAT_NOT_APPLICABLE,
+    },
     text: "Атака Wp в 6″: цель получает выбранный разрешённый токен.",
     textEn:
       "When this crew card effect is selected, choose a token listed on a crew card belonging to a master with either of this crew’s keywords. Flicker and Summon tokens may not be chosen. Non-peon models in this crew with either of your chosen keywords gain the following action: Forbidden Curse — Rg 6\"; Skl 5; Rst Wp; TN -; Dmg -. The target gains the chosen token.",
@@ -870,6 +909,14 @@ const crewCards = [
   {
     id: "specialized-tools",
     name: "Specialized Tools",
+    effectType: "action",
+    action: {
+      rg: "6″",
+      skl: 5,
+      rst: "Wp",
+      tn: 11,
+      dmg: CREW_STAT_NOT_APPLICABLE,
+    },
     text: "Союзник в 6″ прикрепляет upgrade выбранного разрешённого типа.",
     textEn:
       "When this crew card effect is selected, choose an upgrade type listed on a master, crew card associated with a master, or totem (including upgrade types listed on actions and abilities) belonging to either of this crew’s keywords. For example, a player with the Kin keyword could choose the Improvised Enhancement upgrade type listed in Ophelia LaCroix’s Raid Boss ability. Non-peon models in this crew with either of your chosen keywords gain the following action: Specialized Tools — Rg 6\"; Skl 5; Rst Wp; TN 11; Dmg -. This action may target allies. Attach an upgrade of the chosen type to the target.",
@@ -877,6 +924,8 @@ const crewCards = [
   {
     id: "prepared",
     name: "Prepared For Anything",
+    effectType: "ability",
+    action: null,
     text: "При активации модель может drain Soulstone, чтобы объявить Prepare.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following ability: Prepared For Anything: When this model activates, it may drain a Soulstone to declare the Prepare action.",
@@ -884,6 +933,8 @@ const crewCards = [
   {
     id: "scavenger",
     name: "Scavenger’s Instinct",
+    effectType: "ability",
+    action: null,
     text: "Убив врага, модель может drain Soulstone: взять карту и исцелить 1.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following ability: Scavenger’s Instinct: When this model kills an enemy model, it may drain a Soulstone to draw a card and heal 1.",
@@ -891,6 +942,8 @@ const crewCards = [
   {
     id: "inhuman",
     name: "Inhuman Determination",
+    effectType: "ability",
+    action: null,
     text: "При активации можно drain Soulstone: исцелить 2 и пройти до 1″.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following ability: Inhuman Determination: When this model activates, it may drain a Soulstone to heal 2 and move up to 1\".",
@@ -898,6 +951,14 @@ const crewCards = [
   {
     id: "loot-stash",
     name: "Loot Their Stash",
+    effectType: "action",
+    action: {
+      rg: CREW_STAT_NOT_APPLICABLE,
+      skl: CREW_STAT_NOT_APPLICABLE,
+      rst: CREW_STAT_NOT_APPLICABLE,
+      tn: CREW_STAT_NOT_APPLICABLE,
+      dmg: CREW_STAT_NOT_APPLICABLE,
+    },
     text: "На половине врага сделайте флип и временно получите предмет с равным BR.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following action: Loot Their Stash — Rg -; Skl -; Rst -; TN -; Dmg -. This model must be completely on the enemy table half. Flip a card, which may not be cheated. This model attaches an equipment upgrade with a BR equal to the card’s value. This equipment does not affect your campaign rating. Annihilate this equipment after this game.",
@@ -905,6 +966,14 @@ const crewCards = [
   {
     id: "sadistic",
     name: "Sadistic Blow",
+    effectType: "action",
+    action: {
+      rg: "1″",
+      skl: 5,
+      rst: "Df",
+      tn: CREW_STAT_NOT_APPLICABLE,
+      dmg: 2,
+    },
     text: "Ближняя атака; при raise цель получает Injured token.",
     textEn:
       "Non-peon models in this crew with either of your chosen keywords gain the following action: Sadistic Blow — Rg 1\"; Skl 5; Rst Df; TN -; Dmg 2. If this attack receives a raise, the target gains an Injured token.",
@@ -3873,14 +3942,55 @@ function renderTalents() {
   });
 }
 
+function crewStatPresentation(value) {
+  if (value === CREW_STAT_NOT_APPLICABLE) {
+    return {
+      state: "not-applicable",
+      display: "—",
+      accessible: message("crewStatNotApplicable"),
+    };
+  }
+  if (value == null || (typeof value === "string" && !value.trim())) {
+    const unknown = message("crewStatUnknown");
+    return { state: "unknown", display: unknown, accessible: unknown };
+  }
+  return { state: "value", display: String(value), accessible: String(value) };
+}
+
+function renderCrewActionDetails(card) {
+  if (card.effectType !== "action") {
+    return `<p class="crew-no-actions"><span aria-hidden="true">∅</span>${escapeHtml(
+      message("crewNoActions"),
+    )}</p>`;
+  }
+  const action = card.action || {};
+  return `<dl class="crew-action-stats" aria-label="${escapeHtml(message("crewActionStats"))}">
+    ${CREW_ACTION_FIELDS.map(({ key, label }) => {
+      const presentation = crewStatPresentation(action[key]);
+      const accessibleLabel =
+        presentation.state === "value"
+          ? ""
+          : ` aria-label="${escapeHtml(presentation.accessible)}"`;
+      return `<div data-crew-stat="${key}" data-stat-state="${presentation.state}">
+        <dt>${label}</dt>
+        <dd${accessibleLabel}>${escapeHtml(presentation.display)}</dd>
+      </div>`;
+    }).join("")}
+  </dl>`;
+}
+
 function renderCrewCards() {
   const grid = document.querySelector("#crewCardGrid");
   grid.innerHTML = crewCards
     .map(
       (card) => `
-        <button class="crew-option ${state.leader.crewCard === card.id ? "is-selected" : ""}" type="button" data-crew-card="${card.id}">
-          <h3>${card.name}</h3>
-          <p>${localized(card.text, card.textEn)}</p>
+        <button class="crew-option ${state.leader.crewCard === card.id ? "is-selected" : ""}" type="button" data-crew-card="${escapeHtml(card.id)}" data-crew-effect="${card.effectType}" aria-pressed="${state.leader.crewCard === card.id}">
+          <span class="crew-effect-type">${escapeHtml(
+            message(card.effectType === "action" ? "crewAction" : "crewAbility"),
+          )}</span>
+          <h3>${escapeHtml(card.name)}</h3>
+          ${renderCrewActionDetails(card)}
+          <p class="crew-effect-text">${escapeHtml(localized(card.text, card.textEn))}</p>
         </button>`,
     )
     .join("");
@@ -3888,7 +3998,11 @@ function renderCrewCards() {
     button.addEventListener("click", () => {
       state.leader.crewCard = button.dataset.crewCard;
       saveState();
-      renderCrewCards();
+      grid.querySelectorAll("[data-crew-card]").forEach((option) => {
+        const selected = option.dataset.crewCard === state.leader.crewCard;
+        option.classList.toggle("is-selected", selected);
+        option.setAttribute("aria-pressed", String(selected));
+      });
     });
   });
 }
@@ -8370,6 +8484,8 @@ validateAllKeywords();
 window.MalifauxBuilder = Object.freeze({
   getState: () => clone(state),
   getLocale: () => currentLocale,
+  getCrewCards: () => clone(crewCards),
+  getCrewStatPresentation: (value) => clone(crewStatPresentation(value)),
   notify: (text) => toast(String(text)),
   replaceState(value) {
     state = mergeDefaults(value);

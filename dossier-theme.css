@@ -2435,6 +2435,26 @@ body.theme-dossier {
     var(--folder);
 }
 
+.theme-dossier .crew-option.is-selected .crew-effect-text,
+.theme-dossier .crew-option.is-selected .crew-no-actions,
+.theme-dossier .crew-option.is-selected .crew-action-stats dd {
+  color: var(--dossier-paper-light);
+}
+
+.theme-dossier .crew-option.is-selected .crew-action-stats dt,
+.theme-dossier .crew-option.is-selected .crew-action-stats [data-stat-state="not-applicable"] dd {
+  color: #d9cba9;
+}
+
+.theme-dossier .crew-option.is-selected .crew-action-stats,
+.theme-dossier .crew-option.is-selected .crew-no-actions {
+  border-color: rgba(232, 221, 196, 0.4);
+}
+
+.theme-dossier .crew-option.is-selected .crew-action-stats > div {
+  border-right-color: rgba(232, 221, 196, 0.28);
+}
+
 .theme-dossier .path-choice:has(input:checked),
 .theme-dossier .check-tile:has(input:checked) {
   border-color: var(--dossier-red);
@@ -3262,6 +3282,10 @@ body.theme-dossier {
 .theme-dossier .archetype-card:focus-visible {
   outline: 2px solid var(--dossier-brass);
   outline-offset: 3px;
+}
+
+.theme-dossier .crew-option:focus-visible {
+  outline: 3px solid var(--folder-black);
 }
 
 @media (max-width: 1240px) {
