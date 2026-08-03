@@ -3680,6 +3680,68 @@ h1 {
   line-height: 1.5;
 }
 
+.talent-picker-mode {
+  display: flex;
+  gap: 8px;
+  margin: -5px 0 18px;
+  padding: 0;
+  border: 0;
+}
+
+.talent-picker-mode[hidden] {
+  display: none;
+}
+
+.talent-picker-mode legend {
+  width: 100%;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.talent-picker-mode label {
+  position: relative;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  color: var(--ink-soft);
+  border: 1px solid var(--brass);
+  background: rgba(181, 151, 83, 0.07);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.talent-picker-mode label:has(input:checked) {
+  color: var(--paper-bright);
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
+.talent-picker-mode input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--red);
+}
+
+.talent-picker-mode label:has(input:focus-visible) {
+  outline: 3px solid rgba(156, 46, 39, 0.35);
+  outline-offset: 2px;
+}
+
+#talentDialog.is-direct-mode #talentSearchResults {
+  display: none;
+}
+
 .talent-entry-panel {
   margin-top: 18px;
 }
@@ -3710,6 +3772,77 @@ h1 {
 .talent-entry-list {
   display: grid;
   gap: 9px;
+}
+
+.talent-direct-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.talent-direct-list > li {
+  min-width: 0;
+}
+
+.talent-direct-provenance-row {
+  grid-column: 1 / -1;
+}
+
+.talent-direct-provenance {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.talent-direct-source {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.talent-direct-source select {
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  color: var(--ink);
+  border: 1px solid var(--brass);
+  background: var(--paper-bright);
+  font-family: var(--display);
+  text-transform: none;
+}
+
+.talent-direct-more {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.talent-direct-more button {
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--ink-soft);
+  border: 1px solid var(--brass);
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
 .talent-entry-choice {
@@ -3792,7 +3925,7 @@ h1 {
 }
 
 .entry-choice-actions select {
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 8px;
   color: var(--ink);
   border: 1px solid var(--line);
@@ -3801,7 +3934,7 @@ h1 {
 }
 
 .entry-select-button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 13px;
   color: var(--paper-bright);
   border: 1px solid var(--red);
@@ -4282,6 +4415,46 @@ h1 {
   .talent-entry-choice p,
   .entry-choice-actions {
     grid-column: 1;
+  }
+
+  .talent-picker-mode {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .talent-picker-mode legend {
+    grid-column: 1 / -1;
+  }
+
+  .talent-picker-mode label {
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  .talent-direct-source,
+  .entry-choice-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .talent-direct-source {
+    gap: 5px;
+  }
+
+  .entry-choice-actions .entry-select-button,
+  .entry-choice-actions label,
+  .talent-direct-source select {
+    width: 100%;
+  }
+
+  .talent-direct-more {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .talent-direct-more button {
+    width: 100%;
   }
 
   .trigger-reference div {

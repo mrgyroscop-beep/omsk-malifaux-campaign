@@ -1332,6 +1332,17 @@
           <button class="modal-close" type="button" data-close-dialog="talentDialog" aria-label="Закрыть">×</button>
         </div>
         <p class="talent-picker-rule" id="talentPickerRule"></p>
+        <fieldset class="talent-picker-mode" id="talentPickerMode" data-dynamic-i18n>
+          <legend id="talentPickerModeLegend">Способ выбора</legend>
+          <label>
+            <input type="radio" name="talentPickerMode" value="model" checked />
+            <span id="talentPickerModeModel">По модели</span>
+          </label>
+          <label>
+            <input type="radio" name="talentPickerMode" value="direct" />
+            <span id="talentPickerModeDirect">По действиям</span>
+          </label>
+        </fieldset>
         <section class="catalog-block" aria-labelledby="talentCatalogTitle">
           <div class="catalog-heading">
             <div>
@@ -1354,7 +1365,7 @@
           <p class="catalog-status" id="talentCatalogStatus" aria-live="polite"></p>
           <div class="catalog-results" id="talentSearchResults" role="listbox"></div>
         </section>
-        <div class="talent-entry-panel" id="talentEntryPanel">
+        <div class="talent-entry-panel" id="talentEntryPanel" aria-live="polite">
           <div class="empty-state compact-empty">
             <div>
               <strong>Выберите модель</strong>

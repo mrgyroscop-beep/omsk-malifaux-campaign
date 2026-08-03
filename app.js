@@ -582,6 +582,39 @@ const UI_MESSAGES = {
     ru: "У этой атаки нет триггеров, поэтому её нельзя выбрать для этого слота.",
     en: "This attack has no triggers, so it cannot be chosen for this slot.",
   },
+  talentPickerModeLegend: { ru: "Способ выбора", en: "Selection method" },
+  talentPickerModeModel: { ru: "По модели", en: "By model" },
+  talentPickerModeActions: { ru: "По действиям", en: "By actions" },
+  talentPickerModeAbilities: { ru: "По способностям", en: "By abilities" },
+  talentDirectTitleActions: { ru: "Подходящие действия", en: "Eligible actions" },
+  talentDirectTitleAbilities: { ru: "Подходящие способности", en: "Eligible abilities" },
+  talentDirectSearch: {
+    ru: "Название, правило или модель-источник",
+    en: "Name, rule, or source model",
+  },
+  talentDirectLoading: {
+    ru: "Загружаю карточки: {loaded} из {total} · найдено {entries} записей.",
+    en: "Loading cards: {loaded} of {total} · {entries} entries found.",
+  },
+  talentDirectReady: {
+    ru: "Проверено карточек: {total}. Найдено записей: {entries}.",
+    en: "Cards checked: {total}. Entries found: {entries}.",
+  },
+  talentDirectPartial: {
+    ru: "Проверено {loaded} из {total} карточек; {failed} не загрузилось. Показаны доступные записи.",
+    en: "Checked {loaded} of {total} cards; {failed} failed to load. Available entries are shown.",
+  },
+  talentDirectNoMatches: {
+    ru: "Подходящих записей не найдено.",
+    en: "No matching entries found.",
+  },
+  talentDirectSource: { ru: "Модель-источник", en: "Source model" },
+  talentDirectSources: { ru: "Модели-источники", en: "Source models" },
+  talentDirectShowMore: { ru: "Показать ещё", en: "Show more" },
+  talentDirectShown: {
+    ru: "Показано {shown} из {total}",
+    en: "Showing {shown} of {total}",
+  },
   affinityKeyword: { ru: "выбранный ключ", en: "chosen keyword" },
   affinityFaction: { ru: "объявленная фракция", en: "declared faction" },
   affinityVersatile: { ru: "Versatile", en: "Versatile" },
@@ -1234,6 +1267,16 @@ let modelSelectionRequest = 0;
 let talentSourceRequest = 0;
 let modelDetailController = null;
 let talentDetailController = null;
+let talentPickerMode = "model";
+let talentDirectRequest = 0;
+let talentDirectController = null;
+let talentDirectItems = [];
+let talentDirectLoaded = 0;
+let talentDirectTotal = 0;
+let talentDirectFailed = 0;
+let talentDirectLoading = false;
+let talentDirectVisible = 20;
+let talentDirectRenderedGroups = [];
 let storageWarningShown = false;
 let keywordValidation = [0, 1].map((index) => ({
   status: state.crew.keywords?.[index] ? "pending" : "empty",
@@ -7084,6 +7127,417 @@ function emptyTalentEntryPanel() {
     </div>`;
 }
 
+function resetDirectTalentState() {
+  talentDirectRequest += 1;
+  talentDirectController?.abort();
+  talentDirectController = null;
+  talentDirectItems = [];
+  talentDirectLoaded = 0;
+  talentDirectTotal = 0;
+  talentDirectFailed = 0;
+  talentDirectLoading = false;
+  talentDirectVisible = 20;
+  talentDirectRenderedGroups = [];
+}
+
+function updateTalentPickerModeUi() {
+  const initial = activeTalentSlot?.mode === "initial";
+  const fieldset = document.querySelector("#talentPickerMode");
+  fieldset.hidden = !initial;
+  document.querySelector("#talentPickerModeLegend").textContent = message(
+    "talentPickerModeLegend",
+  );
+  document.querySelector("#talentPickerModeModel").textContent = message(
+    "talentPickerModeModel",
+  );
+  document.querySelector("#talentPickerModeDirect").textContent = message(
+    activeTalentSlot?.slot.kind === "ability"
+      ? "talentPickerModeAbilities"
+      : "talentPickerModeActions",
+  );
+  fieldset.querySelectorAll('input[name="talentPickerMode"]').forEach((input) => {
+    input.checked = input.value === talentPickerMode;
+  });
+
+  const direct = initial && talentPickerMode === "direct";
+  document.querySelector("#talentDialog").classList.toggle("is-direct-mode", direct);
+  document.querySelector("#talentCatalogTitle").textContent = direct
+    ? message(
+        activeTalentSlot.slot.kind === "ability"
+          ? "talentDirectTitleAbilities"
+          : "talentDirectTitleActions",
+      )
+    : localized("Сначала выберите модель-источник", "Choose a source model first");
+  const search = document.querySelector("#talentCardSearch");
+  const searchLabel = search.closest(".catalog-search")?.querySelector(".sr-only");
+  const searchText = direct
+    ? message("talentDirectSearch")
+    : localized("Поиск модели-источника", "Search source models");
+  search.placeholder = direct
+    ? message("talentDirectSearch")
+    : localized(
+        "Название, ключевое слово или фракция",
+        "Name, keyword, or faction",
+      );
+  search.setAttribute("aria-label", searchText);
+  search.setAttribute("aria-controls", direct ? "talentEntryPanel" : "talentSearchResults");
+  if (searchLabel) searchLabel.textContent = searchText;
+}
+
+function talentEntryBehavior(entry, kind) {
+  if (kind === "ability") {
+    return {
+      name: entry.name,
+      suits: entry.suits,
+      defensiveAbilityType: entry.defensiveAbilityType,
+      stoneCost: Number(entry.stoneCost || 0),
+      description: entry.description,
+    };
+  }
+  return {
+    name: entry.name,
+    type: entry.type,
+    typeLabel: entry.typeLabel,
+    isSignature: Boolean(entry.isSignature),
+    stoneCost: Number(entry.stoneCost || 0),
+    range: entry.range,
+    rangeType: entry.rangeType,
+    rangeTypeLabel: entry.rangeTypeLabel,
+    stat: entry.stat,
+    statSuits: entry.statSuits,
+    statModifier: entry.statModifier,
+    resistedBy: entry.resistedBy,
+    resistedByLabel: entry.resistedByLabel,
+    targetNumber: entry.targetNumber,
+    targetSuits: entry.targetSuits,
+    damage: entry.damage,
+    description: entry.description,
+    triggers: (entry.triggers || []).map((trigger) => ({
+      name: trigger.name,
+      suits: trigger.suits,
+      stoneCost: Number(trigger.stoneCost || 0),
+      description: trigger.description,
+    })),
+  };
+}
+
+function talentDirectGroups() {
+  const terms = document
+    .querySelector("#talentCardSearch")
+    .value.trim()
+    .toLocaleLowerCase("en")
+    .split(/\s+/u)
+    .filter(Boolean);
+  const groups = new Map();
+  talentDirectItems.forEach(({ card, entry }) => {
+    const meta = activeTalentSlot?.slot.kind === "ability" ? abilityMeta(entry) : actionMeta(entry);
+    const searchable = [
+      entry.name,
+      meta,
+      entry.description,
+      ...(entry.triggers || []).flatMap((trigger) => [
+        trigger.name,
+        trigger.suits,
+        trigger.description,
+      ]),
+      card.displayName,
+      card.factionLabel,
+      card.stationLabel,
+      ...characterKeywordNames(card),
+    ]
+      .join(" ")
+      .toLocaleLowerCase("en");
+    if (!terms.every((term) => searchable.includes(term))) return;
+    const key = JSON.stringify(talentEntryBehavior(entry, activeTalentSlot.slot.kind));
+    if (!groups.has(key)) groups.set(key, { key, entry, sources: [] });
+    groups.get(key).sources.push({ card, entry });
+  });
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      sources: group.sources.sort((a, b) =>
+        a.card.displayName.localeCompare(b.card.displayName, "en"),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        a.entry.name.localeCompare(b.entry.name, "en") ||
+        a.sources[0].card.displayName.localeCompare(b.sources[0].card.displayName, "en"),
+    );
+}
+
+function directTalentStatus(entryCount = talentDirectGroups().length) {
+  if (talentDirectLoading) {
+    return message("talentDirectLoading", {
+      loaded: talentDirectLoaded,
+      total: talentDirectTotal,
+      entries: entryCount,
+    });
+  }
+  if (talentDirectFailed) {
+    return message("talentDirectPartial", {
+      loaded: talentDirectLoaded,
+      total: talentDirectTotal,
+      failed: talentDirectFailed,
+    });
+  }
+  return message("talentDirectReady", {
+    total: talentDirectTotal,
+    entries: entryCount,
+  });
+}
+
+function directTalentGroupHtml(group, index) {
+  const { slot } = activeTalentSlot;
+  const entry = group.entry;
+  const requiresTrigger = Boolean(slot.chooseTrigger);
+  const triggers = Array.isArray(entry.triggers) ? entry.triggers : [];
+  const unavailable = requiresTrigger && !triggers.length;
+  const kindLabel =
+    slot.kind === "ability" ? "Ability" : entry.typeLabel || talentKindLabel(slot);
+  const sourceControl =
+    group.sources.length > 1
+      ? `<label class="talent-direct-source">
+          <span>${message("talentDirectSources")}</span>
+          <select data-direct-source="${index}">
+            ${group.sources
+              .map(
+                ({ card }) =>
+                  `<option value="${escapeHtml(card.slug)}">${escapeHtml(
+                    [card.displayName, card.factionLabel, `Cost ${card.cost}`]
+                      .filter(Boolean)
+                      .join(" · "),
+                  )}</option>`,
+              )
+              .join("")}
+          </select>
+        </label>`
+      : `<p class="talent-direct-provenance"><b>${message("talentDirectSource")}:</b> ${escapeHtml(
+          [
+            group.sources[0].card.displayName,
+            group.sources[0].card.factionLabel,
+            `Cost ${group.sources[0].card.cost}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        )}</p>`;
+  return `<li>
+    <article class="talent-entry-choice talent-direct-choice">
+      <h4>${escapeHtml(entry.name)}</h4>
+      <small>${escapeHtml(
+        slot.kind === "ability"
+          ? [kindLabel, abilityMeta(entry)].filter(Boolean).join(" · ")
+          : actionMeta(entry) || kindLabel,
+      )}</small>
+      ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
+      ${requiresTrigger && triggers.length
+        ? `<div class="trigger-reference">
+            ${triggers
+              .map(
+                (trigger) => `<div>
+                  <b>${cardText(
+                    [trigger.suits, trigger.name, stoneMarker(trigger.stoneCost)]
+                      .filter(Boolean)
+                      .join(" · "),
+                  )}</b>
+                  <span>${cardText(trigger.description)}</span>
+                </div>`,
+              )
+              .join("")}
+          </div>`
+        : ""}
+      <div class="talent-direct-provenance-row">${sourceControl}</div>
+      <div class="entry-choice-actions">
+        ${requiresTrigger
+          ? unavailable
+            ? `<span class="talent-trigger-warning">${message("talentNeedsTrigger")}</span>`
+            : `<label>
+                ${message("talentChooseTrigger")}
+                <select data-direct-trigger="${index}">
+                  ${triggers
+                    .map(
+                      (trigger, triggerIndex) =>
+                        `<option value="${triggerIndex}">${escapeHtml(
+                          [
+                            plainCardText(trigger.suits),
+                            trigger.name,
+                            stoneMarker(trigger.stoneCost),
+                          ]
+                            .filter(Boolean)
+                            .join(" · "),
+                        )}</option>`,
+                    )
+                    .join("")}
+                </select>
+              </label>`
+          : ""}
+        <button class="entry-select-button" type="button" data-select-direct-talent="${index}" ${unavailable ? "disabled" : ""}>
+          ${message("chooseFromCard")}
+        </button>
+      </div>
+    </article>
+  </li>`;
+}
+
+function renderDirectTalentEntries() {
+  if (talentPickerMode !== "direct" || activeTalentSlot?.mode !== "initial") return;
+  const panel = document.querySelector("#talentEntryPanel");
+  const groups = talentDirectGroups();
+  setCatalogStatus("#talentCatalogStatus", directTalentStatus(groups.length));
+  if (!groups.length) {
+    panel.innerHTML = `<div class="empty-state compact-empty"><div><strong>${
+      talentDirectLoading ? message("catalogLoading") : message("talentDirectNoMatches")
+    }</strong></div></div>`;
+    talentDirectRenderedGroups = [];
+    return;
+  }
+  talentDirectRenderedGroups = groups.slice(0, talentDirectVisible);
+  panel.innerHTML = `
+    <ul class="talent-entry-list talent-direct-list">
+      ${talentDirectRenderedGroups.map(directTalentGroupHtml).join("")}
+    </ul>
+    <div class="talent-direct-more">
+      <span>${message("talentDirectShown", {
+        shown: talentDirectRenderedGroups.length,
+        total: groups.length,
+      })}</span>
+      ${talentDirectRenderedGroups.length < groups.length
+        ? `<button type="button" data-show-more-talents>${message("talentDirectShowMore")}</button>`
+        : ""}
+    </div>`;
+  panel.querySelectorAll("[data-select-direct-talent]").forEach((button) => {
+    button.addEventListener("click", () => chooseDirectTalent(Number(button.dataset.selectDirectTalent)));
+  });
+  panel.querySelector("[data-show-more-talents]")?.addEventListener("click", () => {
+    talentDirectVisible += 20;
+    renderDirectTalentEntries();
+  });
+}
+
+function chooseDirectTalent(index) {
+  const group = talentDirectRenderedGroups[index];
+  if (!group || !activeTalentSlot || activeTalentSlot.mode !== "initial") return;
+  const sourceSelect = document.querySelector(`[data-direct-source="${index}"]`);
+  const selected = sourceSelect
+    ? group.sources.find(({ card }) => card.slug === sourceSelect.value)
+    : group.sources[0];
+  if (!selected) return;
+  let selectedTrigger = null;
+  if (activeTalentSlot.slot.chooseTrigger) {
+    const triggerIndex = Number(
+      document.querySelector(`[data-direct-trigger="${index}"]`)?.value,
+    );
+    selectedTrigger = selected.entry.triggers?.[triggerIndex] || null;
+    if (!selectedTrigger) {
+      toast(message("talentNeedsTrigger"));
+      return;
+    }
+  }
+  storeInitialTalentEntry(selected.card, selected.entry, selectedTrigger);
+}
+
+async function runTalentDirectSearch(force = false) {
+  if (!activeTalentSlot || activeTalentSlot.mode !== "initial" || !cardCatalog) return false;
+  const request = ++talentDirectRequest;
+  talentDirectController?.abort();
+  const controller = new AbortController();
+  talentDirectController = controller;
+  talentDirectItems = [];
+  talentDirectLoaded = 0;
+  talentDirectTotal = 0;
+  talentDirectFailed = 0;
+  talentDirectLoading = true;
+  talentDirectVisible = 20;
+  renderDirectTalentEntries();
+  try {
+    const found = await cardCatalog.searchCharacters("", {
+      force,
+      limit: 1000,
+      onProgress: (loaded, total) => {
+        if (request !== talentDirectRequest) return;
+        setCatalogStatus(
+          "#talentCatalogStatus",
+          message("catalogProgress", { loaded, total }),
+        );
+      },
+    });
+    if (request !== talentDirectRequest || controller.signal.aborted) return false;
+    const eligible = sortCharactersForCrew(
+      found.filter((character) => isTalentSourceCard(character, activeTalentSlot.slot.limit)),
+    );
+    talentDirectTotal = eligible.length;
+    renderDirectTalentEntries();
+    let nextIndex = 0;
+    const loadNext = async () => {
+      while (nextIndex < eligible.length) {
+        const summary = eligible[nextIndex];
+        nextIndex += 1;
+        try {
+          const card = await cardCatalog.getCharacter(summary.slug, {
+            force,
+            signal: controller.signal,
+          });
+          if (request !== talentDirectRequest || controller.signal.aborted || !activeTalentSlot) {
+            return;
+          }
+          if (isTalentSourceCard(card, activeTalentSlot.slot.limit)) {
+            eligibleTalentEntries(card, activeTalentSlot.slot).forEach((entry) => {
+              talentDirectItems.push({ card, entry });
+            });
+          }
+        } catch (error) {
+          if (controller.signal.aborted || request !== talentDirectRequest) return;
+          talentDirectFailed += 1;
+        } finally {
+          if (request === talentDirectRequest && !controller.signal.aborted) {
+            talentDirectLoaded += 1;
+            renderDirectTalentEntries();
+          }
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(4, eligible.length) }, () => loadNext()),
+    );
+    if (request !== talentDirectRequest || controller.signal.aborted) return false;
+    talentDirectLoading = false;
+    renderDirectTalentEntries();
+    return true;
+  } catch (error) {
+    if (request !== talentDirectRequest || controller.signal.aborted) return false;
+    talentDirectLoading = false;
+    talentDirectFailed = Math.max(1, talentDirectFailed);
+    talentDirectTotal = Math.max(talentDirectTotal, talentDirectLoaded + talentDirectFailed);
+    renderDirectTalentEntries();
+    return false;
+  } finally {
+    if (request === talentDirectRequest) talentDirectController = null;
+  }
+}
+
+function setTalentPickerMode(mode) {
+  if (!activeTalentSlot || activeTalentSlot.mode !== "initial") return;
+  const next = mode === "direct" ? "direct" : "model";
+  if (talentPickerMode === next) return;
+  talentPickerMode = next;
+  talentSearchRequest += 1;
+  talentSourceRequest += 1;
+  talentDetailController?.abort();
+  talentDetailController = null;
+  selectedTalentSource = null;
+  document.querySelector("#talentCardSearch").value = "";
+  document.querySelector("#talentSearchResults").innerHTML = "";
+  updateTalentPickerModeUi();
+  if (next === "direct") {
+    runTalentDirectSearch();
+  } else {
+    resetDirectTalentState();
+    emptyTalentEntryPanel();
+    runTalentCardSearch();
+  }
+  document.querySelector("#talentCardSearch").focus();
+}
+
 function setTalentPickerRuleText() {
   if (!activeTalentSlot) return;
   const { mode, slot } = activeTalentSlot;
@@ -7104,6 +7558,8 @@ function resetTalentPicker() {
   talentSourceRequest += 1;
   talentDetailController?.abort();
   talentDetailController = null;
+  resetDirectTalentState();
+  talentPickerMode = "model";
   activeTalentSlot = null;
   selectedTalentSource = null;
   document.querySelector("#talentCardSearch").value = "";
@@ -7118,11 +7574,14 @@ function openTalentPicker(index) {
   if (!slot) return;
   talentSearchRequest += 1;
   talentSourceRequest += 1;
+  resetDirectTalentState();
+  talentPickerMode = "model";
   activeTalentSlot = { mode: "initial", index, slot };
   selectedTalentSource = null;
   document.querySelector("#talentCardSearch").value = "";
   document.querySelector("#talentSearchResults").innerHTML = "";
   setTalentPickerRuleText();
+  updateTalentPickerModeUi();
   emptyTalentEntryPanel();
   const dialog = document.querySelector("#talentDialog");
   if (!dialog.open) dialog.showModal();
@@ -7154,11 +7613,14 @@ function openAdvancementTalentPicker() {
   };
   talentSearchRequest += 1;
   talentSourceRequest += 1;
+  resetDirectTalentState();
+  talentPickerMode = "model";
   activeTalentSlot = { mode: "advancement", index: null, slot };
   selectedTalentSource = null;
   document.querySelector("#talentCardSearch").value = "";
   document.querySelector("#talentSearchResults").innerHTML = "";
   setTalentPickerRuleText();
+  updateTalentPickerModeUi();
   emptyTalentEntryPanel();
   returnToAdvancementAfterTalent = true;
   const advancementDialog = document.querySelector("#advancementDialog");
@@ -7170,6 +7632,10 @@ function openAdvancementTalentPicker() {
 }
 
 async function runTalentCardSearch(force = false) {
+  if (activeTalentSlot?.mode === "initial" && talentPickerMode === "direct") {
+    renderDirectTalentEntries();
+    return true;
+  }
   const resultsWrap = document.querySelector("#talentSearchResults");
   if (!activeTalentSlot || !cardCatalog) {
     setCatalogStatus("#talentCatalogStatus", message("catalogUnavailable"));
@@ -7368,6 +7834,46 @@ async function selectTalentSourceCard(slug) {
   }
 }
 
+function storeInitialTalentEntry(sourceCard, entry, selectedTrigger = null) {
+  if (!activeTalentSlot || activeTalentSlot.mode !== "initial") return false;
+  const { index, slot } = activeTalentSlot;
+  if (!isTalentSourceCard(sourceCard, slot.limit)) return false;
+  if (!eligibleTalentEntries(sourceCard, slot).includes(entry)) return false;
+  if (slot.chooseTrigger && !selectedTrigger) {
+    toast(message("talentNeedsTrigger"));
+    return false;
+  }
+  const entrySnapshot = clone(entry);
+  if (slot.kind !== "ability") {
+    entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
+  }
+  const talentsBefore = clone(state.leader.talents);
+  state.leader.talents[index] = {
+    slotId: slot.id,
+    kind: slot.kind,
+    mode: "biggerhat",
+    cardId: sourceCard.id,
+    cardSlug: sourceCard.slug,
+    entryId: entry.id,
+    name: entry.name,
+    source: sourceCard.displayName,
+    snapshot: {
+      sourceCard: compactTalentSourceCard(sourceCard, entry, slot),
+      entry: entrySnapshot,
+      selectedTrigger: selectedTrigger ? clone(selectedTrigger) : null,
+    },
+  };
+  if (!saveState()) {
+    state.leader.talents = talentsBefore;
+    renderTalents();
+    return false;
+  }
+  document.querySelector("#talentDialog").close();
+  renderTalents();
+  toast(message("talentEntrySelected", { name: entry.name }));
+  return true;
+}
+
 function chooseTalentEntry(entryId) {
   if (!activeTalentSlot || !selectedTalentSource) return;
   const { index, slot } = activeTalentSlot;
@@ -7431,30 +7937,7 @@ function chooseTalentEntry(entryId) {
     );
     return;
   }
-  const talentsBefore = clone(state.leader.talents);
-  state.leader.talents[index] = {
-    slotId: slot.id,
-    kind: slot.kind,
-    mode: "biggerhat",
-    cardId: selectedTalentSource.id,
-    cardSlug: selectedTalentSource.slug,
-    entryId: entry.id,
-    name: entry.name,
-    source: selectedTalentSource.displayName,
-    snapshot: {
-      sourceCard: compactTalentSourceCard(selectedTalentSource, entry, slot),
-      entry: entrySnapshot,
-      selectedTrigger: selectedTrigger ? clone(selectedTrigger) : null,
-    },
-  };
-  if (!saveState()) {
-    state.leader.talents = talentsBefore;
-    renderTalents();
-    return;
-  }
-  document.querySelector("#talentDialog").close();
-  renderTalents();
-  toast(message("talentEntrySelected", { name: entry.name }));
+  storeInitialTalentEntry(selectedTalentSource, entry, selectedTrigger);
 }
 
 async function refreshCardCatalog(button) {
@@ -7464,16 +7947,27 @@ async function refreshCardCatalog(button) {
   }
   button.classList.add("is-loading");
   const dialog = button.closest("dialog");
+  if (
+    dialog?.id === "talentDialog" &&
+    activeTalentSlot?.mode === "initial" &&
+    talentPickerMode === "direct"
+  ) {
+    cardCatalog.clearDetailCache();
+  }
   const success =
     dialog?.id === "talentDialog"
-      ? await runTalentCardSearch(true)
+      ? activeTalentSlot?.mode === "initial" && talentPickerMode === "direct"
+        ? await runTalentDirectSearch(true)
+        : await runTalentCardSearch(true)
       : await runModelCardSearch(true);
   button.classList.remove("is-loading");
   if (success) {
-    cardCatalog.clearDetailCache();
+    if (!(dialog?.id === "talentDialog" && talentPickerMode === "direct")) {
+      cardCatalog.clearDetailCache();
+    }
     if (dialog?.id === "talentDialog") {
       selectedTalentSource = null;
-      emptyTalentEntryPanel();
+      if (talentPickerMode === "model") emptyTalentEntryPanel();
     } else if (pendingModelCard) {
       clearPendingModelCard(true);
     }
@@ -8278,6 +8772,11 @@ document
 document
   .querySelector("#talentCardSearch")
   .addEventListener("input", debounce(() => runTalentCardSearch(), 280));
+document.querySelector("#talentPickerMode").addEventListener("change", (event) => {
+  if (event.target.matches('input[name="talentPickerMode"]')) {
+    setTalentPickerMode(event.target.value);
+  }
+});
 document.querySelector("#injurySearch").addEventListener("input", (event) => {
   renderInjuryCatalog(event.currentTarget.value);
 });
@@ -8681,6 +9180,7 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
     }
     if (document.querySelector("#talentDialog").open && activeTalentSlot) {
       setTalentPickerRuleText();
+      updateTalentPickerModeUi();
       if (selectedTalentSource) renderTalentEntries(selectedTalentSource);
       runTalentCardSearch();
     }
