@@ -1,0 +1,58 @@
+name: Required CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  required-ci:
+    name: required-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+
+      - name: Install root dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check application syntax
+        run: node --check app.js
+
+      - name: Run root smoke tests
+        env:
+          BROWSER_CHANNEL: chromium
+        run: |
+          set -euo pipefail
+          for test_file in tests/*.smoke.cjs; do
+            node "$test_file"
+          done
+
+      - name: Install worker dependencies
+        run: pnpm --dir worker install --frozen-lockfile
+
+      - name: Check worker syntax
+        run: pnpm --dir worker check
+
+      - name: Run worker tests
+        run: pnpm --dir worker test
