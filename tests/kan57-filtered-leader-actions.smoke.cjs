@@ -196,8 +196,23 @@ const fixture = {
 
     await openSlot(0);
     assert.equal(await page.locator('input[name="talentPickerMode"]:checked').inputValue(), "model");
-    await page.locator('input[name="talentPickerMode"][value="direct"]').check();
-    await page.locator('input[name="talentPickerMode"][value="model"]').check();
+    const modelMode = page.locator('input[name="talentPickerMode"][value="model"]');
+    const directMode = page.locator('input[name="talentPickerMode"][value="direct"]');
+    await modelMode.focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await directMode.isChecked(), true);
+    assert.equal(
+      await directMode.evaluate((input) => document.activeElement === input),
+      true,
+      "ArrowRight moved focus away from the newly checked native radio.",
+    );
+    await page.keyboard.press("ArrowLeft");
+    assert.equal(await modelMode.isChecked(), true);
+    assert.equal(
+      await modelMode.evaluate((input) => document.activeElement === input),
+      true,
+      "ArrowLeft moved focus away from the newly checked native radio.",
+    );
     await page.waitForTimeout(150);
     assert.equal(await page.locator(".talent-direct-choice").count(), 0, "A stale direct result rendered in model mode.");
     await page.locator('[data-close-dialog="talentDialog"]').click();
@@ -266,6 +281,9 @@ const fixture = {
     });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await groupedAgain.locator("[data-select-direct-talent]").click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-pick-talent="0"]') === document.activeElement,
+    );
     let state = await page.evaluate(() => window.MalifauxBuilder.getState());
     assert.equal(state.leader.talents[0].source, "Beta Marshal");
     assert.equal(state.leader.talents[0].cardSlug, "beta");

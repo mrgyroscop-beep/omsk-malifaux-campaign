@@ -7535,7 +7535,6 @@ function setTalentPickerMode(mode) {
     emptyTalentEntryPanel();
     runTalentCardSearch();
   }
-  document.querySelector("#talentCardSearch").focus();
 }
 
 function setTalentPickerRuleText() {
@@ -7870,6 +7869,9 @@ function storeInitialTalentEntry(sourceCard, entry, selectedTrigger = null) {
   }
   document.querySelector("#talentDialog").close();
   renderTalents();
+  requestAnimationFrame(() => {
+    document.querySelector(`[data-pick-talent="${index}"]`)?.focus();
+  });
   toast(message("talentEntrySelected", { name: entry.name }));
   return true;
 }
