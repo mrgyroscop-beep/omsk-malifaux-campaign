@@ -149,7 +149,10 @@ async function assertCrewStatLabelContrast(page, label) {
 
 (async () => {
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({
+    locale: "ru-RU",
+    viewport: { width: 1440, height: 900 },
+  });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

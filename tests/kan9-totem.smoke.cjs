@@ -76,7 +76,10 @@ async function stateOf(page) {
 
 (async () => {
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const context = await browser.newContext({
+    locale: "ru-RU",
+    viewport: { width: 1440, height: 1000 },
+  });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
