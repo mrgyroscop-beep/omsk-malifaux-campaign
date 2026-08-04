@@ -10,7 +10,8 @@
     "test:kan10": "node tests/kan10-advancement.smoke.cjs",
     "test:kan55": "node tests/kan55-crew-card-actions.smoke.cjs",
     "test:kan53": "node tests/kan53-leader-upgrades.smoke.cjs",
-    "test:kan57": "node tests/kan57-filtered-leader-actions.smoke.cjs"
+    "test:kan57": "node tests/kan57-filtered-leader-actions.smoke.cjs",
+    "test:kan64": "node tests/kan64-attack-skill-advancement.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"

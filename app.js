@@ -5587,14 +5587,18 @@ function advancementKnownActionsFrom({
         !advance.legacy &&
         advance.recipient === recipient &&
         advance.tableId === `${kind}-modification` &&
-        advance.resultType === "trigger" &&
         advance.appliesTo,
     )
     .forEach((advance) => {
       const action = merged.get(advance.appliesTo);
-      if (action) {
+      if (!action) return;
+      if (advance.resultType === "trigger") {
         action.triggers += 1;
         action.triggerNames = [...new Set([...(action.triggerNames || []), advance.name])];
+      }
+      if (advance.resultType === "skill") {
+        const skill = Number(advance.snapshot?.result?.skill);
+        if (Number.isFinite(skill)) action.skill = skill;
       }
     });
   return [...merged.values()];
@@ -6119,7 +6123,13 @@ function renderAdvancementForm() {
     actions.length
       ? actions.map((action) => ({
           value: action.name,
-          label: `${action.name} · ${action.triggers} ${localized("триг.", "trg.")}`,
+          label: [
+            action.name,
+            action.skill !== null && action.skill !== undefined ? `Skl ${action.skill}` : "",
+            `${action.triggers} ${localized("триг.", "trg.")}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
         }))
       : [
           {
