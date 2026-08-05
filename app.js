@@ -1028,7 +1028,7 @@ const crewCards = [
   },
 ];
 
-const equipment = [
+const barterEquipment = [
   ["Lucky Gremlin Foot", "Всегда", 1, "Предотвращает получение травмы, затем аннигилируется.", "Lucky Gremlin Foot: When this model would attach an injury upgrade, it may annihilate this equipment to not do so."],
   ["Pistol", "Всегда", 1, "Атака Skl 5, ближняя 1″ или дальняя 8″, урон 2.", "Pistol — Rg *; Skl 5; Rst Df; TN -; Dmg 2. When this action is declared, choose if it has a range of 1\" or 8\"."],
   ["Sword", "Всегда", 1, "Ближняя атака 1″, Skl +5, урон 2.", "Sword — Rg 1\"; Skl +5; Rst Df; TN -; Dmg 2."],
@@ -1147,6 +1147,51 @@ const equipment = [
     "Demise: 3 irreducible damage врагам в 3″.",
     "Demise (Dead Man’s Switch): When this model is killed, enemy models within 3\" are dealt 3 irreducible damage.",
   ],
+];
+
+const thoseWhoThirstEquipment = [
+  ["The Book of the Dead", "Those Who Thirst · 1", 3, "Призывает Mindless Zombie; Laid to Rest заставляет убитую цель сделать два флипа травм.", "Summons a Mindless Zombie; Laid to Rest makes a killed target perform two injury flips."],
+  ["Judgement", "Those Who Thirst · 2", 3, "Ближняя атака игнорирует защитные способности; Laid to Rest заставляет убитую цель сделать два флипа травм.", "A melee attack that ignores defensive abilities; Laid to Rest makes a killed target perform two injury flips."],
+  ["Medusa", "Those Who Thirst · 3", 3, "Дальняя атака накладывает Slow, Stunned и Entranced; Laid to Rest заставляет убитую цель сделать два флипа травм.", "A ranged attack that applies Slow, Stunned, and Entranced; Laid to Rest makes a killed target perform two injury flips."],
+  ["Vicious Thorn", "Those Who Thirst · 4", 3, "Атака накладывает Poison и Suppressed; Laid to Rest заставляет убитую цель сделать два флипа травм.", "An attack that applies Poison and Suppressed; Laid to Rest makes a killed target perform two injury flips."],
+  ["Edict", "Those Who Thirst · 5", 3, "После атаки создаёт Scheme marker рядом с целью; Laid to Rest заставляет убитую цель сделать два флипа травм.", "Makes a Scheme marker in base contact with the target; Laid to Rest makes a killed target perform two injury flips."],
+  ["Blight", "Those Who Thirst · 6", 3, "После убийства позволяет infuse Soulstone; Laid to Rest заставляет убитую цель сделать два флипа травм.", "May infuse a Soulstone after killing; Laid to Rest makes a killed target perform two injury flips."],
+  ["Insight", "Those Who Thirst · 7", 3, "Позволяет посмотреть две верхние карты колоды и сбросить любое их число; Laid to Rest заставляет убитую цель сделать два флипа травм.", "Looks at the top two cards of the fate deck and may discard any of them; Laid to Rest makes a killed target perform two injury flips."],
+  ["Rigged Fate Deck", "Those Who Thirst · 8", 1, "Можно аннигилировать во время активации, чтобы обменять любое число карт и добрать на две больше.", "May be annihilated during the model's activation to discard any number of cards and draw that many plus two."],
+  ["Omen’s Mark", "Those Who Thirst · Joker", 0, "Бесплатный обязательный предмет, который переходит к убившей модель стороне.", "A free mandatory item that transfers to the model credited with the kill.", { group: "those-who-thirst", free: true }],
+].map((entry) => {
+  const metadata = entry[5] || {};
+  return [...entry.slice(0, 5), { group: "those-who-thirst", ...metadata }];
+});
+
+const luckyMissEquipment = [
+  ["Martyr", "Lucky Miss · 1", "После гибели модели все дружественные модели в 6″ получают Fast.", "When this model is killed, all friendly models within 6\" gain Fast."],
+  ["In the Name of Research", "Lucky Miss · 2", "После убийства врага модель может взять и сбросить карту.", "After killing an enemy model, this model may draw and discard a card."],
+  ["Lowered Expectations", "Lucky Miss · 3", "Снижает стоимость модели на 1.", "Lowers this model's soulstone cost by 1."],
+  ["Discreet Operative", "Lucky Miss · 4", "В End Phase четвёртого хода модель может переместиться на 3″ и создать Scheme marker.", "During the end phase of turn 4, this model may move up to 3\" and make a Scheme marker."],
+  ["Secret Directive", "Lucky Miss · 5", "Если модель завершает игру в 6″ от зоны развёртывания врага, команда получает 1 VP.", "If this model ends the game within 6\" of the enemy deployment zone, gain 1 VP."],
+  ["Hydraulic Limb", "Lucky Miss · 6", "Действия указанного типа наносят +1 урон.", "The model's listed actions deal +1 damage."],
+  ["Tyrant’s Hunger", "Lucky Miss · 7", "В конце активации удаляет Remains и вражеские Scheme markers в 3″ и лечится за каждый.", "At the end of its activation, removes nearby Remains and enemy Scheme markers and heals for each."],
+  ["Bestial Rage", "Lucky Miss · 8", "При активации модель может получить 3 урона, чтобы получить Fast.", "When this model activates, it may suffer 3 damage to gain Fast."],
+  ["Slow to Die", "Lucky Miss · 9", "После гибели модель может выполнить атаку перед удалением.", "When killed, this model may resolve an attack action before being removed."],
+  ["Slippery", "Lucky Miss · 10", "После атаки по модели она может переместиться на 2″.", "After an attack against this model resolves, it may move up to 2\"."],
+  ["Fast Runner", "Lucky Miss · 11", "При перемещении вне активации модель может пройти дополнительно 3″.", "When moved outside its activation, this model may move an additional 3\"."],
+  ["The Hunter", "Lucky Miss · 12", "После убийства врага модель может infuse Soulstone.", "After killing an enemy, this model may infuse a Soulstone."],
+  ["The Scholar", "Lucky Miss · 13", "При активации модель может взять карту, затем сбросить карту.", "When this model activates, it may draw a card and then discard a card."],
+  ["Doppelganger", "Lucky Miss · Joker", "Создаёт копию модели по правилам таблицы Lucky Miss.", "Adds a copy of the model according to the Lucky Miss table."],
+].map(([name, br, effect, effectEn]) => [
+  name,
+  br,
+  0,
+  effect,
+  effectEn,
+  { group: "lucky-miss", free: true, ratingExempt: true },
+]);
+
+const equipment = [
+  ...barterEquipment.map((entry) => [...entry, { group: "barter" }]),
+  ...thoseWhoThirstEquipment,
+  ...luckyMissEquipment,
 ];
 
 const equipmentAssignmentRules = Object.freeze({
@@ -6893,11 +6938,25 @@ function tableHtml(headings, rows) {
 function renderEquipmentCatalog() {
   const catalog = document.querySelector("#equipmentCatalog");
   const selectedValue = catalog.value;
-  catalog.innerHTML = equipment
-    .map(
-      ([name, br, cc], index) =>
-        `<option value="${index}">${name} · BR ${displayBr(br)} · CC ${cc}</option>`,
-    )
+  const groups = [
+    { id: "barter", label: localized("Barter-снаряжение", "Barter equipment") },
+    { id: "those-who-thirst", label: localized("Те, кто жаждет", "Those Who Thirst") },
+    { id: "lucky-miss", label: "Lucky Miss" },
+  ];
+  catalog.innerHTML = groups
+    .map(({ id, label }) => {
+      const options = equipment
+        .map((entry, index) => ({ entry, index }))
+        .filter(({ entry }) => entry[5]?.group === id)
+        .map(
+          ({ entry: [name, br, cc], index }) =>
+            `<option value="${index}">${escapeHtml(name)} · BR ${escapeHtml(
+              displayBr(br),
+            )} · CC ${escapeHtml(cc)}</option>`,
+        )
+        .join("");
+      return `<optgroup label="${escapeHtml(label)}">${options}</optgroup>`;
+    })
     .join("");
   if (selectedValue) catalog.value = selectedValue;
 }
@@ -6910,8 +6969,9 @@ function renderEquipmentPurchasePreview() {
   const data = new FormData(form);
   const customName = String(data.get("customName") || "").trim();
   const selected = equipment[Number(data.get("catalog"))];
-  const receivedFree = data.get("freeAcquisition") === "on";
-  const ratingExempt = data.get("ratingExempt") === "on";
+  const catalogMetadata = customName ? {} : selected?.[5] || {};
+  const receivedFree = catalogMetadata.free === true || data.get("freeAcquisition") === "on";
+  const ratingExempt = catalogMetadata.ratingExempt === true || data.get("ratingExempt") === "on";
   const available = Number(state.arsenal.scrip) || 0;
   const cost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
 
@@ -8942,6 +9002,7 @@ document.querySelector("#addAdvancementButton").addEventListener("click", () => 
     renderAdvancementForm();
   });
 });
+document.querySelector("#advancementName").addEventListener("input", renderAdvancementForm);
 document
   .querySelector("#advancementBiggerHatButton")
   .addEventListener("click", openAdvancementTalentPicker);
@@ -8971,8 +9032,10 @@ equipmentForm.addEventListener("submit", (event) => {
   const data = new FormData(form);
   const customName = data.get("customName").trim();
   const selected = equipment[Number(data.get("catalog"))];
-  const receivedFree = data.get("freeAcquisition") === "on";
-  const ratingExempt = data.get("ratingExempt") === "on";
+  const catalogMetadata = customName ? {} : selected?.[5] || {};
+  const receivedFree = catalogMetadata.free === true || data.get("freeAcquisition") === "on";
+  const ratingExempt =
+    catalogMetadata.ratingExempt === true || data.get("ratingExempt") === "on";
   const purchaseCost = customName || receivedFree ? 0 : Number(selected?.[2] || 0);
   const available = Number(state.arsenal.scrip) || 0;
   if (!customName && !selected) return;
