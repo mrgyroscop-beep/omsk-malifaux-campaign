@@ -66,6 +66,7 @@ test("handles CORS preflight and exposes application headers", async () => {
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), ORIGIN);
   assert.match(response.headers.get("Access-Control-Allow-Methods"), /GET/u);
   assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Organizer-Token/u);
+  assert.match(response.headers.get("Access-Control-Allow-Headers"), /X-Account-Session/u);
 });
 
 test("requires a verified anonymous session for chat", async () => {
@@ -140,6 +141,32 @@ test("rate limits public cloud reads by Cloudflare client IP", async () => {
   );
   assert.equal(response.status, 429);
   assert.equal(receivedKey, "cloud:203.0.113.9");
+});
+
+test("rate limits account authentication globally by Cloudflare client IP", async () => {
+  let receivedKey = "";
+  const env = environment({
+    API_RATE_LIMITER: {
+      async limit({ key }) {
+        receivedKey = key;
+        return { success: false };
+      },
+    },
+  });
+  const response = await worker.fetch(
+    new Request("https://worker.example/api/auth/login", {
+      method: "POST",
+      headers: {
+        Origin: ORIGIN,
+        "Content-Type": "application/json",
+        "CF-Connecting-IP": "203.0.113.25",
+      },
+      body: JSON.stringify({ email: "spray@example.com", password: "wrong password" }),
+    }),
+    env,
+  );
+  assert.equal(response.status, 429);
+  assert.equal(receivedKey, "auth:203.0.113.25");
 });
 
 test("rate limits BiggerHat proxy reads by Cloudflare client IP", async () => {

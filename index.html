@@ -131,6 +131,16 @@
             <button type="button" data-locale="en" aria-label="English">EN</button>
           </div>
           <button
+            class="account-chip"
+            id="openAccountButton"
+            type="button"
+            aria-label="Открыть аккаунт"
+            aria-haspopup="dialog"
+          >
+            <span class="account-chip-mark" aria-hidden="true">◎</span>
+            <span id="accountChipLabel">Аккаунт</span>
+          </button>
+          <button
             class="utility-menu-toggle"
             id="utilityMenuButton"
             type="button"
@@ -1019,6 +1029,28 @@
     </dialog>
 
     <dialog
+      id="accountDialog"
+      class="modal account-dialog"
+      aria-labelledby="accountDialogTitle"
+    >
+      <div class="modal-panel account-panel">
+        <div class="modal-heading account-heading">
+          <div>
+            <span class="kicker" id="accountDialogKicker">Личный судовой журнал</span>
+            <h2 id="accountDialogTitle">Аккаунт Malifaux</h2>
+          </div>
+          <button
+            class="modal-close"
+            id="accountDialogClose"
+            type="button"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <div id="accountDialogContent" data-dynamic-i18n></div>
+      </div>
+    </dialog>
+
+    <dialog
       id="cloudDialog"
       class="modal modal-wide cloud-dossier-dialog"
       aria-labelledby="cloudDialogTitle"
@@ -1611,7 +1643,8 @@
     ></script>
     <script src="biggerhat.js?v=3"></script>
     <script src="advancement-data.js?v=1"></script>
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=26"></script>
+    <script src="account.js?v=1"></script>
     <script src="cloud.js?v=1"></script>
     <script src="feedback.js?v=1"></script>
     <script src="print.js?v=3"></script>

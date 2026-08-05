@@ -1,4 +1,5 @@
 const STORAGE_KEY = "m4e-untold-campaign-v1";
+const STORAGE_META_KEY = "m4e-untold-campaign-meta-v1";
 const advancementData = window.MalifauxAdvancementData || null;
 
 const STATIC_TEXT_EN = {
@@ -12,6 +13,10 @@ const STATIC_TEXT_EN = {
   "Открыть помощника по правилам": "Open the rules assistant",
   "Облачная кампания": "Cloud campaign",
   "Открыть облачную кампанию": "Open cloud campaign",
+  "Аккаунт": "Account",
+  "Открыть аккаунт": "Open account",
+  "Личный судовой журнал": "Personal ship log",
+  "Аккаунт Malifaux": "Malifaux account",
   "Обратная связь": "Feedback",
   "Печать": "Print",
   "Досье": "Dossier",
@@ -2666,9 +2671,40 @@ function loadState() {
   }
 }
 
-function saveState() {
+function loadStateMeta() {
+  try {
+    const value = JSON.parse(localStorage.getItem(STORAGE_META_KEY) || "null");
+    if (value && Number.isFinite(Date.parse(value.modifiedAt))) {
+      return {
+        modifiedAt: value.modifiedAt,
+        sequence: Math.max(0, Number(value.sequence) || 0),
+      };
+    }
+  } catch {
+    // A new metadata record is created after the next successful save.
+  }
+  return { modifiedAt: null, sequence: 0 };
+}
+
+let stateMeta = loadStateMeta();
+
+function saveState(options = {}) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    stateMeta = {
+      modifiedAt: new Date().toISOString(),
+      sequence: stateMeta.sequence + 1,
+    };
+    try {
+      localStorage.setItem(STORAGE_META_KEY, JSON.stringify(stateMeta));
+    } catch {
+      // State is already durable; metadata can be rebuilt conservatively.
+    }
+    window.dispatchEvent(
+      new CustomEvent("malifaux-state-saved", {
+        detail: { ...stateMeta, source: String(options.source || "local") },
+      }),
+    );
     return true;
   } catch {
     if (!storageWarningShown) {
@@ -9316,13 +9352,14 @@ validateAllKeywords();
 
 window.MalifauxBuilder = Object.freeze({
   getState: () => clone(state),
+  getStateMeta: () => ({ ...stateMeta }),
   getLocale: () => currentLocale,
   getCrewCards: () => clone(crewCards),
   getCrewStatPresentation: (value) => clone(crewStatPresentation(value)),
   notify: (text) => toast(String(text)),
-  replaceState(value) {
+  replaceState(value, options = {}) {
     state = mergeDefaults(value);
-    saveState();
+    saveState(options);
     document.querySelectorAll("[data-bind]").forEach((input) => {
       input.value = getAtPath(input.dataset.bind) ?? "";
     });

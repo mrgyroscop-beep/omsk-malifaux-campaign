@@ -36,11 +36,13 @@ class D1Statement {
 class FakeD1 {
   constructor() {
     this.database = new DatabaseSync(":memory:");
-    const migration = readFileSync(
-      new URL("../migrations/0001_cloud_campaigns.sql", import.meta.url),
-      "utf8",
-    );
-    this.database.exec(migration);
+    for (const name of ["0001_cloud_campaigns.sql", "0003_accounts.sql"]) {
+      const migration = readFileSync(
+        new URL(`../migrations/${name}`, import.meta.url),
+        "utf8",
+      );
+      this.database.exec(migration);
+    }
   }
 
   prepare(sql) {

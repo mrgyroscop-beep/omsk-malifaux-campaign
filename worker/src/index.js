@@ -1,4 +1,6 @@
 import { issueSession, validateTurnstile, verifySession } from "./auth.js";
+import { handleAccountAuthRequest } from "./account-auth.js";
+import { handleAccountCampaignRequest } from "./account-campaigns.js";
 import { handleBiggerHat, refreshBiggerHatCache } from "./biggerhat-cache.js";
 import { handleCampaignRequest } from "./campaigns.js";
 import {
@@ -70,7 +72,7 @@ function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, X-Organizer-Token, If-Match",
+      "Content-Type, Authorization, X-Account-Session, X-Organizer-Token, If-Match",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "Access-Control-Expose-Headers":
       "ETag, Retry-After, X-BiggerHat-Cache, X-BiggerHat-Fetched-At",
@@ -422,6 +424,20 @@ function isCampaignMutation(request, url) {
 async function dispatch(request, env, context, origin) {
   const url = new URL(request.url);
 
+  if (url.pathname.startsWith("/api/auth/")) {
+    if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "auth")))) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    return handleAccountAuthRequest(request, env);
+  }
+
+  if (url.pathname.startsWith("/api/account/")) {
+    if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "account")))) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    return handleAccountCampaignRequest(request, env);
+  }
+
   if (request.method === "GET" && url.pathname.startsWith("/api/biggerhat/")) {
     if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "biggerhat")))) {
       return jsonResponse({ error: "rate_limited" }, 429);
@@ -466,6 +482,8 @@ async function dispatch(request, env, context, origin) {
 }
 
 function routeLabel(pathname) {
+  if (pathname.startsWith("/api/auth/")) return "account_auth";
+  if (pathname.startsWith("/api/account/")) return "account_campaign";
   if (pathname === "/api/chat") return "chat";
   if (pathname === "/api/feedback") return "feedback";
   if (isFeedbackAutomationPath(pathname)) return "feedback_automation";

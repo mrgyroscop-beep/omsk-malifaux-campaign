@@ -1,4 +1,4 @@
-import { randomToken, sha256Hex } from "./auth.js";
+import { randomToken, secureHashEqual, sha256Hex } from "./auth.js";
 
 const CAMPAIGN_ID_RE = /^[A-Za-z0-9_-]{12,64}$/;
 const ENTRY_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
@@ -72,7 +72,7 @@ function json(data, status = 200) {
 
 async function campaignRecord(env, id) {
   return env.DB.prepare(
-    `SELECT id, organizer_token_hash, name, dossier_json, dossier_revision,
+    `SELECT id, organizer_token_hash, owner_user_id, access_mode, name, dossier_json, dossier_revision,
       created_at, updated_at
      FROM campaigns WHERE id = ?`,
   )
@@ -85,7 +85,10 @@ async function requireOrganizer(request, env, id) {
   if (token.length < 32 || token.length > 128) throw new HttpError(403, "organizer_required");
   const campaign = await campaignRecord(env, id);
   if (!campaign) throw new HttpError(404, "not_found");
-  if ((await sha256Hex(token)) !== campaign.organizer_token_hash) {
+  if (campaign.owner_user_id && campaign.access_mode !== "legacy_public") {
+    throw new HttpError(404, "not_found");
+  }
+  if (!(await secureHashEqual(await sha256Hex(token), campaign.organizer_token_hash))) {
     throw new HttpError(403, "organizer_required");
   }
   return campaign;
@@ -111,6 +114,9 @@ function publicCampaign(row) {
 async function getCampaign(env, id) {
   const campaign = await campaignRecord(env, id);
   if (!campaign) throw new HttpError(404, "not_found");
+  if (campaign.owner_user_id && campaign.access_mode !== "legacy_public") {
+    throw new HttpError(404, "not_found");
+  }
   const [playersResult, eventsResult] = await Promise.all([
     env.DB.prepare(
       `SELECT id, player_name, crew_name, faction, campaign_rating,

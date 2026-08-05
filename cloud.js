@@ -1093,6 +1093,14 @@
   window.CloudCampaignApi = Object.freeze({
     ensureSession,
     clearSession,
+    getClaimCandidate() {
+      if (!connection?.campaignId || !connection.organizerToken) return null;
+      return {
+        campaignId: connection.campaignId,
+        organizerToken: connection.organizerToken,
+        name: cloudData?.campaign?.name || "",
+      };
+    },
   });
 
   const sharedCampaignId = new URL(location.href).searchParams.get("campaign");

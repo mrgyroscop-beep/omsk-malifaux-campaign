@@ -155,3 +155,17 @@ export async function validateTurnstile(request, env, responseToken, origin) {
   }
   return { success: true };
 }
+
+export async function secureHashEqual(leftHex, rightHex) {
+  if (!/^[a-f0-9]{64}$/u.test(leftHex || "") || !/^[a-f0-9]{64}$/u.test(rightHex || "")) {
+    return false;
+  }
+  const left = Uint8Array.from(leftHex.match(/.{2}/gu), (value) => Number.parseInt(value, 16));
+  const right = Uint8Array.from(rightHex.match(/.{2}/gu), (value) => Number.parseInt(value, 16));
+  if (typeof crypto.subtle.timingSafeEqual === "function") {
+    return crypto.subtle.timingSafeEqual(left, right);
+  }
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
+  return difference === 0;
+}

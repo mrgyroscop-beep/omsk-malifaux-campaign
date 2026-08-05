@@ -133,6 +133,462 @@ body.theme-dossier {
   align-items: stretch;
 }
 
+/* Account: a personal admiralty passport inside the dossier */
+
+.theme-dossier .account-chip {
+  min-width: 116px;
+  min-height: 39px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: rgba(240, 231, 210, 0.76);
+  border: 1px solid rgba(185, 154, 89, 0.27);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .account-chip:hover,
+.theme-dossier .account-chip.is-authenticated {
+  color: var(--dossier-paper-light);
+  border-color: var(--dossier-brass);
+}
+
+.theme-dossier .account-chip.is-authenticated .account-chip-mark {
+  color: #d9c786;
+  box-shadow: 0 0 0 4px rgba(185, 154, 89, 0.1);
+}
+
+.theme-dossier .account-chip-mark {
+  color: var(--dossier-brass);
+  font-size: 16px;
+}
+
+.theme-dossier .modal.account-dialog {
+  width: min(920px, calc(100% - 34px));
+  max-height: min(90dvh, 800px);
+}
+
+.theme-dossier .account-panel {
+  position: relative;
+  overflow: hidden auto;
+  background:
+    linear-gradient(90deg, transparent 0 54px, rgba(151, 54, 45, 0.11) 55px 56px, transparent 57px),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 75, 48, 0.055) 32px 33px),
+    radial-gradient(circle at 91% 11%, rgba(136, 92, 42, 0.12), transparent 19%),
+    var(--dossier-paper);
+}
+
+.theme-dossier .account-heading {
+  margin-bottom: 24px;
+}
+
+.theme-dossier .account-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: clamp(24px, 5vw, 58px);
+  align-items: center;
+  padding: 12px 14px 22px;
+}
+
+.theme-dossier .account-stamp {
+  width: fit-content;
+  display: inline-flex;
+  padding: 5px 9px 3px;
+  color: var(--dossier-red);
+  border: 1px solid currentColor;
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  transform: rotate(-1.5deg);
+}
+
+.theme-dossier .account-auth-intro h3,
+.theme-dossier .account-current h3,
+.theme-dossier .account-conflict h3 {
+  margin: 15px 0 9px;
+  font-family: var(--display);
+  font-size: clamp(24px, 3vw, 35px);
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.theme-dossier .account-auth-intro p,
+.theme-dossier .account-conflict p {
+  color: var(--dossier-muted);
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.theme-dossier .account-auth-intro ul {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #514b40;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .account-auth-intro li::before {
+  content: "◆";
+  margin-right: 9px;
+  color: var(--dossier-brass-dark);
+  font-size: 8px;
+}
+
+.theme-dossier .account-auth-form {
+  position: relative;
+  display: grid;
+  gap: 15px;
+  padding: 26px;
+  border: 1px solid rgba(84, 70, 45, 0.28);
+  background: rgba(244, 237, 220, 0.76);
+  box-shadow: 7px 9px 0 rgba(89, 69, 37, 0.09);
+}
+
+.theme-dossier .account-auth-form::before {
+  content: "AUTH / 25";
+  position: absolute;
+  right: 16px;
+  top: 9px;
+  color: rgba(73, 63, 47, 0.34);
+  font-family: var(--display);
+  font-size: 8px;
+  letter-spacing: 0.13em;
+}
+
+.theme-dossier .account-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(65, 55, 39, 0.2);
+}
+
+.theme-dossier .account-tabs button {
+  padding: 10px 8px 8px;
+  color: var(--dossier-muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .account-tabs button.is-active {
+  color: var(--dossier-ink);
+  border-bottom-color: var(--dossier-red);
+}
+
+.theme-dossier .account-auth-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.theme-dossier .account-auth-form label span {
+  color: var(--dossier-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .account-auth-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(65, 55, 39, 0.27);
+  border-radius: 1px;
+  outline: 0;
+  background: rgba(255, 252, 244, 0.66);
+}
+
+.theme-dossier .account-auth-form input:focus {
+  border-color: var(--dossier-brass-dark);
+  box-shadow: 0 0 0 2px rgba(185, 154, 89, 0.15);
+}
+
+.theme-dossier .account-error {
+  margin: 0;
+  padding: 10px 12px;
+  color: #70241f;
+  border-left: 3px solid var(--dossier-red);
+  background: rgba(159, 48, 40, 0.08);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.theme-dossier .account-current {
+  display: grid;
+  gap: 20px;
+  padding: 8px 14px 24px;
+}
+
+.theme-dossier .account-passport {
+  display: grid;
+  grid-template-columns: auto 68px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 21px 24px;
+  border: 1px solid rgba(69, 59, 42, 0.28);
+  background: rgba(244, 237, 220, 0.69);
+}
+
+.theme-dossier .account-avatar {
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  color: var(--dossier-paper-light);
+  border: 3px double var(--dossier-brass);
+  border-radius: 50%;
+  background: #282923;
+  font-family: var(--display);
+  font-size: 27px;
+}
+
+.theme-dossier .account-passport h3 {
+  margin: 2px 0 3px;
+  font-size: 27px;
+}
+
+.theme-dossier .account-passport p,
+.theme-dossier .account-passport > div > span {
+  margin: 0;
+  color: var(--dossier-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.theme-dossier .account-sync-state {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  padding: 15px 18px;
+  color: #4b493e;
+  border: 1px solid rgba(81, 73, 51, 0.2);
+  background: rgba(223, 213, 188, 0.55);
+}
+
+.theme-dossier .account-sync-state > i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #74766a;
+  box-shadow: 0 0 0 5px rgba(76, 86, 70, 0.08);
+}
+
+.theme-dossier .account-sync-state.is-synced > i { background: #65745d; }
+.theme-dossier .account-sync-state.is-syncing > i { background: var(--dossier-brass); animation: account-pulse 1s ease-in-out infinite; }
+.theme-dossier .account-sync-state.is-conflict > i,
+.theme-dossier .account-sync-state.is-error > i { background: var(--dossier-red); }
+
+.theme-dossier .account-sync-state span {
+  display: grid;
+  gap: 3px;
+}
+
+.theme-dossier .account-sync-state b {
+  font-family: var(--display);
+  font-size: 16px;
+}
+
+.theme-dossier .account-sync-state small {
+  color: var(--dossier-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.theme-dossier .account-conflict {
+  padding: 22px;
+  border: 2px solid rgba(139, 50, 42, 0.56);
+  background: rgba(247, 236, 212, 0.9);
+  box-shadow: inset 0 0 0 3px rgba(139, 50, 42, 0.08);
+}
+
+.theme-dossier .account-conflict h3 { font-size: 26px; }
+
+.theme-dossier .account-copy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.theme-dossier .account-copy-grid article {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid rgba(76, 63, 43, 0.21);
+  background: rgba(255, 252, 244, 0.55);
+}
+
+.theme-dossier .account-copy-grid b { font-family: var(--display); }
+.theme-dossier .account-copy-grid span { color: var(--dossier-muted); font-size: 11px; }
+
+.theme-dossier .account-conflict-actions,
+.theme-dossier .account-actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.theme-dossier .account-actions .button-ghost {
+  color: #302d27;
+  border-color: #716143;
+  background: #e2d5ba;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.theme-dossier .account-actions .button-ghost:hover,
+.theme-dossier .account-actions .button-ghost:active {
+  color: #f5ecd8;
+  border-color: #282923;
+  background: #282923;
+}
+
+.theme-dossier .account-actions .button-ghost:focus,
+.theme-dossier .account-actions .button-ghost:focus-visible {
+  color: #302d27;
+  border-color: #5f4b28;
+  outline: 3px solid #8d342c;
+  outline-offset: 3px;
+  background: #eadfc8;
+}
+
+.theme-dossier .account-actions .button-ghost:disabled {
+  color: #514c42;
+  border-color: #94866d;
+  background: #d8cdb5;
+  opacity: 1;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.theme-dossier .account-claim {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px 17px;
+  border: 1px dashed rgba(121, 97, 56, 0.55);
+  background: rgba(244, 237, 220, 0.58);
+}
+
+.theme-dossier .account-claim > div {
+  display: grid;
+  gap: 3px;
+}
+
+.theme-dossier .account-claim b { font-family: var(--display); font-size: 15px; }
+.theme-dossier .account-claim small { color: var(--dossier-muted); font-size: 10px; }
+
+.theme-dossier .account-claim-skip {
+  grid-column: 2 / -1;
+  justify-self: end;
+  padding: 4px 0;
+  color: var(--dossier-muted);
+  border: 0;
+  border-bottom: 1px solid rgba(69, 59, 42, 0.28);
+  background: transparent;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .account-download,
+.theme-dossier .account-logout {
+  min-height: 39px;
+  padding: 0 14px;
+  color: var(--dossier-muted);
+  border: 1px solid rgba(69, 59, 42, 0.25);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .account-logout { margin-left: auto; color: var(--dossier-red); }
+
+.theme-dossier .account-loading {
+  min-height: 230px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--dossier-muted);
+  font-family: var(--display);
+}
+
+.theme-dossier .account-loading i {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(121, 97, 56, 0.3);
+  border-top-color: var(--dossier-brass-dark);
+  border-radius: 50%;
+  animation: account-spin 0.8s linear infinite;
+}
+
+@keyframes account-spin { to { transform: rotate(360deg); } }
+@keyframes account-pulse { 50% { opacity: 0.4; transform: scale(0.75); } }
+
+@media (max-width: 760px) {
+  .theme-dossier .account-chip {
+    min-width: 42px;
+    padding: 0 8px;
+  }
+
+  .theme-dossier .account-chip #accountChipLabel { display: none; }
+
+  .theme-dossier .modal.account-dialog {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .theme-dossier .account-auth {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding-inline: 0;
+  }
+
+  .theme-dossier .account-auth-form { padding: 22px 17px; }
+  .theme-dossier .account-current { padding-inline: 0; }
+  .theme-dossier .account-passport { grid-template-columns: 58px minmax(0, 1fr); padding: 17px; }
+  .theme-dossier .account-passport .account-stamp { grid-column: 1 / -1; }
+  .theme-dossier .account-avatar { width: 54px; height: 54px; }
+  .theme-dossier .account-copy-grid { grid-template-columns: 1fr; }
+  .theme-dossier .account-claim { grid-template-columns: 1fr; }
+  .theme-dossier .account-claim-skip { grid-column: 1; justify-self: start; }
+  .theme-dossier .account-conflict-actions .button,
+  .theme-dossier .account-download { width: 100%; }
+}
+
 /* Cloud campaign: a shared carbon-copy ledger inside the dossier */
 
 .theme-dossier .topbar .cloud-button {

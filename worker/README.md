@@ -6,6 +6,7 @@ GitHub Pages; this Worker provides:
 - DeepSeek access through Cloudflare AI Gateway with exact-request caching,
   metadata-only logs, automatic retries, and a direct emergency fallback;
 - Turnstile-verified anonymous API sessions;
+- password accounts with revocable D1 sessions and automatic private dossier sync;
 - a KV read-through cache and Cron prewarming for BiggerHat;
 - D1 cloud dossiers, a shared player table, and a shared chronicle;
 - origin-bound feedback intake and a private leased automation queue.
@@ -91,6 +92,26 @@ POST   /api/campaigns/:campaignId/events
 PATCH  /api/campaigns/:campaignId/events/:eventId
 DELETE /api/campaigns/:campaignId/events/:eventId
 ```
+
+Account authentication uses a separate `X-Account-Session` header so it cannot
+be confused with the anonymous Turnstile bearer. A raw account token is returned
+only by register/login and is stored only in browser session storage; D1 stores
+its SHA-256 hash. Passwords use versioned PBKDF2-SHA-256 with a per-user salt and
+600,000 iterations.
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/me
+POST /api/auth/logout
+GET  /api/account/campaign
+PUT  /api/account/campaign
+POST /api/account/campaign/claim
+```
+
+New account dossiers are private and every query is scoped by `owner_user_id`.
+An existing public campaign can be claimed only with its organizer key; the same
+row remains public-read/organizer-write compatible after the ownership upgrade.
 
 `POST /api/feedback` accepts:
 
