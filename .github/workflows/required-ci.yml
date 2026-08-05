@@ -45,7 +45,16 @@ jobs:
         run: |
           set -euo pipefail
           for test_file in tests/*.smoke.cjs; do
-            node "$test_file"
+            echo "RUN $test_file"
+            if ! test_output=$(node "$test_file" 2>&1); then
+              printf '%s\n' "$test_output"
+              annotation=${test_output//'%'/'%25'}
+              annotation=${annotation//$'\r'/'%0D'}
+              annotation=${annotation//$'\n'/'%0A'}
+              echo "::error file=${test_file}::${annotation:0:4000}"
+              exit 1
+            fi
+            printf '%s\n' "$test_output"
           done
 
       - name: Install worker dependencies
