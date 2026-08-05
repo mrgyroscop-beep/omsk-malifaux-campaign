@@ -170,6 +170,28 @@ body.theme-dossier {
   font-size: 16px;
 }
 
+@media (min-width: 861px) and (max-width: 1500px) {
+  .theme-dossier .account-chip {
+    position: relative;
+    min-width: 42px;
+    width: 42px;
+    padding: 0 8px;
+  }
+
+  .theme-dossier .account-chip #accountChipLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
 .theme-dossier .modal.account-dialog {
   width: min(920px, calc(100% - 34px));
   max-height: min(90dvh, 800px);
