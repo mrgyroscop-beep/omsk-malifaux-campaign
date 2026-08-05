@@ -96,6 +96,8 @@ async function startServer() {
 }
 
 (async () => {
+  const indexSource = await readFile(path.join(root, "index.html"), "utf8");
+  assert.match(indexSource, /<script src="app\.js\?v=27"><\/script>/u);
   const server = await startServer();
   const port = server.address().port;
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
