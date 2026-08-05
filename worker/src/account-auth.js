@@ -3,7 +3,9 @@ import { readBoundedJson } from "./bounded-json.js";
 
 const PASSWORD_ALGORITHM = "PBKDF2-SHA-256";
 const PASSWORD_VERSION = 1;
-const PASSWORD_ITERATIONS = 600_000;
+// Cloudflare Workers Free allows 10 ms of CPU per request; 600k exhausted that
+// budget in production before registration could reach D1.
+const PASSWORD_ITERATIONS = 100_000;
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 const AUTH_WINDOW_SECONDS = 15 * 60;
 const AUTH_ATTEMPT_LIMIT = 8;

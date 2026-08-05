@@ -39,7 +39,13 @@ test("replays all migrations on an empty D1 database", () => {
   );
 });
 
-test("registers with a normalized unique email and versioned strong password hash", async () => {
+test("uses a PBKDF2 work factor compatible with the production Worker CPU budget", () => {
+  assert.equal(accountAuthConfig.algorithm, "PBKDF2-SHA-256");
+  assert.equal(accountAuthConfig.version, 1);
+  assert.equal(accountAuthConfig.iterations, 100_000);
+});
+
+test("registers with a normalized unique email and versioned password hash", async () => {
   const environment = env();
   const response = await handleAccountAuthRequest(
     jsonRequest("https://worker.example/api/auth/register", "POST", {
@@ -60,7 +66,7 @@ test("registers with a normalized unique email and versioned strong password has
   assert.equal(user.email_normalized, "captain@example.com");
   assert.equal(user.password_algorithm, "PBKDF2-SHA-256");
   assert.equal(user.password_version, 1);
-  assert.equal(user.password_iterations, 600_000);
+  assert.equal(user.password_iterations, 100_000);
   assert.equal(user.password_hash.includes("correct horse"), false);
   assert.equal(user.password_salt.length > 20, true);
   const storedSession = environment.DB.database
@@ -68,7 +74,6 @@ test("registers with a normalized unique email and versioned strong password has
     .get();
   assert.equal(storedSession.token_hash.length, 64);
   assert.notEqual(storedSession.token_hash, payload.token);
-  assert.equal(accountAuthConfig.iterations, 600_000);
 });
 
 test("rejects duplicate normalized email without exposing an account lookup response", async () => {

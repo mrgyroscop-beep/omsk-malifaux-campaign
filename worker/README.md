@@ -97,7 +97,9 @@ Account authentication uses a separate `X-Account-Session` header so it cannot
 be confused with the anonymous Turnstile bearer. A raw account token is returned
 only by register/login and is stored only in browser session storage; D1 stores
 its SHA-256 hash. Passwords use versioned PBKDF2-SHA-256 with a per-user salt and
-600,000 iterations.
+100,000 iterations so password hashing fits the Cloudflare Workers Free 10 ms CPU
+budget. The iteration count remains stored per user: existing stronger hashes are
+verified with their recorded work factor and are never downgraded on login.
 
 ```text
 POST /api/auth/register

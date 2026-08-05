@@ -15,7 +15,7 @@ const STATIC_TEXT_EN = {
   "Открыть облачную кампанию": "Open cloud campaign",
   "Аккаунт": "Account",
   "Открыть аккаунт": "Open account",
-  "Личный судовой журнал": "Personal ship log",
+  "Личный журнал": "Personal log",
   "Аккаунт Malifaux": "Malifaux account",
   "Обратная связь": "Feedback",
   "Печать": "Print",

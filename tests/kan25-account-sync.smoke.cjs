@@ -202,6 +202,8 @@ async function startServer() {
     await page.locator("#openAccountButton").click();
     await page.locator('[data-account-action="logout"]').click();
     await page.waitForFunction(() => window.MalifauxAccount.getUser() === null);
+    assert.equal(await page.locator("#accountDialogKicker").textContent(), "Личный журнал");
+    assert.doesNotMatch(await page.locator("#accountDialogKicker").textContent(), /судовой/u);
     assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).crew.name, "Device Edit");
     assert.ok(
       (await page.locator("#accountDialogContent").textContent()).includes(
@@ -229,6 +231,7 @@ async function startServer() {
     await page.locator("#accountDialogClose").click();
     await page.locator('[data-locale="en"]').click();
     await page.locator("#openAccountButton").click();
+    assert.equal(await page.locator("#accountDialogKicker").textContent(), "Personal log");
     assert.match(await page.locator("#accountDialogContent").textContent(), /Guest mode remains available/u);
     assert.deepEqual(pageErrors, []);
 
