@@ -122,6 +122,9 @@ const STATIC_TEXT_EN = {
   "Снаряжение в игре": "Equipment hired",
   "Продвижения": "Advancements",
   "Травмы в ростере": "Injuries hired",
+  "Ручная поправка": "Manual adjustment",
+  "Введите разницу, если фактический рейтинг отличается от автоматического.":
+    "Enter the difference when the actual rating differs from the automatic total.",
   "Хранилище": "Storage",
   "Снаряжение": "Equipment",
   "Назначение действует для текущей встречи и может быть изменено перед следующей.":
@@ -1262,7 +1265,7 @@ const xpTiers = Array.isArray(advancementData?.xpTrack)
     ];
 
 const defaultState = {
-  version: 5,
+  version: 6,
   crew: {
     name: "",
     player: "",
@@ -1273,6 +1276,7 @@ const defaultState = {
     length: 8,
     week: 1,
     meetingDay: "",
+    ratingAdjustment: 0,
   },
   leader: {
     name: "",
@@ -2626,6 +2630,12 @@ function mergeDefaults(saved) {
       length: safeInteger(saved.campaign?.length, base.campaign.length, 4, 14),
       week: safeInteger(saved.campaign?.week, base.campaign.week, 1, 14),
       meetingDay: safeText(saved.campaign?.meetingDay, 120),
+      ratingAdjustment: safeInteger(
+        saved.campaign?.ratingAdjustment,
+        base.campaign.ratingAdjustment,
+        -99,
+        99,
+      ),
     },
     leader: {
       name: safeText(savedLeader.name, 200),
@@ -4591,6 +4601,7 @@ function renderArsenal() {
   document.querySelector("#ratingInjuries").value = ratingInjuries;
   document.querySelector("#ratingEquipment").value = assignedEquipmentCount();
   document.querySelector("#ratingAdvances").value = campaignAdvanceCount();
+  document.querySelector("#ratingAdjustment").value = state.campaign.ratingAdjustment;
   renderActiveLoadoutSummary();
   const arsenalTotemShell = document.querySelector("#arsenalTotemCardShell");
   if (arsenalTotemShell) {
@@ -5097,7 +5108,14 @@ function calculateRating() {
   const equipmentCount = Number(document.querySelector("#ratingEquipment").value || 0);
   const advances = Number(document.querySelector("#ratingAdvances").value || 0);
   const injuriesCount = Number(document.querySelector("#ratingInjuries").value || 0);
-  document.querySelector("#ratingResult").textContent = equipmentCount + advances - injuriesCount;
+  const automaticRating = equipmentCount + advances - injuriesCount;
+  const adjustmentInput = document.querySelector("#ratingAdjustment");
+  const adjustment = Number.isFinite(adjustmentInput?.valueAsNumber)
+    ? Math.trunc(adjustmentInput.valueAsNumber)
+    : 0;
+  const signedAdjustment = adjustment >= 0 ? `+${adjustment}` : String(adjustment);
+  document.querySelector("#ratingResult").textContent = automaticRating + adjustment;
+  document.querySelector("#ratingBreakdown").textContent = `${localized("Авто", "Auto")} ${automaticRating} · ${localized("поправка", "adjustment")} ${signedAdjustment}`;
 }
 
 function renderGamePreview() {
@@ -9122,6 +9140,15 @@ equipmentForm.addEventListener("submit", (event) => {
 
 ["ratingEquipment", "ratingAdvances", "ratingInjuries"].forEach((id) => {
   document.querySelector(`#${id}`).addEventListener("input", calculateRating);
+});
+
+document.querySelector("#ratingAdjustment").addEventListener("input", (event) => {
+  if (Number.isFinite(event.currentTarget.valueAsNumber)) {
+    event.currentTarget.value = String(
+      Math.min(99, Math.max(-99, Math.trunc(event.currentTarget.valueAsNumber))),
+    );
+  }
+  calculateRating();
 });
 
 document.querySelector("#gameForm").addEventListener("input", renderGamePreview);

@@ -657,8 +657,30 @@
                     <input id="ratingInjuries" type="number" min="0" value="0" readonly />
                   </label>
                 </div>
+                <label class="rating-adjustment" for="ratingAdjustment">
+                  <span class="rating-adjustment-copy">
+                    <b>Ручная поправка</b>
+                    <small id="ratingAdjustmentHint">Введите разницу, если фактический рейтинг отличается от автоматического.</small>
+                  </span>
+                  <span class="rating-adjustment-control">
+                    <span aria-hidden="true">±</span>
+                    <input
+                      id="ratingAdjustment"
+                      data-bind="campaign.ratingAdjustment"
+                      type="number"
+                      min="-99"
+                      max="99"
+                      step="1"
+                      value="0"
+                      aria-describedby="ratingAdjustmentHint"
+                    />
+                  </span>
+                </label>
                 <div class="rating-result">
-                  <span>Campaign Rating</span>
+                  <span>
+                    Campaign Rating
+                    <small id="ratingBreakdown">Авто 0 · поправка +0</small>
+                  </span>
                   <strong id="ratingResult">0</strong>
                 </div>
                 <div id="activeLoadoutSummary" class="active-loadout-summary"></div>
@@ -1643,7 +1665,7 @@
     ></script>
     <script src="biggerhat.js?v=3"></script>
     <script src="advancement-data.js?v=1"></script>
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=28"></script>
     <script src="account.js?v=1"></script>
     <script src="cloud.js?v=1"></script>
     <script src="feedback.js?v=1"></script>
