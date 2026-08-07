@@ -1364,7 +1364,7 @@ h1 {
 
 .model-row {
   display: grid;
-  grid-template-columns: 42px minmax(150px, 1fr) auto auto auto auto;
+  grid-template-columns: 42px minmax(150px, 1fr) auto auto auto auto auto;
   gap: 14px;
   align-items: center;
   min-height: 70px;
@@ -1451,6 +1451,43 @@ h1 {
 
 .model-card-link:hover {
   border-color: var(--red);
+}
+
+.model-characteristics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.model-characteristics span {
+  padding: 3px 6px;
+  color: var(--paper-bright);
+  border: 1px solid rgba(181, 151, 83, 0.46);
+  background: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.model-characteristics-button {
+  min-height: 30px;
+  padding: 5px 8px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: transparent;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.model-characteristics-button:hover {
+  color: var(--paper-bright);
+  border-color: var(--ink-soft);
+  background: var(--ink-soft);
 }
 
 .model-badge {
@@ -1583,6 +1620,99 @@ h1 {
 
 .rating-equation input {
   text-align: center;
+}
+
+.scrip-transaction-form {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.scrip-transaction-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scrip-transaction-actions .button {
+  min-height: 38px;
+  padding-inline: 9px;
+  font-size: 8px;
+}
+
+.scrip-transaction-actions .button-ghost {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.scrip-transaction-actions .button-ghost:hover {
+  color: var(--paper-bright);
+  border-color: var(--ink-soft);
+  background: var(--ink-soft);
+}
+
+.scrip-transaction-heading {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scrip-transaction-list {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scrip-transaction-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: baseline;
+  padding-bottom: 7px;
+  border-bottom: 1px dotted var(--line);
+}
+
+.scrip-transaction-list li > span {
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.scrip-transaction-list li.is-debit > span b {
+  color: var(--red);
+}
+
+.scrip-transaction-list li small {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.scrip-transaction-list .is-empty {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.barter-flip-field {
+  padding: 12px;
+  border-left: 3px solid var(--brass);
+  background: rgba(181, 151, 83, 0.08);
+}
+
+.game-barter-result {
+  display: block;
+  margin-top: 5px;
+  color: var(--brass-deep);
+  font-weight: 700;
 }
 
 .rating-equation input[readonly] {
@@ -4543,12 +4673,22 @@ h1 {
   .model-badge,
   .mini-stepper,
   .injury-controls,
+  .model-characteristics-button,
   .loadout-toggle {
     grid-column: 2 / -1;
   }
 
   .loadout-toggle {
     width: fit-content;
+  }
+
+  .model-characteristics-button {
+    width: fit-content;
+  }
+
+  .scrip-transaction-form,
+  .scrip-transaction-actions {
+    grid-template-columns: 1fr;
   }
 
   .rating-equation {

@@ -193,6 +193,34 @@ test("maintains the shared player table and chronicle", async () => {
   const withPlayer = await playerResponse.json();
   assert.equal(withPlayer.players.length, 1);
   assert.equal(withPlayer.players[0].campaignRating, 31);
+  assert.equal(withPlayer.players[0].notes, "Organizer");
+
+  const playerId = withPlayer.players[0].id;
+  const updatedPlayerResponse = await handleCampaignRequest(
+    jsonRequest(
+      `https://worker.example/api/campaigns/${id}/players/${playerId}`,
+      "PATCH",
+      { notes: " Updated organizer note " },
+      token,
+    ),
+    env,
+  );
+  assert.equal(updatedPlayerResponse.status, 200);
+  const withUpdatedPlayer = await updatedPlayerResponse.json();
+  assert.equal(withUpdatedPlayer.players[0].notes, "Updated organizer note");
+
+  const clearedPlayerResponse = await handleCampaignRequest(
+    jsonRequest(
+      `https://worker.example/api/campaigns/${id}/players/${playerId}`,
+      "PATCH",
+      { notes: "" },
+      token,
+    ),
+    env,
+  );
+  assert.equal(clearedPlayerResponse.status, 200);
+  const withClearedPlayer = await clearedPlayerResponse.json();
+  assert.equal(withClearedPlayer.players[0].notes, "");
 
   const eventResponse = await handleCampaignRequest(
     jsonRequest(

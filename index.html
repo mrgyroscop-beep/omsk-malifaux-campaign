@@ -686,6 +686,33 @@
                 <div id="activeLoadoutSummary" class="active-loadout-summary"></div>
               </article>
 
+              <article class="ledger-card compact-card scrip-operations-card">
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Касса кампании</span>
+                    <h2>Операции со скрипом</h2>
+                  </div>
+                  <button class="page-ref" type="button" data-rules-pages="21,33">стр. 21, 33</button>
+                </div>
+                <p class="equipment-loadout-note">Начисление и расходы вне автоматического Aftermath.</p>
+                <form id="scripTransactionForm" class="scrip-transaction-form">
+                  <label class="field">
+                    <span>Количество</span>
+                    <input name="amount" type="number" min="1" max="100000" step="1" value="1" required />
+                  </label>
+                  <label class="field">
+                    <span>Причина или событие</span>
+                    <input name="reason" maxlength="240" placeholder="Недельное событие" />
+                  </label>
+                  <div class="scrip-transaction-actions">
+                    <button class="button button-ghost" type="submit" data-scrip-kind="credit">Начислить</button>
+                    <button class="button button-red" type="submit" data-scrip-kind="debit">Списать за доктора</button>
+                  </div>
+                </form>
+                <div class="scrip-transaction-heading">Последние операции</div>
+                <ul id="scripTransactionList" class="scrip-transaction-list"></ul>
+              </article>
+
               <article class="ledger-card compact-card">
                 <div class="card-title">
                   <div>
@@ -747,6 +774,11 @@
                   <label class="field">
                     <span>Выполнено схем</span>
                     <input name="schemes" type="number" min="0" max="3" value="0" />
+                  </label>
+                  <label class="field field-wide barter-flip-field">
+                    <span>Barter-флип</span>
+                    <input name="barterFlip" maxlength="80" placeholder="Например, 9 C/T или Red Joker" />
+                    <small>Сначала выполните один Barter-флип; продвижение откроется после сохранения результата.</small>
                   </label>
                 </div>
                 <div class="toggle-grid">
@@ -1336,6 +1368,25 @@
           </label>
         </div>
         <button class="button button-red button-wide" value="default">Добавить в арсенал</button>
+      </form>
+    </dialog>
+
+    <dialog id="modelCharacteristicsDialog" class="modal" aria-labelledby="modelCharacteristicsTitle">
+      <form method="dialog" id="modelCharacteristicsForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Постоянные изменения</span>
+            <h2 id="modelCharacteristicsTitle">Характеристики модели</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="modelCharacteristicsDialog" aria-label="Закрыть">×</button>
+        </div>
+        <p id="modelCharacteristicsTarget" class="injury-dialog-target"></p>
+        <label class="field field-wide">
+          <span>Новые характеристики</span>
+          <textarea name="characteristics" rows="4" maxlength="960" placeholder="Undead, Construct"></textarea>
+          <small>До 12 значений, разделённых запятыми или переносами строк.</small>
+        </label>
+        <button class="button button-red button-wide" value="default">Сохранить характеристики</button>
       </form>
     </dialog>
 

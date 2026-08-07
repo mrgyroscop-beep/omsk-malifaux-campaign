@@ -419,6 +419,10 @@
         "Облачное досье изменилось в другом окне. Я загрузил свежую версию; проверьте её перед повторным сохранением.",
         "The cloud dossier changed elsewhere. The latest version was loaded; review it before saving again.",
       ),
+      notes_not_saved: text(
+        "Сервер не подтвердил сохранение заметки. Повторите ввод и сохранение.",
+        "The server did not confirm the saved note. Enter it again and retry.",
+      ),
       rate_limited: text(
         "Слишком много изменений подряд. Подождите минуту.",
         "Too many changes in a short time. Wait a minute.",
@@ -922,6 +926,7 @@
   async function savePlayer(form) {
     const data = new FormData(form);
     const id = String(data.get("id") || "");
+    const requestedNotes = String(data.get("notes") ?? "").trim();
     const body = {
       playerName: data.get("playerName"),
       crewName: data.get("crewName"),
@@ -929,12 +934,12 @@
       campaignRating: Number(data.get("campaignRating") || 0),
       gamesPlayed: Number(data.get("gamesPlayed") || 0),
       wins: Number(data.get("wins") || 0),
-      notes: data.get("notes"),
+      notes: requestedNotes,
     };
     setBusy(true);
     try {
       const suffix = id ? `/players/${encodeURIComponent(id)}` : "/players";
-      cloudData = await api(
+      const updated = await api(
         `/api/campaigns/${encodeURIComponent(connection.campaignId)}${suffix}`,
         {
           method: id ? "PATCH" : "POST",
@@ -943,6 +948,16 @@
           body,
         },
       );
+      const savedPlayer = id
+        ? updated.players.find((player) => player.id === id)
+        : [...updated.players]
+            .reverse()
+            .find((player) => player.playerName === String(body.playerName || "").trim());
+      if (!savedPlayer || String(savedPlayer.notes || "") !== requestedNotes) {
+        cloudData = updated;
+        throw new ApiError(502, "notes_not_saved", updated);
+      }
+      cloudData = updated;
       editingPlayerId = null;
       notify("Таблица игроков обновлена.", "Player table updated.");
     } catch (error) {

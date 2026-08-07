@@ -116,6 +116,17 @@ const STATIC_TEXT_EN = {
   "Состав": "Roster",
   "Модели в арсенале": "Models in arsenal",
   "+ Добавить модель": "+ Add model",
+  "Операции со скрипом": "Scrip operations",
+  "Касса кампании": "Campaign till",
+  "Начисление и расходы вне автоматического Aftermath.":
+    "Income and expenses outside automatic Aftermath.",
+  "Количество": "Amount",
+  "Причина или событие": "Reason or event",
+  "Начислить": "Add scrip",
+  "Списать за доктора": "Pay the doctor",
+  "Последние операции": "Recent operations",
+  "Недельное событие": "Weekly event",
+  "стр. 21, 33": "pp. 21, 33",
   "Подготовка встречи": "Encounter setup",
   "Рейтинг кампании": "Campaign rating",
   "стр. 19": "p. 19",
@@ -151,6 +162,10 @@ const STATIC_TEXT_EN = {
   "Ход 3+: без базовой карты":
     "If the crew withdrew on or after the third turn, then the crew that did not withdraw may use any remaining turns to try to score VP.",
   "Выплата": "Payday",
+  "Barter-флип": "Barter flip",
+  "Сначала выполните один Barter-флип; продвижение откроется после сохранения результата.":
+    "Make one Barter flip first; advancement opens after its result is saved.",
+  "Например, 9 C/T или Red Joker": "For example, 9 C/T or Red Joker",
   "0 скрип": "0 scrip",
   "Опыт лидера": "Leader experience",
   "Записать в хронику": "Add to chronicle",
@@ -167,6 +182,11 @@ const STATIC_TEXT_EN = {
     "The English rules text below is reproduced verbatim from Index of the Untold.",
   "Цикл кампании": "Campaign flow",
   "Травмы": "Injuries",
+  "Характеристики модели": "Model characteristics",
+  "Новые характеристики": "New characteristics",
+  "До 12 значений, разделённых запятыми или переносами строк.":
+    "Up to 12 values separated by commas or line breaks.",
+  "Сохранить характеристики": "Save characteristics",
   "Добавить травму": "Add injury",
   "Поиск по названию или флипу": "Search by name or flip",
   "Название травмы или флип": "Injury name or flip",
@@ -1298,6 +1318,7 @@ const defaultState = {
     equipment: [],
     equipmentScripSpent: 0,
     scrip: 0,
+    scripTransactions: [],
   },
   loadout: {
     hiredModelIds: [],
@@ -1315,6 +1336,7 @@ let pendingAdvancementTalent = null;
 let returnToAdvancementAfterTalent = false;
 let activeCardView = null;
 let activeInjuryTarget = null;
+let activeModelCharacteristicsId = null;
 let modelSearchRequest = 0;
 let talentSearchRequest = 0;
 let modelSelectionRequest = 0;
@@ -1639,6 +1661,12 @@ function normalizeStoredModel(model) {
     versatile: Boolean(source.versatile),
     outOfKeyword: Boolean(source.outOfKeyword),
     modelLimit: safeInteger(source.modelLimit ?? snapshot?.count, 1, 1, 100),
+    characteristics: Array.isArray(source.characteristics)
+      ? [...new Set(source.characteristics
+          .slice(0, 12)
+          .map((value) => safeText(value, 80).trim())
+          .filter(Boolean))]
+      : [],
     injuries: normalizeStoredInjuries(source.injuries, id),
     addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
     scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
@@ -1648,6 +1676,19 @@ function normalizeStoredModel(model) {
         : safeExternalId(source.cardId, "card"),
     cardSlug: safeSlug(source.cardSlug || source.cardSnapshot?.slug) || null,
     cardSnapshot: snapshot,
+  };
+}
+
+function normalizeScripTransaction(transaction) {
+  const source = transaction && typeof transaction === "object" ? transaction : {};
+  const kind = source.kind === "debit" ? "debit" : "credit";
+  return {
+    id: safeIdentifier(source.id, "scrip-transaction"),
+    kind,
+    amount: safeInteger(source.amount, 1, 1, 100_000),
+    reason: safeText(source.reason, 240).trim(),
+    week: safeInteger(source.week, 1, 1, 99),
+    createdAt: safeText(source.createdAt, 80),
   };
 }
 
@@ -1948,6 +1989,7 @@ function normalizeStoredGame(game) {
     withdrewLate: Boolean(source.withdrewLate),
     gap: safeNumber(source.gap, 0, -1_000, 1_000),
     hand: safeNumber(source.hand, 0, 0, 100),
+    barterFlip: safeText(source.barterFlip, 80).trim(),
     scrip: safeNumber(source.scrip, 0, -1_000, 10_000),
     xp,
     creditedXp:
@@ -2665,6 +2707,11 @@ function mergeDefaults(saved) {
       scrip:
         safeNumber(savedArsenal.scrip, base.arsenal.scrip, -1_000, 100_000) +
         orphanedTotemRefund,
+      scripTransactions: Array.isArray(savedArsenal.scripTransactions)
+        ? savedArsenal.scripTransactions
+            .slice(-500)
+            .map(normalizeScripTransaction)
+        : [],
     },
     loadout: normalizedLoadout,
     games: Array.isArray(saved.games)
@@ -4590,6 +4637,34 @@ function setEquipmentAssignment(item, targetKey) {
   return true;
 }
 
+function modelCharacteristicsHtml(model) {
+  const values = Array.isArray(model.characteristics) ? model.characteristics : [];
+  if (!values.length) return "";
+  return `<span class="model-characteristics" aria-label="${escapeHtml(localized("Характеристики модели", "Model characteristics"))}">
+    ${values.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}
+  </span>`;
+}
+
+function renderScripTransactions() {
+  const ledger = document.querySelector("#scripTransactionList");
+  if (!ledger) return;
+  const entries = [...state.arsenal.scripTransactions].slice(-6).reverse();
+  ledger.innerHTML = entries.length
+    ? entries
+        .map((entry) => {
+          const sign = entry.kind === "debit" ? "−" : "+";
+          const fallback = entry.kind === "debit"
+            ? localized("Подпольный доктор", "Back-Alley Doctor")
+            : localized("Дополнительное начисление", "Additional income");
+          return `<li class="${entry.kind === "debit" ? "is-debit" : "is-credit"}">
+            <span><b>${sign}${escapeHtml(entry.amount)}</b> ${localized("скрип", "scrip")}</span>
+            <small>${escapeHtml(entry.reason || fallback)} · ${message("week", { n: entry.week })}</small>
+          </li>`;
+        })
+        .join("")
+    : `<li class="is-empty">${localized("Ручных операций пока нет.", "No manual operations yet.")}</li>`;
+}
+
 function renderArsenal() {
   repairLoadout();
   const { cost, injuriesCount } = arsenalTotals();
@@ -4602,6 +4677,7 @@ function renderArsenal() {
   document.querySelector("#ratingEquipment").value = assignedEquipmentCount();
   document.querySelector("#ratingAdvances").value = campaignAdvanceCount();
   document.querySelector("#ratingAdjustment").value = state.campaign.ratingAdjustment;
+  renderScripTransactions();
   renderActiveLoadoutSummary();
   const arsenalTotemShell = document.querySelector("#arsenalTotemCardShell");
   if (arsenalTotemShell) {
@@ -4631,6 +4707,7 @@ function renderArsenal() {
                   .filter(Boolean)
                   .join(" · "),
               )}</small>
+              ${modelCharacteristicsHtml(model)}
               ${model.cardSnapshot || model.cardSlug
                 ? `<button class="model-card-link" type="button" data-view-model-card="${escapeHtml(model.id)}">
                     ${message("openCard")} · ${message("cardCounts", {
@@ -4666,6 +4743,9 @@ function renderArsenal() {
               ${message(isModelHired(model.id) ? "modelInLoadout" : "modelOutsideLoadout")}
             </button>
             <span class="model-badge">${model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
+            <button class="model-characteristics-button" type="button" data-edit-model-characteristics="${escapeHtml(model.id)}">
+              ${localized("Характеристики", "Characteristics")}
+            </button>
             ${
               model.type === "Peon"
                 ? ""
@@ -4785,6 +4865,11 @@ function renderArsenal() {
       if (model) openStoredModelCard(model);
     });
   });
+  list.querySelectorAll("[data-edit-model-characteristics]").forEach((button) => {
+    button.addEventListener("click", () => openModelCharacteristicsDialog(
+      button.dataset.editModelCharacteristics,
+    ));
+  });
   equipmentWrap.querySelectorAll("[data-delete-equipment]").forEach((button) => {
     button.addEventListener("click", () => {
       state.arsenal.equipment = state.arsenal.equipment.filter(
@@ -4812,6 +4897,18 @@ function renderArsenal() {
       calculateRating();
     });
   });
+}
+
+function openModelCharacteristicsDialog(modelId) {
+  const model = state.arsenal.models.find((item) => item.id === modelId);
+  if (!model) return;
+  activeModelCharacteristicsId = model.id;
+  const form = document.querySelector("#modelCharacteristicsForm");
+  form.elements.characteristics.value = (model.characteristics || []).join(", ");
+  document.querySelector("#modelCharacteristicsTarget").textContent = model.name;
+  const dialog = document.querySelector("#modelCharacteristicsDialog");
+  if (!dialog.open) dialog.showModal();
+  form.elements.characteristics.focus();
 }
 
 function injuryTarget(kind, id = "") {
@@ -5307,6 +5404,11 @@ function renderChronicle() {
             <span>
               <b>${escapeHtml(opponent)}</b>
               <p>${message("week", { n: escapeHtml(game.week) })} · ${escapeHtml(game.vp)} VP · ${game.won ? message("resultWin") : game.lost ? message("resultLoss") : message("resultDraw")}</p>
+              ${game.withdrewEarly
+                ? `<small class="game-barter-result">${localized("Без Barter-флипа · ранний отход", "No Barter flip · early withdrawal")}</small>`
+                : game.barterFlip
+                  ? `<small class="game-barter-result">Barter: ${escapeHtml(game.barterFlip)}</small>`
+                  : ""}
               ${gameLoadoutHtml(game.loadoutSnapshot)}
             </span>
             <span class="game-entry-actions">
@@ -8892,6 +8994,67 @@ document.querySelector("#addModelButton").addEventListener("click", () => {
   document.querySelector("#modelCardSearch").focus();
 });
 
+document.querySelector("#modelCharacteristicsForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const model = state.arsenal.models.find((item) => item.id === activeModelCharacteristicsId);
+  if (!model) return;
+  const before = clone(model.characteristics || []);
+  model.characteristics = [...new Set(
+    String(event.currentTarget.elements.characteristics.value || "")
+      .split(/[,;\n]+/u)
+      .map((value) => safeText(value, 80).trim())
+      .filter(Boolean),
+  )].slice(0, 12);
+  if (!saveState()) {
+    model.characteristics = before;
+    return;
+  }
+  document.querySelector("#modelCharacteristicsDialog").close();
+  activeModelCharacteristicsId = null;
+  renderArsenal();
+  toast(localized("Характеристики модели сохранены.", "Model characteristics saved."));
+});
+
+document.querySelector("#scripTransactionForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const amount = safeInteger(event.currentTarget.elements.amount.value, 0, 0, 100_000);
+  const kind = event.submitter?.dataset.scripKind === "debit" ? "debit" : "credit";
+  if (amount < 1) {
+    event.currentTarget.elements.amount.focus();
+    return;
+  }
+  if (kind === "debit" && amount > Number(state.arsenal.scrip || 0)) {
+    toast(localized(
+      `Для списания нужно ${amount} скрип; доступно ${state.arsenal.scrip}.`,
+      `This expense requires ${amount} scrip; ${state.arsenal.scrip} is available.`,
+    ));
+    return;
+  }
+  const before = clone(state.arsenal);
+  const customReason = safeText(event.currentTarget.elements.reason.value, 240).trim();
+  state.arsenal.scrip += kind === "debit" ? -amount : amount;
+  state.arsenal.scripTransactions.push(normalizeScripTransaction({
+    id: `scrip-${uid()}`,
+    kind,
+    amount,
+    reason: customReason || (kind === "debit" ? "Подпольный доктор" : "Дополнительное начисление"),
+    week: state.campaign.week,
+    createdAt: new Date().toISOString(),
+  }));
+  state.arsenal.scripTransactions = state.arsenal.scripTransactions.slice(-500);
+  if (!saveState()) {
+    state.arsenal = before;
+    renderArsenal();
+    return;
+  }
+  event.currentTarget.reset();
+  event.currentTarget.elements.amount.value = 1;
+  renderArsenal();
+  toast(kind === "debit"
+    ? localized(`Списано ${amount} скрип за доктора.`, `${amount} scrip paid to the doctor.`)
+    : localized(`Начислено ${amount} скрип.`, `${amount} scrip added.`));
+});
+
 document
   .querySelector("#modelCardSearch")
   .addEventListener("input", debounce(() => runModelCardSearch(), 280));
@@ -8934,6 +9097,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     keywords: data.get("keywords").trim(),
     versatile: data.get("versatile") === "on",
     outOfKeyword: data.get("outOfKeyword") === "on",
+    characteristics: [],
     injuries: [],
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
@@ -9181,6 +9345,15 @@ document.querySelector("#gameForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const calculation = renderGamePreview();
   const data = new FormData(event.currentTarget);
+  const barterFlip = safeText(data.get("barterFlip"), 80).trim();
+  if (!calculation.withdrewEarly && !barterFlip) {
+    toast(localized(
+      "Сначала выполните Barter-флип и запишите его результат.",
+      "Make the Barter flip and record its result first.",
+    ));
+    event.currentTarget.elements.barterFlip.focus();
+    return;
+  }
   const before = clone(state);
   const loadoutSnapshot = currentLoadoutSnapshot();
   state.games.push({
@@ -9188,6 +9361,7 @@ document.querySelector("#gameForm").addEventListener("submit", (event) => {
     week: state.campaign.week,
     opponent: data.get("opponent").trim(),
     ...calculation,
+    barterFlip,
     loadoutSnapshot,
   });
   state.arsenal.scrip += calculation.scrip;

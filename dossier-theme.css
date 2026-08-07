@@ -3018,6 +3018,28 @@ body.theme-dossier {
   color: var(--dossier-brass-dark);
 }
 
+.theme-dossier .model-characteristics span {
+  color: var(--dossier-paper-light);
+  border-color: rgba(185, 154, 89, 0.5);
+  background: var(--folder);
+}
+
+.theme-dossier .model-characteristics-button {
+  color: var(--dossier-ink-soft);
+  border-color: rgba(91, 75, 48, 0.32);
+}
+
+.theme-dossier .scrip-operations-card {
+  background:
+    linear-gradient(145deg, rgba(185, 154, 89, 0.08), transparent 48%),
+    rgba(255, 255, 255, 0.1);
+}
+
+.theme-dossier .barter-flip-field {
+  border-left-color: var(--dossier-brass-dark);
+  background: rgba(185, 154, 89, 0.08);
+}
+
 .theme-dossier .mini-stepper button,
 .theme-dossier .row-delete,
 .theme-dossier .icon-button {

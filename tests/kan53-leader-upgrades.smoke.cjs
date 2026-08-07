@@ -291,6 +291,7 @@ async function addUpgrade(page, { title, effect, action = "" }) {
 
     await page.locator('[data-route="chronicle"]').click();
     await page.locator('#gameForm [name="opponent"]').fill("Snapshot rival");
+    await page.locator('#gameForm [name="barterFlip"]').fill("7 R/M");
     await page.locator("#gameForm").evaluate((form) => form.requestSubmit());
     await page.waitForFunction(() => window.MalifauxBuilder.getState().games.length === 1);
     const savedGame = await page.evaluate(() => window.MalifauxBuilder.getState().games[0]);
