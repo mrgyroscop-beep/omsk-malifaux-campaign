@@ -3027,6 +3027,26 @@ body.theme-dossier {
   background: rgba(159, 48, 40, 0.07);
 }
 
+.theme-dossier .doctor-intake {
+  border-color: rgba(159, 48, 40, 0.38);
+  border-left-color: var(--dossier-red);
+  background: linear-gradient(105deg, rgba(159, 48, 40, 0.09), transparent 64%);
+}
+
+.theme-dossier .doctor-step-number,
+.theme-dossier .doctor-receipt {
+  background: var(--dossier-ink);
+}
+
+.theme-dossier .doctor-secondary .doctor-step-number {
+  background: var(--dossier-red);
+}
+
+.theme-dossier .lucky-miss-chip {
+  border-color: rgba(151, 111, 30, 0.54);
+  background: rgba(151, 111, 30, 0.1);
+}
+
 .theme-dossier .model-card-link {
   color: var(--dossier-brass-dark);
 }

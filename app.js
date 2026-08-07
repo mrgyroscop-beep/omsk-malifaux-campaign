@@ -124,6 +124,37 @@ const STATIC_TEXT_EN = {
   "Причина или событие": "Reason or event",
   "Начислить": "Add scrip",
   "Списать за доктора": "Pay the doctor",
+  "Списать": "Spend scrip",
+  "Aftermath · фаза 5": "Aftermath · phase 5",
+  "Подпольный доктор": "Back-Alley Doctor",
+  "стр. 33, 36": "pp. 33, 36",
+  "1 скрип · попытка": "1 scrip · attempt",
+  "Выберите травму и зафиксируйте итог физических флипов. Доктор оставляет скрип при любом результате.":
+    "Choose an injury and record the final physical flips. The doctor keeps the scrip whatever the result.",
+  "Начать приём": "Start visit",
+  "Back-Alley Doctor · квитанция": "Back-Alley Doctor · receipt",
+  "Зафиксировать приём": "Record visit",
+  "Пациент": "Patient",
+  "Выберите модель и травму": "Choose model and injury",
+  "Модель": "Model",
+  "Травма для лечения": "Injury to treat",
+  "Физический флип": "Physical flip",
+  "Запишите итоговую карту": "Record the final card",
+  "Карта подпольного доктора": "Back-Alley Doctor card",
+  "Результат был читерским": "The result was cheated",
+  "Итоговая карта взята из Aftermath hand": "The final card came from the Aftermath hand",
+  "Второй физический флип": "Second physical flip",
+  "Запишите итог второй таблицы": "Record the second table result",
+  "Итог по таблице травм": "Injury table result",
+  "Итог по таблице Lucky Miss": "Lucky Miss table result",
+  "Второй результат был читерским": "The second result was cheated",
+  "Зафиксировать карту из Aftermath hand": "Record a card from the Aftermath hand",
+  "До подтверждения": "Before confirmation",
+  "Выберите результат": "Choose a result",
+  "Списание и изменения модели сохраняются одной операцией.":
+    "The payment and model changes are saved as one operation.",
+  "Отмена": "Cancel",
+  "Применить и заплатить 1 скрип": "Apply and pay 1 scrip",
   "Последние операции": "Recent operations",
   "Недельное событие": "Weekly event",
   "стр. 21, 33": "pp. 21, 33",
@@ -1229,6 +1260,18 @@ const luckyMissEquipment = [
   { group: "lucky-miss", free: true, ratingExempt: true },
 ]);
 
+const luckyMissCatalog = Object.freeze(
+  luckyMissEquipment.map(([name, , , effect, effectEn], index) =>
+    Object.freeze({
+      id: `lucky-miss-${String(index + 1).padStart(2, "0")}`,
+      flip: index < 13 ? String(index + 1) : "joker",
+      name,
+      effect,
+      effectEn,
+    }),
+  ),
+);
+
 const equipment = [
   ...barterEquipment.map((entry) => [...entry, { group: "barter" }]),
   ...thoseWhoThirstEquipment,
@@ -1324,6 +1367,7 @@ const defaultState = {
     advances: [],
     manualUpgrades: [],
     injuries: [],
+    luckyMissUpgrades: [],
     totem: null,
   },
   arsenal: {
@@ -1654,6 +1698,32 @@ function normalizeStoredInjuries(value, ownerId = "model") {
     .filter((injury) => injury.name);
 }
 
+function normalizeLuckyMissUpgrades(value, ownerId = "model") {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, 100)
+    .map((record, index) => {
+      const source = record && typeof record === "object" && !Array.isArray(record) ? record : {};
+      const flip = /^(?:[1-9]|1[0-3]|black-joker|red-joker|joker)$/u.test(String(source.flip || ""))
+        ? String(source.flip)
+        : "";
+      const catalogEntry = luckyMissCatalog.find(
+        (entry) => entry.id === source.catalogId || entry.flip === flip || entry.name === source.name,
+      );
+      return {
+        id: safeIdentifier(source.id, `${ownerId}-lucky-miss-${index + 1}`),
+        catalogId: catalogEntry?.id || safeText(source.catalogId, 96) || null,
+        name: safeText(source.name, 200) || catalogEntry?.name || "Lucky Miss",
+        effect: safeText(source.effect, 4_000) || catalogEntry?.effect || "",
+        effectEn: safeText(source.effectEn, 4_000) || catalogEntry?.effectEn || "",
+        flip: flip || catalogEntry?.flip || "",
+        cheated: Boolean(source.cheated),
+        week: safeInteger(source.week, 1, 1, 99),
+      };
+    })
+    .filter((record) => record.name);
+}
+
 function injuryCount(value) {
   return Array.isArray(value) ? value.length : safeInteger(value, 0, 0, 100);
 }
@@ -1681,6 +1751,7 @@ function normalizeStoredModel(model) {
           .filter(Boolean))]
       : [],
     injuries: normalizeStoredInjuries(source.injuries, id),
+    luckyMissUpgrades: normalizeLuckyMissUpgrades(source.luckyMissUpgrades, id),
     addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
     scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
     acquisition: source.acquisition === "traitor" ? "traitor" : "",
@@ -1690,6 +1761,32 @@ function normalizeStoredModel(model) {
         : safeExternalId(source.cardId, "card"),
     cardSlug: safeSlug(source.cardSlug || source.cardSnapshot?.slug) || null,
     cardSnapshot: snapshot,
+  };
+}
+
+function normalizeDoctorVisit(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const secondaryTable = ["injury", "lucky-miss"].includes(value.secondary?.table)
+    ? value.secondary.table
+    : "";
+  return {
+    targetKind: ["leader", "model", "totem"].includes(value.targetKind)
+      ? value.targetKind
+      : "model",
+    targetId: safeText(value.targetId, 96),
+    targetName: safeText(value.targetName, 200),
+    injuryId: safeText(value.injuryId, 96),
+    injuryName: safeText(value.injuryName, 200),
+    main: normalizeStoredFlip(value.main),
+    secondary: secondaryTable
+      ? {
+          table: secondaryTable,
+          card: safeText(value.secondary.card, 32),
+          cheated: Boolean(value.secondary.cheated),
+          resultName: safeText(value.secondary.resultName, 200),
+        }
+      : null,
+    outcome: safeText(value.outcome, 500),
   };
 }
 
@@ -1703,6 +1800,7 @@ function normalizeScripTransaction(transaction) {
     reason: safeText(source.reason, 240).trim(),
     week: safeInteger(source.week, 1, 1, 99),
     createdAt: safeText(source.createdAt, 80),
+    doctorVisit: normalizeDoctorVisit(source.doctorVisit),
   };
 }
 
@@ -1916,6 +2014,10 @@ function normalizeStoredLoadoutMember(member, fallbackRole) {
     type: safeText(source.type, 80),
     henchman: Boolean(source.henchman),
     injuries: normalizeStoredInjuries(source.injuries, safeIdentifier(source.id, fallbackRole)),
+    luckyMissUpgrades: normalizeLuckyMissUpgrades(
+      source.luckyMissUpgrades,
+      safeIdentifier(source.id, fallbackRole),
+    ),
     abilities: Array.isArray(source.abilities)
       ? source.abilities
           .slice(0, 100)
@@ -2090,10 +2192,11 @@ function normalizeStoredTotem(totem, sourceAdvancement, leaderKeywords = []) {
     size: safeInteger(stored.size, 1, 1, 4),
     base: [30, 40, 50].includes(base) ? base : 30,
     characteristics: characteristics
-      .slice(0, 2)
+      .slice(0, 12)
       .map((value) => safeText(value, 100))
       .filter(Boolean),
     injuries: normalizeStoredInjuries(stored.injuries, id),
+    luckyMissUpgrades: normalizeLuckyMissUpgrades(stored.luckyMissUpgrades, id),
     sourceAdvancementId: sourceId,
     acquiredBy: sourceId,
     cost: 0,
@@ -2696,9 +2799,15 @@ function mergeDefaults(saved) {
     leader: {
       name: safeText(savedLeader.name, 200),
       archetype: archetypes[savedLeader.archetype] ? savedLeader.archetype : "",
-      characteristics: [0, 1].map((index) =>
-        safeText(savedLeader.characteristics?.[index], 200),
-      ),
+      characteristics: [
+        ...[0, 1].map((index) => safeText(savedLeader.characteristics?.[index], 200)),
+        ...(Array.isArray(savedLeader.characteristics)
+          ? savedLeader.characteristics
+              .slice(2, 12)
+              .map((value) => safeText(value, 200))
+              .filter(Boolean)
+          : []),
+      ],
       size: safeInteger(savedLeader.size, base.leader.size, 1, 10),
       base: safeInteger(savedLeader.base, base.leader.base, 1, 100),
       path: ["Bruiser", "Strategist"].includes(savedLeader.path)
@@ -2710,6 +2819,7 @@ function mergeDefaults(saved) {
       advances,
       manualUpgrades: normalizeStoredManualUpgrades(savedLeader.manualUpgrades),
       injuries: normalizeStoredInjuries(savedLeader.injuries, "leader"),
+      luckyMissUpgrades: normalizeLuckyMissUpgrades(savedLeader.luckyMissUpgrades, "leader"),
       totem,
     },
     arsenal: {
@@ -4377,6 +4487,7 @@ function currentLoadoutSnapshot() {
       type: state.leader.archetype || "",
       henchman: false,
       injuries: clone(state.leader.injuries),
+      luckyMissUpgrades: clone(state.leader.luckyMissUpgrades || []),
       abilities: abilityRecords("leader"),
       manualUpgrades: clone(state.leader.manualUpgrades),
       equipment: snapshotEquipment(equipmentAssignedTo("leader")),
@@ -4391,6 +4502,7 @@ function currentLoadoutSnapshot() {
         type: displayModelType(model.type),
         henchman: Boolean(model.henchman),
         injuries: clone(model.injuries),
+        luckyMissUpgrades: clone(model.luckyMissUpgrades || []),
         abilities: [],
         equipment: snapshotEquipment(equipmentAssignedTo("model", model.id)),
       })),
@@ -4405,6 +4517,7 @@ function currentLoadoutSnapshot() {
             message("equipmentTotemTarget"),
           henchman: false,
           injuries: clone(state.leader.totem.injuries),
+          luckyMissUpgrades: clone(state.leader.totem.luckyMissUpgrades || []),
           abilities: abilityRecords("totem"),
           equipment: snapshotEquipment(equipmentAssignedTo("totem")),
         }
@@ -4469,6 +4582,21 @@ function injuryListHtml(
     .join("")}</span>`;
 }
 
+function luckyMissListHtml(records) {
+  const items = Array.isArray(records) ? records : [];
+  if (!items.length) return "";
+  return `<span class="lucky-miss-list">${items
+    .map((record) => {
+      const effect = currentLocale === "en" && record.effectEn ? record.effectEn : record.effect;
+      const flip = record.flip === "joker" ? localized("Joker", "Joker") : record.flip;
+      return `<span class="lucky-miss-chip" title="${escapeHtml(effect)}">
+        <b>Lucky Miss · ${escapeHtml(record.name)}</b>
+        <small>${escapeHtml(flip)}${record.cheated ? ` · ${localized("читинг", "cheated")}` : ""}</small>
+      </span>`;
+    })
+    .join("")}</span>`;
+}
+
 function loadoutMemberHtml(member, { compact = false } = {}) {
   const role =
     member.role === "leader"
@@ -4515,6 +4643,14 @@ function loadoutMemberHtml(member, { compact = false } = {}) {
           <b>${localized("Травмы", "Injuries")}</b>
           ${injuryListHtml(member.injuries) || `<span class="permanent-empty">—</span>`}
         </div>
+        ${
+          member.luckyMissUpgrades?.length
+            ? `<div class="loadout-permanent-section" data-loadout-section="lucky-miss">
+                <b>Lucky Miss</b>
+                ${luckyMissListHtml(member.luckyMissUpgrades)}
+              </div>`
+            : ""
+        }
         ${loadoutEquipmentHtml(member.equipment || [])}
       </div>
     </div>`;
@@ -4672,7 +4808,7 @@ function renderScripTransactions() {
         .map((entry) => {
           const sign = entry.kind === "debit" ? "−" : "+";
           const fallback = entry.kind === "debit"
-            ? localized("Подпольный доктор", "Back-Alley Doctor")
+            ? localized("Ручное списание", "Manual expense")
             : localized("Дополнительное начисление", "Additional income");
           return `<li class="${entry.kind === "debit" ? "is-debit" : "is-credit"}">
             <span><b>${sign}${escapeHtml(entry.amount)}</b> ${localized("скрип", "scrip")}</span>
@@ -4681,6 +4817,367 @@ function renderScripTransactions() {
         })
         .join("")
     : `<li class="is-empty">${localized("Ручных операций пока нет.", "No manual operations yet.")}</li>`;
+}
+
+function doctorTargets() {
+  const targets = [];
+  if (injuryCount(state.leader.injuries)) {
+    targets.push({
+      key: "leader",
+      kind: "leader",
+      id: "",
+      name: state.leader.name || localized("Лидер", "Leader"),
+      target: state.leader,
+    });
+  }
+  state.arsenal.models.forEach((model) => {
+    if (model.type !== "Peon" && injuryCount(model.injuries)) {
+      targets.push({
+        key: `model:${model.id}`,
+        kind: "model",
+        id: model.id,
+        name: model.name || localized("Модель без имени", "Unnamed model"),
+        target: model,
+      });
+    }
+  });
+  if (state.leader.totem && injuryCount(state.leader.totem.injuries)) {
+    targets.push({
+      key: "totem",
+      kind: "totem",
+      id: "",
+      name: state.leader.totem.name || localized("Тотем", "Totem"),
+      target: state.leader.totem,
+    });
+  }
+  return targets;
+}
+
+function doctorTargetByKey(key) {
+  return doctorTargets().find((entry) => entry.key === key) || null;
+}
+
+function doctorCardLabel(card) {
+  if (card === "black-joker") return "Black Joker";
+  if (card === "red-joker") return "Red Joker";
+  return String(card || "—");
+}
+
+function doctorSecondaryType(card, cheated) {
+  if (card === "black-joker" || card === "9") return "injury";
+  if (card === "red-joker" && !cheated) return "lucky-miss";
+  return "";
+}
+
+function doctorMainOutcome(card, cheated) {
+  const value = Number(card);
+  if (card === "black-joker") return "add-injury";
+  if (value >= 1 && value <= 8) return "keep-injury";
+  if (value === 9) return "replace-injury";
+  if (value === 10) return "undead";
+  if (value === 11) return "construct";
+  if (value === 12 || value === 13) return "remove-injury";
+  if (card === "red-joker") return cheated ? "remove-injury" : "lucky-miss";
+  return "";
+}
+
+function validDoctorInjuryResults() {
+  const ignored = new Set([
+    canonical("Traitor"),
+    canonical("Just a Flesh Wound"),
+    canonical("Killed Off"),
+    canonical("Close Call"),
+  ]);
+  return injuryCatalog.filter((entry) => !ignored.has(canonical(entry.name)));
+}
+
+function doctorPreview(form = document.querySelector("#doctorForm")) {
+  if (!form) return { valid: false, text: "" };
+  const targetEntry = doctorTargetByKey(form.elements.target.value);
+  const injury = targetEntry?.target.injuries.find(
+    (item) => item.id === form.elements.injury.value,
+  );
+  const card = form.elements.mainCard.value;
+  const cheated = form.elements.mainCheated.checked;
+  const outcome = doctorMainOutcome(card, cheated);
+  const secondaryType = doctorSecondaryType(card, cheated);
+  const secondaryInjury = validDoctorInjuryResults().find(
+    (entry) => entry.id === form.elements.secondaryInjury.value,
+  );
+  const secondaryLucky = luckyMissCatalog.find(
+    (entry) => entry.id === form.elements.secondaryLucky.value,
+  );
+  let text = "";
+  if (outcome === "add-injury") {
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» останется; модель получит «${secondaryInjury?.name || "—"}».`,
+      `“${injuryRecordName(injury)}” remains; the model gains “${secondaryInjury?.name || "—"}”.`,
+    );
+  } else if (outcome === "keep-injury") {
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» останется без изменений.`,
+      `“${injuryRecordName(injury)}” remains unchanged.`,
+    );
+  } else if (outcome === "replace-injury") {
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» будет удалена; модель получит «${secondaryInjury?.name || "—"}».`,
+      `“${injuryRecordName(injury)}” is removed; the model gains “${secondaryInjury?.name || "—"}”.`,
+    );
+  } else if (outcome === "undead" || outcome === "construct") {
+    const characteristic = outcome === "undead" ? "Undead" : "Construct";
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» будет удалена; модель получит характеристику ${characteristic}.`,
+      `“${injuryRecordName(injury)}” is removed; the model gains the ${characteristic} characteristic.`,
+    );
+  } else if (outcome === "remove-injury") {
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» будет удалена.`,
+      `“${injuryRecordName(injury)}” is removed.`,
+    );
+  } else if (outcome === "lucky-miss") {
+    text = localized(
+      `Травма «${injuryRecordName(injury)}» будет удалена; зафиксируется Lucky Miss «${secondaryLucky?.name || "—"}».`,
+      `“${injuryRecordName(injury)}” is removed; Lucky Miss “${secondaryLucky?.name || "—"}” is recorded.`,
+    );
+  }
+  const secondaryValid =
+    !secondaryType ||
+    (secondaryType === "injury" ? Boolean(secondaryInjury) : Boolean(secondaryLucky));
+  return {
+    valid: Boolean(targetEntry && injury && outcome && secondaryValid && state.arsenal.scrip >= 1),
+    targetEntry,
+    injury,
+    card,
+    cheated,
+    outcome,
+    secondaryType,
+    secondaryInjury,
+    secondaryLucky,
+    text,
+  };
+}
+
+function renderDoctorCard() {
+  const availability = document.querySelector("#doctorAvailability");
+  const history = document.querySelector("#doctorHistory");
+  const button = document.querySelector("#openDoctorButton");
+  if (!availability || !history || !button) return;
+  const targets = doctorTargets();
+  const ready = targets.length > 0 && state.arsenal.scrip >= 1;
+  availability.classList.toggle("is-blocked", !ready);
+  availability.textContent = !targets.length
+    ? localized("Нет моделей с травмами для лечения.", "No injured models are available for treatment.")
+    : state.arsenal.scrip < 1
+      ? localized("Для попытки нужен 1 скрип.", "The attempt requires 1 scrip.")
+      : localized(
+          `Доступно пациентов: ${targets.length} · в кассе ${state.arsenal.scrip} скрип.`,
+          `${targets.length} patients available · ${state.arsenal.scrip} scrip in the till.`,
+        );
+  button.disabled = !ready;
+  const visits = state.arsenal.scripTransactions
+    .filter((entry) => entry.doctorVisit)
+    .slice(-3)
+    .reverse();
+  history.innerHTML = visits.length
+    ? visits
+        .map((entry) => {
+          const visit = entry.doctorVisit;
+          const main = `${doctorCardLabel(visit.main.card)}${visit.main.cheated ? ` · ${localized("читинг", "cheated")}` : ""}`;
+          const secondary = visit.secondary
+            ? ` → ${visit.secondary.resultName || doctorCardLabel(visit.secondary.card)}${visit.secondary.cheated ? ` · ${localized("читинг", "cheated")}` : ""}`
+            : "";
+          return `<div class="doctor-history-entry">
+            <span>${message("week", { n: entry.week })}</span>
+            <div><b>${escapeHtml(visit.targetName)} · ${escapeHtml(visit.injuryName)}</b>
+            <small>${escapeHtml(`${main}${secondary}`)} · ${escapeHtml(visit.outcome)}</small></div>
+          </div>`;
+        })
+        .join("")
+    : "";
+}
+
+function syncDoctorForm({ targetChanged = false } = {}) {
+  const form = document.querySelector("#doctorForm");
+  if (!form) return;
+  const targetEntry = doctorTargetByKey(form.elements.target.value);
+  const previousInjury = targetChanged ? "" : form.elements.injury.value;
+  form.elements.injury.innerHTML = (targetEntry?.target.injuries || [])
+    .map(
+      (injury) => `<option value="${escapeHtml(injury.id)}">${escapeHtml(injuryRecordName(injury))} · ${escapeHtml(displayFlip(injury.flip))}</option>`,
+    )
+    .join("");
+  if (previousInjury && targetEntry?.target.injuries.some((injury) => injury.id === previousInjury)) {
+    form.elements.injury.value = previousInjury;
+  }
+  const card = form.elements.mainCard.value;
+  const cheated = form.elements.mainCheated.checked;
+  const secondaryType = doctorSecondaryType(card, cheated);
+  const secondary = document.querySelector("#doctorSecondary");
+  const injuryField = document.querySelector("#doctorSecondaryInjuryField");
+  const luckyField = document.querySelector("#doctorSecondaryLuckyField");
+  secondary.hidden = !secondaryType;
+  injuryField.hidden = secondaryType !== "injury";
+  luckyField.hidden = secondaryType !== "lucky-miss";
+  form.elements.secondaryInjury.required = secondaryType === "injury";
+  form.elements.secondaryLucky.required = secondaryType === "lucky-miss";
+  document.querySelector("#doctorSecondaryTitle").textContent = secondaryType === "injury"
+    ? localized("Итог по таблице травм", "Injury table result")
+    : localized("Итог по таблице Lucky Miss", "Lucky Miss table result");
+  document.querySelector("#doctorSecondaryRule").textContent = secondaryType === "injury"
+    ? localized(
+        "Укажите финальный результат после обязательных перебросов Joker, Killed Off и результатов без травмы.",
+        "Enter the final result after mandatory reflips of Jokers, Killed Off, and no-injury results.",
+      )
+    : localized(
+        "Укажите итог физического Lucky Miss-флипа. Этот флип также можно читить.",
+        "Enter the physical Lucky Miss result. This flip may also be cheated.",
+      );
+  const preview = doctorPreview(form);
+  document.querySelector("#doctorPreviewTitle").textContent = preview.valid
+    ? localized("Готово к подтверждению", "Ready to confirm")
+    : localized("Заполните квитанцию", "Complete the receipt");
+  document.querySelector("#doctorPreviewText").textContent = preview.text;
+  document.querySelector("#doctorSubmit").disabled = !preview.valid;
+}
+
+function openDoctorDialog() {
+  const targets = doctorTargets();
+  if (!targets.length) {
+    toast(localized("Нет моделей с травмами для лечения.", "No injured models are available for treatment."));
+    return;
+  }
+  if (state.arsenal.scrip < 1) {
+    toast(localized("Для попытки нужен 1 скрип.", "The attempt requires 1 scrip."));
+    return;
+  }
+  const form = document.querySelector("#doctorForm");
+  form.reset();
+  form.elements.target.innerHTML = targets
+    .map((entry) => `<option value="${escapeHtml(entry.key)}">${escapeHtml(entry.name)} · ${injuryCount(entry.target.injuries)}</option>`)
+    .join("");
+  form.elements.mainCard.value = "6";
+  form.elements.secondaryInjury.innerHTML = validDoctorInjuryResults()
+    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(displayFlip(entry.flip))} · ${escapeHtml(entry.name)}</option>`)
+    .join("");
+  form.elements.secondaryLucky.innerHTML = luckyMissCatalog
+    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.flip === "joker" ? "Any Joker" : entry.flip)} · ${escapeHtml(entry.name)}</option>`)
+    .join("");
+  syncDoctorForm({ targetChanged: true });
+  const dialog = document.querySelector("#doctorDialog");
+  if (!dialog.open) dialog.showModal();
+  form.elements.target.focus();
+}
+
+function submitDoctorVisit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const preview = doctorPreview(form);
+  if (!preview.valid) {
+    syncDoctorForm();
+    return;
+  }
+  if (
+    preview.secondaryType === "injury" &&
+    preview.secondaryInjury &&
+    preview.targetEntry.target.injuries.some(
+      (injury) =>
+        canonical(injuryRecordName(injury)) === canonical(preview.secondaryInjury.name) &&
+        !(preview.outcome === "replace-injury" && injury.id === preview.injury.id),
+    )
+  ) {
+    toast(localized(
+      "Эта травма уже есть у модели: по правилам нужно перебросить физическую карту.",
+      "The model already has this injury; reflip the physical card.",
+    ));
+    return;
+  }
+  const before = clone(state);
+  const target = preview.targetEntry.target;
+  if (["replace-injury", "undead", "construct", "remove-injury", "lucky-miss"].includes(preview.outcome)) {
+    target.injuries = target.injuries.filter((injury) => injury.id !== preview.injury.id);
+  }
+  if (["add-injury", "replace-injury"].includes(preview.outcome)) {
+    const injury = preview.secondaryInjury;
+    target.injuries.push({
+      id: `injury-instance-${uid()}`,
+      catalogId: injury.id,
+      name: injury.name,
+      nameEn: injury.name,
+      effect: injury.effect,
+      effectEn: injury.effectEn,
+      flip: injury.flip,
+      week: state.campaign.week,
+    });
+  }
+  if (["undead", "construct"].includes(preview.outcome)) {
+    const characteristic = preview.outcome === "undead" ? "Undead" : "Construct";
+    target.characteristics = Array.isArray(target.characteristics) ? target.characteristics : [];
+    if (!target.characteristics.some((value) => canonical(value) === canonical(characteristic))) {
+      target.characteristics.push(characteristic);
+    }
+  }
+  if (preview.outcome === "lucky-miss") {
+    const result = preview.secondaryLucky;
+    target.luckyMissUpgrades = Array.isArray(target.luckyMissUpgrades)
+      ? target.luckyMissUpgrades
+      : [];
+    target.luckyMissUpgrades.push({
+      id: `lucky-miss-${uid()}`,
+      catalogId: result.id,
+      name: result.name,
+      effect: result.effect,
+      effectEn: result.effectEn,
+      flip: result.flip,
+      cheated: form.elements.secondaryCheated.checked,
+      week: state.campaign.week,
+    });
+  }
+  state.arsenal.scrip -= 1;
+  const secondary = preview.secondaryType === "injury"
+    ? {
+        table: "injury",
+        card: preview.secondaryInjury.flip,
+        cheated: form.elements.secondaryCheated.checked,
+        resultName: preview.secondaryInjury.name,
+      }
+    : preview.secondaryType === "lucky-miss"
+      ? {
+          table: "lucky-miss",
+          card: preview.secondaryLucky.flip,
+          cheated: form.elements.secondaryCheated.checked,
+          resultName: preview.secondaryLucky.name,
+        }
+      : null;
+  state.arsenal.scripTransactions.push(normalizeScripTransaction({
+    id: `scrip-${uid()}`,
+    kind: "debit",
+    amount: 1,
+    reason: `${localized("Подпольный доктор", "Back-Alley Doctor")} · ${preview.targetEntry.name}`,
+    week: state.campaign.week,
+    createdAt: new Date().toISOString(),
+    doctorVisit: {
+      targetKind: preview.targetEntry.kind,
+      targetId: preview.targetEntry.id,
+      targetName: preview.targetEntry.name,
+      injuryId: preview.injury.id,
+      injuryName: injuryRecordName(preview.injury),
+      main: { card: preview.card, cheated: preview.cheated },
+      secondary,
+      outcome: preview.text,
+    },
+  }));
+  state.arsenal.scripTransactions = state.arsenal.scripTransactions.slice(-500);
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return;
+  }
+  document.querySelector("#doctorDialog").close();
+  renderLeaderPermanentRecords();
+  renderArsenal();
+  renderTotemCard();
+  calculateRating();
+  toast(localized("Приём сохранён. Списан 1 скрип.", "Visit saved. 1 scrip paid."));
 }
 
 function renderArsenal() {
@@ -4696,6 +5193,7 @@ function renderArsenal() {
   document.querySelector("#ratingAdvances").value = campaignAdvanceCount();
   document.querySelector("#ratingAdjustment").value = state.campaign.ratingAdjustment;
   renderScripTransactions();
+  renderDoctorCard();
   renderActiveLoadoutSummary();
   const arsenalTotemShell = document.querySelector("#arsenalTotemCardShell");
   if (arsenalTotemShell) {
@@ -4746,6 +5244,7 @@ function renderArsenal() {
                 targetId: model.id,
                 removable: model.type !== "Peon",
               })}
+              ${luckyMissListHtml(model.luckyMissUpgrades)}
             </span>
             <button
               class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
@@ -5089,6 +5588,17 @@ function renderLeaderPermanentRecords() {
         ${message("addInjury")}
       </button>
     </section>
+    ${
+      state.leader.luckyMissUpgrades.length
+        ? `<section class="permanent-record-section" data-permanent-section="lucky-miss">
+            <div class="permanent-record-heading">
+              <span>Lucky Miss</span>
+              <b>${state.leader.luckyMissUpgrades.length}</b>
+            </div>
+            ${luckyMissListHtml(state.leader.luckyMissUpgrades)}
+          </section>`
+        : ""
+    }
     <section class="permanent-record-section manual-upgrade-section" data-permanent-section="manual-upgrades">
       <div class="permanent-record-heading">
         <span>${localized("Улучшения", "Upgrades")}</span>
@@ -6732,6 +7242,17 @@ function renderTotemCard(selector = "#totemCard") {
             ${message("addInjury")}
           </button>
         </section>
+        ${
+          (totem.luckyMissUpgrades || []).length
+            ? `<section class="permanent-record-section" data-permanent-section="lucky-miss">
+                <div class="permanent-record-heading">
+                  <span>Lucky Miss</span>
+                  <b>${(totem.luckyMissUpgrades || []).length}</b>
+                </div>
+                ${luckyMissListHtml(totem.luckyMissUpgrades || [])}
+              </section>`
+            : ""
+        }
       </div>
       <div class="totem-stat-strip">
         ${[
@@ -9081,7 +9602,7 @@ document.querySelector("#scripTransactionForm").addEventListener("submit", (even
     id: `scrip-${uid()}`,
     kind,
     amount,
-    reason: customReason || (kind === "debit" ? "Подпольный доктор" : "Дополнительное начисление"),
+    reason: customReason || (kind === "debit" ? "Ручное списание" : "Дополнительное начисление"),
     week: state.campaign.week,
     createdAt: new Date().toISOString(),
   }));
@@ -9095,9 +9616,15 @@ document.querySelector("#scripTransactionForm").addEventListener("submit", (even
   event.currentTarget.elements.amount.value = 1;
   renderArsenal();
   toast(kind === "debit"
-    ? localized(`Списано ${amount} скрип за доктора.`, `${amount} scrip paid to the doctor.`)
+    ? localized(`Списано ${amount} скрип.`, `${amount} scrip spent.`)
     : localized(`Начислено ${amount} скрип.`, `${amount} scrip added.`));
 });
+
+document.querySelector("#openDoctorButton").addEventListener("click", openDoctorDialog);
+document.querySelector("#doctorForm").addEventListener("change", (event) => {
+  syncDoctorForm({ targetChanged: event.target.name === "target" });
+});
+document.querySelector("#doctorForm").addEventListener("submit", submitDoctorVisit);
 
 document
   .querySelector("#modelCardSearch")
@@ -9148,6 +9675,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     outOfKeyword: traitorTransfer ? false : data.get("outOfKeyword") === "on",
     characteristics: [],
     injuries: [],
+    luckyMissUpgrades: [],
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
     cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,

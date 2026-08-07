@@ -1556,6 +1556,274 @@ h1 {
   background: rgba(156, 40, 36, 0.06);
 }
 
+.doctor-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.doctor-card::after {
+  position: absolute;
+  right: -18px;
+  bottom: -28px;
+  width: 132px;
+  height: 132px;
+  border: 2px solid rgba(156, 40, 36, 0.12);
+  border-radius: 50%;
+  content: "Rx";
+  color: rgba(156, 40, 36, 0.1);
+  font-family: var(--serif);
+  font-size: 54px;
+  font-style: italic;
+  line-height: 128px;
+  text-align: center;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.doctor-intake {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid rgba(156, 40, 36, 0.34);
+  border-left: 5px solid var(--red);
+  background: linear-gradient(105deg, rgba(156, 40, 36, 0.08), transparent 64%);
+}
+
+.doctor-intake-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.doctor-intake-copy p,
+.doctor-secondary-rule,
+.doctor-receipt p {
+  margin: 0;
+}
+
+.doctor-stamp {
+  width: max-content;
+  padding: 4px 8px 3px;
+  color: var(--red);
+  border: 1px solid currentColor;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-1deg);
+}
+
+.doctor-availability {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.doctor-availability.is-blocked {
+  color: var(--red);
+}
+
+.doctor-history {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.doctor-history-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.doctor-history-entry > span {
+  color: var(--red);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doctor-history-entry b,
+.doctor-history-entry small {
+  display: block;
+}
+
+.doctor-history-entry small {
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.doctor-form {
+  display: grid;
+  gap: 14px;
+}
+
+.doctor-step {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.doctor-step-number {
+  display: grid;
+  place-items: center;
+  color: var(--paper-bright);
+  background: var(--ink);
+  font-family: var(--serif);
+  font-size: 19px;
+}
+
+.doctor-step-body {
+  padding: 16px;
+}
+
+.doctor-step-body h3 {
+  margin: 3px 0 14px;
+  font-family: var(--serif);
+  font-size: 19px;
+}
+
+.doctor-flip-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.9fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.doctor-cheat-tile {
+  min-height: 58px;
+}
+
+.doctor-secondary {
+  border-color: rgba(156, 40, 36, 0.44);
+}
+
+.doctor-secondary[hidden],
+.doctor-flip-row > [hidden] {
+  display: none;
+}
+
+.doctor-secondary .doctor-step-number {
+  background: var(--red);
+}
+
+.doctor-secondary-rule {
+  margin: -7px 0 13px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.doctor-receipt {
+  display: grid;
+  gap: 7px;
+  padding: 16px 18px;
+  color: var(--paper-bright);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--ink);
+}
+
+.doctor-receipt > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.doctor-receipt span,
+.doctor-receipt small {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doctor-receipt b {
+  color: var(--gold);
+  font-family: var(--serif);
+  font-size: 18px;
+}
+
+.doctor-receipt p {
+  line-height: 1.5;
+}
+
+.doctor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.lucky-miss-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.lucky-miss-chip {
+  display: inline-grid;
+  gap: 2px;
+  max-width: 100%;
+  padding: 5px 8px;
+  color: var(--ink);
+  border: 1px solid rgba(174, 134, 40, 0.52);
+  background: rgba(174, 134, 40, 0.1);
+  font-size: 9px;
+}
+
+.lucky-miss-chip b {
+  color: var(--gold-dark);
+  font-family: var(--sans);
+  letter-spacing: 0.04em;
+}
+
+.lucky-miss-chip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .doctor-intake,
+  .doctor-receipt > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .doctor-intake .button {
+    width: 100%;
+  }
+
+  .doctor-step {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .doctor-flip-row {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
 .mini-stepper {
   display: flex;
   align-items: center;

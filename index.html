@@ -625,6 +625,25 @@
               </div>
               <div class="model-list" id="modelList"></div>
               </article>
+
+              <article class="ledger-card doctor-card">
+                <div class="card-title">
+                  <div>
+                    <span class="kicker">Aftermath · фаза 5</span>
+                    <h2>Подпольный доктор</h2>
+                  </div>
+                  <button class="page-ref" type="button" data-rules-pages="33,36">стр. 33, 36</button>
+                </div>
+                <div class="doctor-intake">
+                  <div class="doctor-intake-copy">
+                    <span class="doctor-stamp">1 скрип · попытка</span>
+                    <p>Выберите травму и зафиксируйте итог физических флипов. Доктор оставляет скрип при любом результате.</p>
+                  </div>
+                  <button class="button button-red" id="openDoctorButton" type="button">Начать приём</button>
+                </div>
+                <div class="doctor-availability" id="doctorAvailability"></div>
+                <div class="doctor-history" id="doctorHistory"></div>
+              </article>
             </div>
 
             <aside class="side-stack">
@@ -706,7 +725,7 @@
                   </label>
                   <div class="scrip-transaction-actions">
                     <button class="button button-ghost" type="submit" data-scrip-kind="credit">Начислить</button>
-                    <button class="button button-red" type="submit" data-scrip-kind="debit">Списать за доктора</button>
+                    <button class="button button-red" type="submit" data-scrip-kind="debit">Списать</button>
                   </div>
                 </form>
                 <div class="scrip-transaction-heading">Последние операции</div>
@@ -1436,6 +1455,107 @@
           ></div>
         </section>
       </div>
+    </dialog>
+
+    <dialog id="doctorDialog" class="modal modal-wide" aria-labelledby="doctorDialogTitle">
+      <form method="dialog" id="doctorForm" class="doctor-form">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Back-Alley Doctor · квитанция</span>
+            <h2 id="doctorDialogTitle">Зафиксировать приём</h2>
+          </div>
+          <button class="modal-close" type="button" data-close-dialog="doctorDialog" aria-label="Закрыть">×</button>
+        </div>
+
+        <section class="doctor-step" data-doctor-step="patient">
+          <div class="doctor-step-number">01</div>
+          <div class="doctor-step-body">
+            <span class="kicker">Пациент</span>
+            <h3>Выберите модель и травму</h3>
+            <div class="form-grid">
+              <label class="field">
+                <span>Модель</span>
+                <select name="target" required></select>
+              </label>
+              <label class="field">
+                <span>Травма для лечения</span>
+                <select name="injury" required></select>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="doctor-step" data-doctor-step="primary">
+          <div class="doctor-step-number">02</div>
+          <div class="doctor-step-body">
+            <span class="kicker">Физический флип</span>
+            <h3>Запишите итоговую карту</h3>
+            <div class="doctor-flip-row">
+              <label class="field">
+                <span>Карта подпольного доктора</span>
+                <select name="mainCard" required>
+                  <option value="black-joker">Black Joker</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="red-joker">Red Joker</option>
+                </select>
+              </label>
+              <label class="check-tile doctor-cheat-tile">
+                <input name="mainCheated" type="checkbox" />
+                <span><b>Результат был читерским</b><small>Итоговая карта взята из Aftermath hand</small></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="doctor-step doctor-secondary" id="doctorSecondary" data-doctor-step="secondary" hidden>
+          <div class="doctor-step-number">03</div>
+          <div class="doctor-step-body">
+            <span class="kicker">Второй физический флип</span>
+            <h3 id="doctorSecondaryTitle">Запишите итог второй таблицы</h3>
+            <p class="doctor-secondary-rule" id="doctorSecondaryRule"></p>
+            <div class="doctor-flip-row">
+              <label class="field" id="doctorSecondaryInjuryField" hidden>
+                <span>Итог по таблице травм</span>
+                <select name="secondaryInjury"></select>
+              </label>
+              <label class="field" id="doctorSecondaryLuckyField" hidden>
+                <span>Итог по таблице Lucky Miss</span>
+                <select name="secondaryLucky"></select>
+              </label>
+              <label class="check-tile doctor-cheat-tile">
+                <input name="secondaryCheated" type="checkbox" />
+                <span><b>Второй результат был читерским</b><small>Зафиксировать карту из Aftermath hand</small></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="doctor-receipt" aria-live="polite">
+          <div>
+            <span>До подтверждения</span>
+            <b id="doctorPreviewTitle">Выберите результат</b>
+          </div>
+          <p id="doctorPreviewText"></p>
+          <small>Списание и изменения модели сохраняются одной операцией.</small>
+        </section>
+
+        <div class="doctor-actions">
+          <button class="button button-ghost" type="button" data-close-dialog="doctorDialog">Отмена</button>
+          <button class="button button-red" id="doctorSubmit" type="submit">Применить и заплатить 1 скрип</button>
+        </div>
+      </form>
     </dialog>
 
     <dialog id="talentDialog" class="modal modal-wide">
