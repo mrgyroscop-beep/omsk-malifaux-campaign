@@ -1031,10 +1031,12 @@
   cloudContent.addEventListener("submit", (event) => {
     event.preventDefault();
     if (cloudBusy) return;
-    if (event.target.id === "cloudCreateForm") void createCampaign(event.target);
-    if (event.target.id === "cloudConnectForm") void connectCampaign(event.target);
-    if (event.target.id === "cloudPlayerForm") void savePlayer(event.target);
-    if (event.target.id === "cloudEventForm") void saveEvent(event.target);
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.matches("#cloudCreateForm")) void createCampaign(form);
+    if (form.matches("#cloudConnectForm")) void connectCampaign(form);
+    if (form.matches("#cloudPlayerForm")) void savePlayer(form);
+    if (form.matches("#cloudEventForm")) void saveEvent(form);
   });
 
   cloudContent.addEventListener("click", (event) => {

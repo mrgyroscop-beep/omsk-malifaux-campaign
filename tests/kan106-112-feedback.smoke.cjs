@@ -4,6 +4,7 @@ const { pathToFileURL } = require("node:url");
 const { chromium } = require("playwright");
 
 const appPath = process.env.APP_PATH || path.resolve(__dirname, "..", "index.html");
+const cloudScriptPath = path.resolve(__dirname, "..", "cloud.js");
 const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
 
 const fixture = {
@@ -126,6 +127,85 @@ const fixture = {
       "Feedback controls introduced horizontal overflow on mobile.",
     );
     assert.deepEqual(pageErrors, []);
+
+    const cloudPage = await context.newPage();
+    let cloudPatchCount = 0;
+    let cloudPayload = {
+      campaign: {
+        id: "feedbackdemo01",
+        name: "Feedback campaign",
+        dossier: fixture,
+        revision: 2,
+        createdAt: "2026-08-07T12:00:00.000Z",
+        updatedAt: "2026-08-07T12:00:00.000Z",
+      },
+      players: [{
+        id: "playerdemo01",
+        playerName: "Organizer",
+        crewName: "Feedback Crew",
+        faction: "Guild",
+        campaignRating: 35,
+        gamesPlayed: 2,
+        wins: 1,
+        notes: "Old note",
+        createdAt: "2026-08-07T12:00:00.000Z",
+        updatedAt: "2026-08-07T12:00:00.000Z",
+      }],
+      events: [],
+    };
+    await cloudPage.route("https://app.example.test/", (route) => route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: `<!doctype html><html><head>
+        <meta name="app-api-url" content="https://api.example.test">
+        <meta name="public-site-url" content="https://app.example.test/">
+      </head><body>
+        <button id="openCloudButton" type="button">Cloud</button>
+        <dialog id="cloudDialog"><div id="cloudDialogContent"></div></dialog>
+        <dialog id="securityDialog"><button id="securityDialogClose" type="button">Close</button><div id="securityStatus"></div><div id="turnstileWidget"></div></dialog>
+      </body></html>`,
+    }));
+    await cloudPage.route("https://api.example.test/api/campaigns/**", async (route) => {
+      if (route.request().method() === "PATCH") {
+        cloudPatchCount += 1;
+        const body = route.request().postDataJSON();
+        cloudPayload = {
+          ...cloudPayload,
+          players: cloudPayload.players.map((player) => ({ ...player, ...body, notes: String(body.notes || "").trim() })),
+        };
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify(cloudPayload),
+      });
+    });
+    await cloudPage.goto("https://app.example.test/");
+    await cloudPage.evaluate((state) => {
+      window.MalifauxBuilder = {
+        getLocale: () => "ru",
+        getState: () => state,
+        notify: () => {},
+        replaceState: () => {},
+      };
+      localStorage.setItem("m4e-cloud-campaign-v1", JSON.stringify({ campaignId: "feedbackdemo01" }));
+      localStorage.setItem("m4e-cloud-organizer-keys-v1", JSON.stringify({
+        feedbackdemo01: "demo-organizer-token-123456789012345678901234",
+      }));
+      sessionStorage.setItem("m4e-cloud-session-v1", JSON.stringify({
+        token: "demo-session-token",
+        expiresAt: Date.now() + 60 * 60 * 1000,
+      }));
+    }, fixture);
+    await cloudPage.addScriptTag({ path: cloudScriptPath });
+    await cloudPage.locator("#openCloudButton").click();
+    await cloudPage.waitForSelector(".cloud-workspace");
+    await cloudPage.locator('[data-cloud-action="edit-player"]').click();
+    await cloudPage.locator('#cloudPlayerForm input[name="notes"]').fill("Saved cloud note");
+    await cloudPage.locator("#cloudPlayerForm button[type=submit]").click();
+    await cloudPage.waitForFunction(() => document.querySelector(".cloud-players tbody")?.textContent.includes("Saved cloud note"));
+    assert.equal(cloudPatchCount, 1);
+    await cloudPage.close();
     console.log("KAN106_112_FEEDBACK_SMOKE_OK");
   } finally {
     await context.close();
