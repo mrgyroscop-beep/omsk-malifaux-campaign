@@ -3014,6 +3014,19 @@ body.theme-dossier {
   border-color: rgba(159, 48, 40, 0.34);
 }
 
+.theme-dossier .model-badge.is-traitor {
+  color: var(--dossier-paper-light);
+  border-color: var(--dossier-red);
+  background: var(--dossier-red);
+}
+
+.theme-dossier .traitor-transfer-note {
+  color: var(--dossier-muted);
+  border-color: rgba(159, 48, 40, 0.36);
+  border-left-color: var(--dossier-red);
+  background: rgba(159, 48, 40, 0.07);
+}
+
 .theme-dossier .model-card-link {
   color: var(--dossier-brass-dark);
 }

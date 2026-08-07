@@ -439,6 +439,19 @@ const UI_MESSAGES = {
   },
   hired: { ru: "{name} нанят за {cost} скрип.", en: "{name} hired for {cost} scrip." },
   addedToStarting: { ru: "{name} добавлен в стартовый арсенал.", en: "{name} added to the starting arsenal." },
+  traitorNeedsGame: {
+    ru: "Переход по Traitor доступен после записанной игры.",
+    en: "A Traitor transfer is available after a recorded game.",
+  },
+  traitorNeedsKeywords: {
+    ru: "Сначала укажите ключевые слова нового лидера.",
+    en: "Set the new leader's keywords first.",
+  },
+  traitorAdded: {
+    ru: "{name} бесплатно добавлен по Traitor. Перенесите травмы и снаряжение исходной модели.",
+    en: "{name} was added for free through Traitor. Copy the original model's injuries and equipment.",
+  },
+  traitorBadge: { ru: "Traitor · бесплатно", en: "Traitor · free" },
   equipmentNeedsScrip: {
     ru: "Для покупки нужно {cost} скрип, доступно {available}.",
     en: "This purchase costs {cost} scrip; only {available} is available.",
@@ -1670,6 +1683,7 @@ function normalizeStoredModel(model) {
     injuries: normalizeStoredInjuries(source.injuries, id),
     addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
     scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
+    acquisition: source.acquisition === "traitor" ? "traitor" : "",
     cardId:
       source.cardId === null || source.cardId === undefined
         ? null
@@ -3150,9 +3164,13 @@ function setupKeywordValidation() {
 }
 
 function selectedCrewKeywords() {
+  return selectedCrewKeywordLabels().map(canonical).filter(Boolean);
+}
+
+function selectedCrewKeywordLabels() {
   return (state.crew.keywords || [])
     .map((keyword, index) =>
-      keywordValidation[index]?.status === "invalid" ? "" : canonical(keyword),
+      keywordValidation[index]?.status === "invalid" ? "" : String(keyword || "").trim(),
     )
     .filter(Boolean);
 }
@@ -4742,7 +4760,7 @@ function renderArsenal() {
               <span aria-hidden="true">${isModelHired(model.id) ? "✓" : "+"}</span>
               ${message(isModelHired(model.id) ? "modelInLoadout" : "modelOutsideLoadout")}
             </button>
-            <span class="model-badge">${model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
+            <span class="model-badge ${model.acquisition === "traitor" ? "is-traitor" : ""}">${model.acquisition === "traitor" ? message("traitorBadge") : model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
             <button class="model-characteristics-button" type="button" data-edit-model-characteristics="${escapeHtml(model.id)}">
               ${localized("Характеристики", "Characteristics")}
             </button>
@@ -7221,6 +7239,7 @@ function resetModelPicker(options = {}) {
   pendingModelCard = null;
   const form = document.querySelector("#modelForm");
   if (options.resetForm !== false) form.reset();
+  syncTraitorModelForm();
   document.querySelector("#modelCardSearch").value = "";
   document.querySelector("#modelSearchResults").innerHTML = "";
   document.querySelector("#modelCardSelection").hidden = true;
@@ -7265,6 +7284,31 @@ function fillModelFormFromCard(card) {
   const hasCrewKeywords = selectedCrewKeywords().length > 0;
   form.elements.outOfKeyword.checked =
     hasCrewKeywords && !characterMatchesKeyword(card) && !versatileInFaction;
+  syncTraitorModelForm();
+}
+
+function syncTraitorModelForm() {
+  const form = document.querySelector("#modelForm");
+  if (!form) return;
+  const active = Boolean(form.elements.traitorTransfer?.checked);
+  const keywords = form.elements.keywords;
+  const versatile = form.elements.versatile;
+  const outOfKeyword = form.elements.outOfKeyword;
+  const submit = form.querySelector('button[type="submit"], button[value="default"]');
+  form.classList.toggle("is-traitor-transfer", active);
+  keywords.readOnly = active;
+  versatile.disabled = active;
+  outOfKeyword.disabled = active;
+  if (active) {
+    keywords.value = selectedCrewKeywordLabels().join(", ");
+    versatile.checked = false;
+    outOfKeyword.checked = false;
+  }
+  if (submit) {
+    submit.textContent = active
+      ? localized("Добавить бесплатно по Traitor", "Add for free through Traitor")
+      : localized("Добавить в арсенал", "Add to arsenal");
+  }
 }
 
 async function selectModelCatalogCard(slug) {
@@ -9079,6 +9123,9 @@ document.querySelector("#modelForm").addEventListener("input", (event) => {
     clearPendingModelCard(true);
   }
 });
+document.querySelector("#modelForm").addEventListener("change", (event) => {
+  if (event.target.name === "traitorTransfer") syncTraitorModelForm();
+});
 document.querySelectorAll("[data-refresh-catalog]").forEach((button) => {
   button.addEventListener("click", () => refreshCardCatalog(button));
 });
@@ -9087,6 +9134,8 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
+  const traitorTransfer = data.get("traitorTransfer") === "on";
+  const leaderKeywords = selectedCrewKeywordLabels();
   const model = {
     id: uid(),
     name: data.get("name").trim(),
@@ -9094,27 +9143,39 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     modelLimit: Math.max(1, Number(data.get("modelLimit") || 1)),
     type: data.get("type"),
     henchman: data.get("henchman") === "on",
-    keywords: data.get("keywords").trim(),
-    versatile: data.get("versatile") === "on",
-    outOfKeyword: data.get("outOfKeyword") === "on",
+    keywords: traitorTransfer ? leaderKeywords.join(", ") : data.get("keywords").trim(),
+    versatile: traitorTransfer ? false : data.get("versatile") === "on",
+    outOfKeyword: traitorTransfer ? false : data.get("outOfKeyword") === "on",
     characteristics: [],
     injuries: [],
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
     cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,
+    acquisition: traitorTransfer ? "traitor" : "",
   };
-  if (state.campaign.week === 1 && state.games.length > 0) {
+  if (traitorTransfer && state.games.length === 0) {
+    toast(message("traitorNeedsGame"));
+    return;
+  }
+  if (traitorTransfer && leaderKeywords.length === 0) {
+    toast(message("traitorNeedsKeywords"));
+    return;
+  }
+  if (!traitorTransfer && state.campaign.week === 1 && state.games.length > 0) {
     toast(message("startingArsenalLocked"));
     return;
   }
   const projected = arsenalTotals().cost + model.cost;
-  if (state.campaign.week === 1 && projected > 25) {
+  if (!traitorTransfer && state.campaign.week === 1 && projected > 25) {
     toast(message("startingLimit"));
     return;
   }
   const arsenalBefore = clone(state.arsenal);
   const loadoutBefore = clone(state.loadout);
-  if (state.campaign.week > 1) {
+  if (traitorTransfer) {
+    model.addedWeek = state.campaign.week;
+    model.scripPaid = 0;
+  } else if (state.campaign.week > 1) {
     const alreadyHired = state.arsenal.models.some((item) => item.addedWeek === state.campaign.week);
     const keywordTax = model.outOfKeyword && !model.versatile ? 1 : 0;
     const hireCost = Math.max(0, model.cost - (alreadyHired ? 0 : 5)) + keywordTax;
@@ -9131,7 +9192,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   }
   state.arsenal.models.push(model);
   state.loadout.hiredModelIds.push(model.id);
-  if (state.campaign.week === 1) {
+  if (!traitorTransfer && state.campaign.week === 1) {
     state.arsenal.scrip = startingScripBalance(projected);
   }
   if (!saveState()) {
@@ -9144,7 +9205,9 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
   resetModelPicker();
   renderArsenal();
   toast(
-    state.campaign.week > 1
+    traitorTransfer
+      ? message("traitorAdded", { name: model.name })
+      : state.campaign.week > 1
       ? message("hired", { name: model.name, cost: model.scripPaid })
       : message("addedToStarting", { name: model.name }),
   );

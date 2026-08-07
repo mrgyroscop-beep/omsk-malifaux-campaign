@@ -16,7 +16,8 @@
     "test:kan64": "node tests/kan64-attack-skill-advancement.smoke.cjs",
     "test:kan83-84": "node tests/kan83-84-chronicle.smoke.cjs",
     "test:kan94": "node tests/kan94-rating-adjustment.smoke.cjs",
-    "test:feedback": "node tests/kan106-112-feedback.smoke.cjs"
+    "test:feedback": "node tests/kan106-112-feedback.smoke.cjs",
+    "test:kan105": "node tests/kan105-traitor-transfer.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"

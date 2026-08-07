@@ -1499,6 +1499,63 @@ h1 {
   text-transform: uppercase;
 }
 
+.model-badge.is-traitor {
+  color: var(--paper-bright);
+  border-color: rgba(156, 40, 36, 0.72);
+  background: var(--red);
+}
+
+.traitor-transfer-tile {
+  grid-column: 1 / -1;
+  border-color: rgba(156, 40, 36, 0.36);
+  background: linear-gradient(90deg, rgba(156, 40, 36, 0.09), transparent 72%);
+}
+
+.traitor-transfer-tile span {
+  align-items: flex-start;
+}
+
+.traitor-transfer-note {
+  display: none;
+  gap: 5px;
+  margin: 0 0 16px;
+  padding: 13px 15px 13px 18px;
+  color: var(--muted);
+  border: 1px solid rgba(156, 40, 36, 0.34);
+  border-left: 4px solid var(--red);
+  background: rgba(156, 40, 36, 0.06);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.traitor-transfer-note b {
+  color: var(--red);
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#modelForm.is-traitor-transfer .traitor-transfer-tile {
+  color: var(--paper-bright);
+  border-color: var(--red);
+  background: var(--red);
+}
+
+#modelForm.is-traitor-transfer .traitor-transfer-tile small {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+#modelForm.is-traitor-transfer .traitor-transfer-note {
+  display: grid;
+}
+
+#modelForm.is-traitor-transfer input[readonly] {
+  color: var(--red);
+  border-color: rgba(156, 40, 36, 0.46);
+  background: rgba(156, 40, 36, 0.06);
+}
+
 .mini-stepper {
   display: flex;
   align-items: center;
