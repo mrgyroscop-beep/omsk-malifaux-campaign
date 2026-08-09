@@ -4644,6 +4644,80 @@ h1 {
   font-size: 11px;
 }
 
+.leader-action-preview {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.leader-action-preview-heading {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.leader-action-preview-heading h3 {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.leader-action-preview-heading > b {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--brass);
+  place-items: center;
+  color: var(--red);
+  font-family: var(--display);
+  font-size: 17px;
+}
+
+.leader-action-records {
+  display: grid;
+  gap: 8px;
+}
+
+.leader-action-record {
+  position: relative;
+  padding: 10px 14px 4px;
+  border-left: 3px solid var(--red);
+  background: rgba(255, 252, 242, 0.58);
+}
+
+.leader-action-origin {
+  display: block;
+  margin-bottom: -4px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.leader-action-record .card-rule {
+  padding-bottom: 10px;
+  border-bottom: 0;
+}
+
+@media (max-width: 560px) {
+  .leader-action-preview-heading {
+    align-items: center;
+  }
+
+  .leader-action-record {
+    padding-inline: 11px;
+  }
+
+  .leader-action-record .card-rule-title {
+    display: grid;
+    gap: 5px;
+  }
+}
+
 .card-symbol {
   color: var(--red);
   font-family: var(--sans);

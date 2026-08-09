@@ -58,6 +58,11 @@
     padding: 0 0 10mm;
   }
 
+  .print-leader-page {
+    min-height: 265mm;
+    padding-bottom: 3mm;
+  }
+
   .print-page + .print-page {
     break-before: page;
   }
@@ -71,6 +76,11 @@
     margin-bottom: 6mm;
     padding: 0 0 5mm;
     border-bottom: 1.5pt solid var(--print-ink);
+  }
+
+  .print-leader-page .print-cover {
+    margin-bottom: 3mm;
+    padding-bottom: 2mm;
   }
 
   .print-overline,
@@ -201,6 +211,15 @@
     margin-top: 5mm;
   }
 
+  .print-leader-page .print-section {
+    margin-top: 3mm;
+  }
+
+  .print-leader-page .print-section-heading {
+    margin-bottom: 1.7mm;
+    padding-bottom: 1mm;
+  }
+
   .print-section-heading {
     display: flex;
     gap: 4mm;
@@ -221,7 +240,28 @@
 
   .print-talent-list {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2.2mm;
+  }
+
+  .print-leader-page .print-talent-list {
+    gap: 1.7mm;
+  }
+
+  .print-talent.has-triggers {
+    grid-column: 1 / -1;
+  }
+
+  .print-leader-action.has-triggers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.4mm 2.2mm;
+  }
+
+  .print-leader-action.has-triggers > .print-talent-heading,
+  .print-leader-action.has-triggers > .print-action-meta,
+  .print-leader-action.has-triggers > .print-rule-text {
+    grid-column: 1 / -1;
   }
 
   .print-talent {
@@ -234,9 +274,18 @@
 
   .print-talent-heading {
     display: grid;
-    grid-template-columns: 27mm minmax(0, 1fr);
+    grid-template-columns: 18mm minmax(0, 1fr);
     gap: 3mm;
     align-items: baseline;
+  }
+
+  .print-talent.has-triggers .print-talent-heading {
+    grid-template-columns: 27mm minmax(0, 1fr);
+  }
+
+  .print-talent-ability .print-talent-heading {
+    grid-template-columns: 29mm minmax(0, 1fr);
+    gap: 2.5mm;
   }
 
   .print-talent-heading .print-kicker {
@@ -255,7 +304,7 @@
   }
 
   .print-action-meta {
-    margin: 1.5mm 0 0 30mm;
+    margin: 1.5mm 0 0 21mm;
     color: var(--print-red);
     font-family: "IBM Plex Mono", "Courier New", monospace;
     font-size: 7.5pt;
@@ -292,7 +341,16 @@
   }
 
   .print-rule-text {
-    margin: 1.4mm 0 0 30mm;
+    margin: 1.4mm 0 0 21mm;
+  }
+
+  .print-talent.has-triggers .print-action-meta,
+  .print-talent.has-triggers .print-rule-text {
+    margin-left: 30mm;
+  }
+
+  .print-talent-ability .print-rule-text {
+    margin-left: 31.5mm;
   }
 
   .print-trigger {
@@ -482,6 +540,15 @@
     break-inside: avoid;
   }
 
+  .print-leader-permanent {
+    gap: 1.5mm;
+    margin-top: 1.5mm;
+  }
+
+  .print-leader-permanent .print-permanent-block:not(.is-empty) {
+    padding: 2mm;
+  }
+
   .print-permanent-block {
     padding: 2.5mm;
     border: 0.7pt solid var(--print-line);
@@ -496,6 +563,28 @@
   .print-manual-upgrades {
     grid-column: 1 / -1;
     border-left: 2pt solid var(--print-brass);
+  }
+
+  .print-leader-permanent .print-permanent-block.is-empty {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 3mm;
+    align-items: center;
+    padding: 1.4mm 2mm;
+  }
+
+  .print-leader-permanent .print-permanent-block.is-empty h3 {
+    margin: 0;
+  }
+
+  .print-leader-permanent .print-permanent-block.is-empty .print-empty {
+    padding: 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .print-leader-action.has-triggers > .print-trigger {
+    margin: 0;
   }
 
   .print-leader-advancements {
@@ -519,6 +608,20 @@
   .print-leader-advancements li {
     min-width: 0;
     break-inside: avoid;
+  }
+
+  .print-leader-page .print-crew-card {
+    margin-top: 1.5mm;
+    padding: 2mm 3mm;
+  }
+
+  .print-leader-page .print-leader {
+    margin-bottom: 2mm;
+    padding: 2.5mm;
+  }
+
+  .print-leader-page .print-stat-strip {
+    margin-top: 2mm;
   }
 
   .print-leader-advancements b,

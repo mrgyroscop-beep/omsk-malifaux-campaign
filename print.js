@@ -95,7 +95,7 @@
         : []),
       ...printAbilityRecords(advances, recipient),
     ];
-    return `<section class="print-permanent-block" data-print-section="abilities">
+    return `<section class="print-permanent-block${items.length ? "" : " is-empty"}" data-print-section="abilities">
       <h3>${printText("Способности", "Abilities")}</h3>
       ${
         items.length
@@ -119,9 +119,11 @@
   }
 
   function renderPrintInjurySection(injuries) {
-    return `<section class="print-permanent-block" data-print-section="injuries">
+    const items = Array.isArray(injuries) ? injuries : [];
+    const isEmpty = !items.length && !printInjuryCount(injuries);
+    return `<section class="print-permanent-block${isEmpty ? " is-empty" : ""}" data-print-section="injuries">
       <h3>${printText("Травмы", "Injuries")}</h3>
-      ${renderPrintInjuries(injuries)}
+      ${isEmpty ? `<p class="print-empty">—</p>` : renderPrintInjuries(injuries)}
     </section>`;
   }
 
@@ -219,7 +221,7 @@
     const meta = slot.kind === "ability" ? "" : printActionMeta(entry);
     const description = entry?.description || "";
     return `
-      <article class="print-talent">
+      <article class="print-talent${trigger ? " has-triggers" : ""}${slot.kind === "ability" ? " print-talent-ability" : ""}">
         <div class="print-talent-heading">
           <span class="print-kicker">${escapePrintHtml(kind)}</span>
           <div>
@@ -239,6 +241,41 @@
               </div>`
             : ""
         }
+      </article>`;
+  }
+
+  function renderLeaderAction(record) {
+    const action = record?.action || {};
+    const kind = action.typeLabel || action.type || printText("Действие", "Action");
+    const source = [
+      record?.originLabel,
+      record?.source ? `${printText("Источник", "Source")}: ${record.source}` : "",
+      record?.page ? `${printText("стр.", "p.")} ${record.page}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const triggers = Array.isArray(action.triggers) ? action.triggers : [];
+    return `
+      <article class="print-talent print-leader-action${triggers.length ? " has-triggers" : ""}" data-print-leader-action="${escapePrintHtml(action.name)}">
+        <div class="print-talent-heading">
+          <span class="print-kicker">${escapePrintHtml(kind)}</span>
+          <div>
+            <h3>${escapePrintHtml(action.name || printText("Действие", "Action"))}</h3>
+            ${source ? `<small>${escapePrintHtml(source)}</small>` : ""}
+          </div>
+        </div>
+        ${printActionMeta(action) ? `<p class="print-action-meta">${printActionMeta(action)}</p>` : ""}
+        ${action.description ? `<p class="print-rule-text">${richPrintText(action.description)}</p>` : ""}
+        ${triggers
+          .map(
+            (trigger) => `<div class="print-trigger" data-print-action-trigger="${escapePrintHtml(trigger.name)}">
+              <b>${printText("Триггер", "Trigger")}: ${richPrintText(
+                [trigger.suits, trigger.name].filter(Boolean).join(" · "),
+              )}${trigger.stoneCost ? ` · ${escapePrintHtml(trigger.stoneCost)} SS` : ""}</b>
+              ${trigger.description ? `<p>${richPrintText(trigger.description)}</p>` : ""}
+            </div>`,
+          )
+          .join("")}
       </article>`;
   }
 
@@ -582,6 +619,12 @@
     const loadout = data.loadout || {};
     const archetype = printArchetype(leader.archetype);
     const talents = Array.isArray(leader.talents) ? leader.talents : [];
+    const leaderActions = typeof leaderActionRecords === "function"
+      ? leaderActionRecords({ talents, advances, recipient: "leader" })
+      : [];
+    const abilityTalents = talents
+      .map((talent, index) => ({ talent, index }))
+      .filter(({ talent }) => talent?.kind === "ability");
     const stats = archetype?.stats || {};
     const keywords = Array.isArray(crew.keywords) ? crew.keywords.filter(Boolean) : [];
     const characteristics = Array.isArray(leader.characteristics)
@@ -672,12 +715,13 @@
 
         <section class="print-section print-talents">
           <div class="print-section-heading">
-            <span class="print-kicker">${printText("Заимствованные таланты", "Borrowed talents")}</span>
+            <span class="print-kicker">${printText("Таланты и продвижения", "Talents & advancements")}</span>
             <h2>${printText("Действия и способности", "Actions & abilities")}</h2>
           </div>
           <div class="print-talent-list">
-            ${talents
-              .map((talent, index) =>
+            ${leaderActions.map(renderLeaderAction).join("")}
+            ${abilityTalents
+              .map(({ talent, index }) =>
                 renderTalent(talent, talentSlot(archetype, talent, index)),
               )
               .join("")}

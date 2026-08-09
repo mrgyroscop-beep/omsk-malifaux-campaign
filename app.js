@@ -4336,6 +4336,7 @@ function renderTalents() {
         index,
       );
       saveState();
+      renderLeaderActionPreview();
     });
   });
 
@@ -6148,6 +6149,215 @@ function abilityRecordFromAdvancement(advance) {
 
 function abilityRecords(recipient, advances = state.leader.advances) {
   return abilityAdvancements(recipient, advances).map(abilityRecordFromAdvancement);
+}
+
+function advancementSuitToken(value) {
+  const raw = safeText(value, 80).trim();
+  const key = canonical(raw).replace(/s$/u, "");
+  return CARD_SYMBOLS[key] ? `{{${key}}}` : raw;
+}
+
+function advancementActionType(value, tableId = "") {
+  const key = canonical(value);
+  if (key.includes("attack")) return "attack";
+  if (key.includes("tactical")) return "tactical";
+  if (tableId === "summoning") return "tactical";
+  return "action";
+}
+
+function advancementActionTypeLabel(type) {
+  if (type === "attack") return localized("Атака", "Attack");
+  if (type === "tactical") return localized("Тактика", "Tactical");
+  return localized("Новое действие", "New action");
+}
+
+function actionTriggerFromAdvancement(advance) {
+  const snapshot = advance?.snapshot?.entry || advance?.snapshot || {};
+  return normalizeStoredTrigger(
+    {
+      id: advance?.choiceId || snapshot.id || advance?.id,
+      slug: snapshot.slug || "",
+      name: advance?.name || snapshot.name,
+      suits: advancementSuitToken(snapshot.suits || snapshot.suit),
+      stoneCost: snapshot.stoneCost,
+      description:
+        snapshot.description || snapshot.text || snapshot.effect || advance?.notes || "",
+    },
+    0,
+  );
+}
+
+function actionRecordFromAdvancement(advance, index = 0) {
+  const snapshot = advance?.snapshot?.entry || advance?.snapshot || {};
+  const type = advancementActionType(snapshot.type, advance?.tableId);
+  const range = safeText(snapshot.range, 80).replace(/[\s"″]+$/gu, "");
+  const skillSuits = Array.isArray(snapshot.skillSuits)
+    ? snapshot.skillSuits.map(advancementSuitToken).join(" ")
+    : advancementSuitToken(snapshot.skillSuits || snapshot.statSuits);
+  const triggers = (Array.isArray(snapshot.triggers) ? snapshot.triggers : []).map(
+    (trigger) => ({
+      ...trigger,
+      suits: advancementSuitToken(trigger.suits || trigger.suit),
+      description: trigger.description || trigger.text || trigger.effect || "",
+    }),
+  );
+  const action = normalizeStoredAction(
+    {
+      id: snapshot.id || advance?.choiceId || advance?.id || `advancement-action-${index + 1}`,
+      slug: snapshot.slug || "",
+      name: advance?.name || snapshot.name || localized("Полученное действие", "Earned action"),
+      type,
+      typeLabel: snapshot.typeLabel || advancementActionTypeLabel(type),
+      isSignature: snapshot.isSignature ?? snapshot.signature,
+      stoneCost: snapshot.stoneCost,
+      range,
+      rangeType: snapshot.rangeType || (range ? "range" : ""),
+      rangeTypeLabel: snapshot.rangeTypeLabel || (range ? "Rg" : ""),
+      stat: snapshot.stat ?? snapshot.skill,
+      statSuits: skillSuits,
+      statModifier:
+        snapshot.statModifier || (snapshot.positiveSkill ? "positive" : ""),
+      resistedBy: snapshot.resistedBy || snapshot.resist,
+      resistedByLabel: snapshot.resistedByLabel || "",
+      targetNumber: snapshot.targetNumber ?? snapshot.tn,
+      targetSuits: Array.isArray(snapshot.targetSuits)
+        ? snapshot.targetSuits.map(advancementSuitToken).join(" ")
+        : advancementSuitToken(snapshot.targetSuits),
+      damage: snapshot.damage,
+      description:
+        snapshot.description || snapshot.text || snapshot.effect || advance?.notes || "",
+      triggers,
+    },
+    index,
+  );
+  return {
+    id: `advancement-${advance?.id || index + 1}`,
+    origin: "advancement",
+    advancementId: advance?.id || "",
+    action,
+    source: advance?.source || "",
+    page: Number(snapshot.page || 0) || null,
+    originLabel: advancementTableLabel(advance?.tableId),
+  };
+}
+
+function leaderActionRecords({
+  talents = state.leader.talents,
+  advances = state.leader.advances,
+  recipient = "leader",
+} = {}) {
+  const records = [];
+  (Array.isArray(talents) ? talents : []).forEach((talent, index) => {
+    if (recipient !== "leader" || !["attack", "tactical"].includes(talent?.kind)) return;
+    const snapshot = talent?.snapshot?.entry || null;
+    const action = normalizeStoredAction(
+      snapshot || {
+        id: talent?.slotId || `talent-action-${index + 1}`,
+        name: talent?.name,
+        type: talent?.kind,
+        typeLabel: advancementActionTypeLabel(talent?.kind),
+      },
+      index,
+    );
+    if (!action.name) return;
+    const selectedTrigger = talent?.snapshot?.selectedTrigger;
+    if (
+      selectedTrigger?.name &&
+      !action.triggers.some(
+        (trigger) => canonical(trigger.name) === canonical(selectedTrigger.name),
+      )
+    ) {
+      action.triggers.push(normalizeStoredTrigger(selectedTrigger, action.triggers.length));
+    }
+    records.push({
+      id: `talent-${talent?.slotId || index + 1}`,
+      origin: "talent",
+      action,
+      source: talent?.source || "",
+      page: null,
+      originLabel: localized("Заимствованный талант", "Borrowed talent"),
+    });
+  });
+
+  (Array.isArray(advances) ? advances : [])
+    .filter(
+      (advance) =>
+        !advance?.legacy &&
+        advance?.recipient === recipient &&
+        (advance?.resultType === "action" || ["action", "summoning"].includes(advance?.tableId)),
+    )
+    .forEach((advance, index) => {
+      const record = actionRecordFromAdvancement(advance, index);
+      const duplicate = records.some(
+        (candidate) => canonical(candidate.action.name) === canonical(record.action.name),
+      );
+      if (!duplicate) records.push(record);
+    });
+
+  (Array.isArray(advances) ? advances : [])
+    .filter(
+      (advance) =>
+        !advance?.legacy &&
+        advance?.recipient === recipient &&
+        ["attack-modification", "tactical-modification"].includes(advance?.tableId) &&
+        advance?.appliesTo,
+    )
+    .forEach((advance) => {
+      const record = records.find(
+        (candidate) => canonical(candidate.action.name) === canonical(advance.appliesTo),
+      );
+      if (!record) return;
+      if (advance.resultType === "trigger") {
+        const trigger = actionTriggerFromAdvancement(advance);
+        if (
+          trigger.name &&
+          !record.action.triggers.some(
+            (existing) => canonical(existing.name) === canonical(trigger.name),
+          )
+        ) {
+          record.action.triggers.push(trigger);
+        }
+      }
+      if (advance.resultType === "skill") {
+        const skill = Number(advance.snapshot?.result?.skill);
+        if (Number.isFinite(skill)) record.action.stat = String(skill);
+      }
+      if (advance.resultType === "signature") record.action.isSignature = true;
+    });
+
+  return records;
+}
+
+function leaderActionPreviewCard(record) {
+  const source = [
+    record.originLabel,
+    record.source ? `${localized("Источник", "Source")}: ${record.source}` : "",
+    record.page ? `${localized("стр.", "p.")} ${record.page}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+    <div class="leader-action-record" data-leader-action-name="${escapeHtml(record.action.name)}">
+      <span class="leader-action-origin">${escapeHtml(source)}</span>
+      ${cardRuleHtml(record.action, "action")}
+    </div>`;
+}
+
+function renderLeaderActionPreview() {
+  const wrap = document.querySelector("#leaderActionPreview");
+  if (!wrap) return;
+  const records = leaderActionRecords();
+  wrap.hidden = !records.length;
+  wrap.innerHTML = records.length
+    ? `<div class="leader-action-preview-heading">
+        <div>
+          <span class="kicker">${localized("Сводка карточки лидера", "Leader card summary")}</span>
+          <h3>${localized("Действия с продвижениями", "Actions with advancements")}</h3>
+        </div>
+        <b aria-label="${localized("Количество действий", "Action count")}">${records.length}</b>
+      </div>
+      <div class="leader-action-records">${records.map(leaderActionPreviewCard).join("")}</div>`
+    : "";
 }
 
 function abilityChoiceAlreadyUsed(recipient, choice, selectedName = "") {
@@ -9139,6 +9349,7 @@ function renderAll() {
   [0, 1].forEach(renderKeywordValidation);
   renderArchetypes();
   renderTalents();
+  renderLeaderActionPreview();
   renderLeaderPermanentRecords();
   renderCrewCards();
   renderArsenal();
