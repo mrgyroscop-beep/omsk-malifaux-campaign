@@ -168,6 +168,13 @@
   function printActionMeta(action) {
     if (!action) return "";
     const pieces = [];
+    if (action.isSignature) {
+      pieces.push(
+        typeof actionMarkerHtml === "function"
+          ? actionMarkerHtml("signature")
+          : '<span class="action-marker action-marker-signature"><span class="action-marker-glyph action-marker-glyph-signature"></span></span>',
+      );
+    }
     if (action.range) {
       pieces.push(
         `${escapePrintHtml(action.rangeTypeLabel || action.rangeType || "Rg")} ${escapePrintHtml(action.range)}″`,
@@ -193,9 +200,14 @@
       pieces.push(`TN ${escapePrintHtml(action.targetNumber)}${escapePrintHtml(suits)}`);
     }
     if (action.damage) pieces.push(`Dmg ${escapePrintHtml(action.damage)}`);
-    if (action.stoneCost) pieces.push(`${escapePrintHtml(action.stoneCost)} SS`);
-    if (action.isSignature) pieces.push("Signature");
-    return pieces.join(" · ");
+    if (action.stoneCost) {
+      pieces.push(
+        typeof actionMarkerHtml === "function"
+          ? actionMarkerHtml("stone", action.stoneCost)
+          : `<span class="action-marker action-marker-stone"><span class="action-marker-glyph action-marker-glyph-stone"></span>${Number(action.stoneCost) > 1 ? `<span class="action-marker-count">${escapePrintHtml(action.stoneCost)}</span>` : ""}</span>`,
+      );
+    }
+    return pieces.join('<span class="action-meta-separator" aria-hidden="true"> · </span>');
   }
 
   function renderTalent(talent, slot) {
@@ -429,6 +441,37 @@
       </section>`;
   }
 
+  function renderLeaderAdvancements(advances) {
+    const records = (Array.isArray(advances) ? advances : []).filter(
+      (advance) =>
+        advance?.recipient !== "totem" &&
+        advance?.tableId !== "ability" &&
+        advance?.resultType !== "ability",
+    );
+    if (!records.length) return "";
+    return `
+      <section class="print-permanent-block print-leader-advancements" data-print-leader-advancements>
+        <span class="print-kicker">XP · ${printText("Лист лидера", "Leader sheet")}</span>
+        <h3>${printText("Продвижения лидера", "Leader advancements")}</h3>
+        <ul>
+          ${records.map((advance) => {
+            const label = typeof advance === "string"
+              ? advance
+              : advance?.name || advance?.label || printText("Продвижение", "Advancement");
+            const details = typeof advance === "object" && advance
+              ? [
+                  advance.xp ? `XP ${advance.xp}` : "",
+                  advance.tier ? `Tier ${advance.tier}` : "",
+                  advance.appliesTo ? `${printText("для", "for")} ${advance.appliesTo}` : "",
+                  advance.flip?.card || "",
+                ].filter(Boolean).join(" · ")
+              : "";
+            return `<li><b>${escapePrintHtml(label)}</b>${details ? `<small>${escapePrintHtml(details)}</small>` : ""}${advance?.notes ? `<p>${escapePrintHtml(advance.notes)}</p>` : ""}</li>`;
+          }).join("")}
+        </ul>
+      </section>`;
+  }
+
   function renderManualUpgrades(upgrades) {
     const records = Array.isArray(upgrades) ? upgrades : [];
     if (!records.length) return "";
@@ -623,6 +666,7 @@
         <div class="print-permanent-grid print-leader-permanent">
           ${renderPrintAbilitySection(advances, "leader")}
           ${renderPrintInjurySection(leader.injuries)}
+          ${renderLeaderAdvancements(advances)}
           ${renderManualUpgrades(manualUpgrades)}
         </div>
 

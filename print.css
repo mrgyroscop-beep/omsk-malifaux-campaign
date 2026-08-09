@@ -263,6 +263,34 @@
     letter-spacing: 0.015em;
   }
 
+  .print-action-meta .action-marker {
+    display: inline-flex;
+    min-width: 2.6mm;
+    min-height: 3.8mm;
+    padding: 0 0.2mm;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65mm;
+    color: var(--print-red);
+    font-size: 6.8pt;
+    line-height: 1;
+    vertical-align: middle;
+  }
+
+  .print-action-meta .action-marker-glyph-signature {
+    width: 2.2mm;
+    height: 3.5mm;
+  }
+
+  .print-action-meta .action-marker-glyph-stone {
+    width: 1.7mm;
+    height: 3.5mm;
+  }
+
+  .print-action-meta .action-marker-count {
+    font-size: 6.2pt;
+  }
+
   .print-rule-text {
     margin: 1.4mm 0 0 30mm;
   }
@@ -468,6 +496,49 @@
   .print-manual-upgrades {
     grid-column: 1 / -1;
     border-left: 2pt solid var(--print-brass);
+  }
+
+  .print-leader-advancements {
+    grid-column: 1 / -1;
+    border-left: 2pt solid var(--print-red);
+  }
+
+  .print-leader-advancements .print-kicker {
+    margin-bottom: 0.8mm;
+  }
+
+  .print-leader-advancements ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2mm 3mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .print-leader-advancements li {
+    min-width: 0;
+    break-inside: avoid;
+  }
+
+  .print-leader-advancements b,
+  .print-leader-advancements small,
+  .print-leader-advancements p {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .print-leader-advancements b {
+    color: var(--print-red);
+    font-size: 7pt;
+  }
+
+  .print-leader-advancements small,
+  .print-leader-advancements p {
+    margin: 0.3mm 0 0;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.2;
   }
 
   .print-manual-upgrades .print-kicker {

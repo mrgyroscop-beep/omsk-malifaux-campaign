@@ -1453,6 +1453,18 @@ h1 {
   border-color: var(--red);
 }
 
+.talent-picked-summary .action-meta {
+  color: var(--ink-soft);
+}
+
+.talent-picked-divider {
+  display: block;
+  width: 32px;
+  height: 1px;
+  margin: 6px 0;
+  background: color-mix(in srgb, var(--red) 45%, transparent);
+}
+
 .model-characteristics {
   display: flex;
   flex-wrap: wrap;
@@ -4636,6 +4648,56 @@ h1 {
   color: var(--red);
   font-family: var(--sans);
   font-weight: 800;
+}
+
+.action-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.action-meta-separator {
+  color: var(--muted);
+}
+
+.action-marker {
+  display: inline-flex;
+  min-width: 1.1em;
+  min-height: 1.35em;
+  padding: 0 0.08em;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28em;
+  color: var(--red);
+  font-family: var(--sans);
+  font-size: 0.96em;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.action-marker-glyph {
+  display: inline-block;
+  flex: 0 0 auto;
+  background: currentColor;
+}
+
+.action-marker-glyph-signature {
+  width: 0.78em;
+  height: 1.18em;
+  clip-path: polygon(55% 0, 100% 0, 68% 38%, 96% 38%, 30% 100%, 45% 56%, 12% 56%);
+}
+
+.action-marker-glyph-stone {
+  width: 0.56em;
+  height: 1.16em;
+  clip-path: polygon(50% 0, 86% 20%, 100% 62%, 50% 100%, 0 62%, 14% 20%);
+}
+
+.action-marker-count {
+  font-size: 0.88em;
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes catalogSpin {

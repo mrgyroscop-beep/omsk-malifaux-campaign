@@ -3472,6 +3472,55 @@ function actionMeta(action) {
   return pieces.join(" · ");
 }
 
+function actionMarkerHtml(kind, value = 1) {
+  const amount = Math.max(1, Number(value) || 1);
+  const signature = kind === "signature";
+  const label = signature
+    ? localized("Сигнатурное действие", "Signature action")
+    : localized(
+        `Стоимость в камнях душ: ${amount}`,
+        `Soulstone cost: ${amount}`,
+      );
+  const count = !signature && amount > 1
+    ? `<span class="action-marker-count" aria-hidden="true">${amount}</span>`
+    : "";
+  const markerKind = signature ? "signature" : "stone";
+  return `<span class="action-marker action-marker-${markerKind}" data-action-marker="${markerKind}"${signature ? "" : ` data-stone-cost="${amount}"`} title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"><span class="action-marker-glyph action-marker-glyph-${markerKind}" aria-hidden="true"></span>${count}</span>`;
+}
+
+function actionMetaHtml(action) {
+  if (!action) return "";
+  const pieces = [action.typeLabel || action.type]
+    .filter(Boolean)
+    .map((value) => escapeHtml(value));
+  if (action.isSignature) pieces.push(actionMarkerHtml("signature"));
+  if (action.range) {
+    pieces.push(
+      `${escapeHtml(action.rangeTypeLabel || action.rangeType || "Rg")} ${escapeHtml(action.range)}″`,
+    );
+  }
+  if (action.stat) {
+    const resist = action.resistedBy ? ` vs ${action.resistedBy}` : "";
+    const suits = action.statSuits ? ` ${action.statSuits}` : "";
+    const modifier =
+      action.statModifier === "positive"
+        ? " +"
+        : action.statModifier === "negative"
+          ? " −"
+          : action.statModifier
+            ? ` ${action.statModifier}`
+            : "";
+    pieces.push(escapeHtml(`Stat ${action.stat}${suits}${modifier}${resist}`));
+  }
+  if (action.targetNumber) {
+    const suits = action.targetSuits ? ` ${action.targetSuits}` : "";
+    pieces.push(escapeHtml(`TN ${action.targetNumber}${suits}`));
+  }
+  if (action.damage) pieces.push(escapeHtml(`Dmg ${action.damage}`));
+  if (action.stoneCost) pieces.push(actionMarkerHtml("stone", action.stoneCost));
+  return `<span class="action-meta">${pieces.join('<span class="action-meta-separator" aria-hidden="true"> · </span>')}</span>`;
+}
+
 function cardRuleHtml(entry, kind, options = {}) {
   const triggers =
     kind === "action" && Array.isArray(entry.triggers)
@@ -3479,22 +3528,19 @@ function cardRuleHtml(entry, kind, options = {}) {
       : options.selectedTrigger
         ? [options.selectedTrigger]
         : [];
-  const meta =
-    kind === "action"
-      ? actionMeta(entry)
-      : abilityMeta(entry);
+  const meta = kind === "action" ? actionMetaHtml(entry) : cardText(abilityMeta(entry));
   return `
     <article class="card-rule">
       <div class="card-rule-title">
         <h4>${escapeHtml(entry.name)}</h4>
-        <small>${cardText(meta || (kind === "action" ? entry.typeLabel : "Ability"))}</small>
+        <small>${meta || cardText(kind === "action" ? entry.typeLabel : "Ability")}</small>
       </div>
       ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
       ${triggers
         .map(
           (trigger) => `
             <div class="card-trigger">
-              <b>${cardText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}${trigger.stoneCost ? ` · ${stoneMarker(trigger.stoneCost)}` : ""}</b>
+              <b>${cardText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}${trigger.stoneCost ? ` <span class="action-meta-separator" aria-hidden="true">·</span> ${actionMarkerHtml("stone", trigger.stoneCost)}` : ""}</b>
               ${trigger.description ? `<p>${cardText(trigger.description)}</p>` : ""}
             </div>`,
         )
@@ -4242,6 +4288,10 @@ function renderTalents() {
     .map((talent, index) => {
       const saved = state.leader.talents[index] || normalizeStoredTalent({}, talent, index);
       const selectedDescription = selectedTalentDescription(saved);
+      const selectedEntry = saved.snapshot?.entry;
+      const selectedMeta = selectedEntry && talent.kind !== "ability"
+        ? actionMetaHtml(selectedEntry)
+        : "";
       return `
         <div class="talent-row">
           <span class="talent-type">${localized(talent.type, talent.typeEn)}</span>
@@ -4255,7 +4305,7 @@ function renderTalents() {
             </span>
             ${saved.mode === "biggerhat"
               ? `<small class="talent-picked-summary">
-                  <span>${cardText(selectedDescription || message("cardAttached"))}</span>
+                  <span>${selectedMeta}${selectedMeta && selectedDescription ? '<span class="talent-picked-divider" aria-hidden="true"></span>' : ""}${cardText(selectedDescription || (selectedMeta ? "" : message("cardAttached")))}</span>
                   <button class="talent-card-button" type="button" data-view-talent-card="${index}">${message("sourceCard")}</button>
                 </small>`
               : ""}
@@ -8115,11 +8165,9 @@ function directTalentGroupHtml(group, index) {
   return `<li>
     <article class="talent-entry-choice talent-direct-choice">
       <h4>${escapeHtml(entry.name)}</h4>
-      <small>${escapeHtml(
-        slot.kind === "ability"
-          ? [kindLabel, abilityMeta(entry)].filter(Boolean).join(" · ")
-          : actionMeta(entry) || kindLabel,
-      )}</small>
+      <small>${slot.kind === "ability"
+        ? cardText([kindLabel, abilityMeta(entry)].filter(Boolean).join(" · "))
+        : actionMetaHtml(entry) || escapeHtml(kindLabel)}</small>
       ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
       ${requiresTrigger && triggers.length
         ? `<div class="trigger-reference">
@@ -8524,13 +8572,9 @@ function renderTalentEntries(card) {
           return `
             <article class="talent-entry-choice">
               <h4>${escapeHtml(entry.name)}</h4>
-              <small>${escapeHtml(
-                slot.kind === "ability"
-                  ? [kindLabel, abilityMeta(entry)]
-                      .filter(Boolean)
-                      .join(" · ")
-                  : actionMeta(entry) || kindLabel,
-              )}</small>
+              <small>${slot.kind === "ability"
+                ? cardText([kindLabel, abilityMeta(entry)].filter(Boolean).join(" · "))
+                : actionMetaHtml(entry) || escapeHtml(kindLabel)}</small>
               ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
               ${requiresTrigger && triggers.length
                 ? `<div class="trigger-reference">
