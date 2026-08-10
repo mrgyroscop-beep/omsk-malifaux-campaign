@@ -5,6 +5,18 @@ const MAX_SNAPSHOT_BYTES = 1_000_000;
 
 const FACTION_DOCUMENTS = Object.freeze({
   arcanists: "Arcanists",
+  bayou: "Bayou",
+  explorers_society: "Explorer's Society",
+  guild: "Guild",
+  neverborn: "Neverborn",
+  outcasts: "Outcasts",
+  resurrectionists: "Resurrectionist",
+  ten_thunders: "Ten Thunders",
+});
+
+const MODEL_ALIASES = Object.freeze({
+  doppleganger: "Doppelganger",
+  "keepside-stangers": "KeepsideStrangers",
 });
 
 function compactText(value) {
@@ -17,6 +29,16 @@ function identity(value) {
     .replace(/[’‘]/gu, "'")
     .replace(/[^a-z0-9]+/giu, "")
     .toLowerCase();
+}
+
+function modelIdentity(name, title) {
+  return compactText(`${name || ""} ${title || ""}`)
+    .normalize("NFKD")
+    .replace(/[’‘]/gu, "'")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .filter((part) => part && part !== "the")
+    .join("");
 }
 
 function firestoreValue(value, depth = 0) {
@@ -137,9 +159,22 @@ async function loadSnapshot(env, faction) {
 }
 
 function findModel(models, character) {
+  const aliasId = MODEL_ALIASES[compactText(character?.slug).toLowerCase()];
+  if (aliasId) {
+    const alias = models.find((model) => model.id === aliasId);
+    if (alias) return alias;
+  }
+
+  const combined = modelIdentity(character?.name, character?.title);
+  if (!combined) return null;
+
+  const combinedMatches = models.filter(
+    (model) => modelIdentity(model.name, model.title) === combined,
+  );
+  if (combinedMatches.length === 1) return combinedMatches[0];
+
   const name = identity(character?.name);
   const title = identity(character?.title);
-  if (!name) return null;
 
   const nameMatches = models.filter((model) => identity(model.name) === name);
   const exact = nameMatches.find((model) => identity(model.title) === title);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import worker from "../src/index.js";
+import { enrichCharacterMarkers } from "../src/playwyrd-markers.js";
 
 const ORIGIN = "https://mrgyroscop-beep.github.io";
 
@@ -63,6 +64,32 @@ function playWyrdFixture() {
               },
             },
           },
+        },
+      },
+    },
+  };
+}
+
+function playWyrdModelsFixture(models) {
+  return {
+    fields: {
+      models: {
+        mapValue: {
+          fields: Object.fromEntries(
+            models.map((model) => [
+              model.id,
+              {
+                mapValue: {
+                  fields: {
+                    id: firestoreString(model.id),
+                    name: firestoreString(model.name),
+                    title: firestoreString(model.title || ""),
+                    text: firestoreString('f Marked Action 6" 0 - 7 - Test.'),
+                  },
+                },
+              },
+            ]),
+          ),
         },
       },
     },
@@ -138,6 +165,111 @@ test("enriches Arcanist action markers from the Play Wyrd snapshot", async (cont
   assert.equal(second.headers.get("X-BiggerHat-Cache"), "HIT");
   assert.equal(calls.filter((url) => url.includes("firestore.googleapis.com")).length, 1);
   assert.equal(calls.filter((url) => url.includes("biggerhat.net")).length, 1);
+});
+
+test("loads and matches Play Wyrd snapshots for every faction", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const cases = [
+    {
+      faction: "arcanists",
+      document: "Arcanists",
+      slug: "the-firestarter",
+      name: "The Firestarter",
+      model: { id: "Firestarter", name: "Firestarter" },
+    },
+    {
+      faction: "bayou",
+      document: "Bayou",
+      slug: "the-brewmaster-proof-prophet",
+      name: "The Brewmaster",
+      title: "Proof-Prophet",
+      model: { id: "Brewmaster_ProofProphet", name: "Brewmaster", title: "Proof Prophet" },
+    },
+    {
+      faction: "explorers_society",
+      document: "Explorer's Society",
+      slug: "evan-havard",
+      name: "Evan Havard",
+      model: { id: "EvanHavard", name: "Evan Havard" },
+    },
+    {
+      faction: "guild",
+      document: "Guild",
+      slug: "lady-justice",
+      name: "Lady Justice",
+      model: { id: "LadyJustice", name: "Lady Justice" },
+    },
+    {
+      faction: "neverborn",
+      document: "Neverborn",
+      slug: "doppleganger",
+      name: "Doppleganger",
+      model: { id: "Doppelganger", name: "Doppelganger" },
+    },
+    {
+      faction: "outcasts",
+      document: "Outcasts",
+      slug: "hamelin",
+      name: "Hamelin",
+      model: { id: "Hamelin", name: "Hamelin" },
+    },
+    {
+      faction: "resurrectionists",
+      document: "Resurrectionist",
+      slug: "chiaki-the-beacon",
+      name: "Chiaki",
+      title: "The Beacon",
+      model: { id: "ChiakitheBeacon", name: "Chiaki the Beacon" },
+    },
+    {
+      faction: "ten_thunders",
+      document: "Ten Thunders",
+      slug: "misaki-katanaka",
+      name: "Misaki Katanaka",
+      model: { id: "MisakiKatanaka", name: "Misaki Katanaka" },
+    },
+  ];
+  const resurrectionistAlias = {
+    faction: "resurrectionists",
+    document: "Resurrectionist",
+    slug: "keepside-stangers",
+    name: "Keepside Stangers",
+    model: { id: "KeepsideStrangers", name: "Keepside Strangers" },
+  };
+  const modelsByDocument = Object.fromEntries(
+    cases.map((item) => [item.document, [item.model]]),
+  );
+  modelsByDocument.Resurrectionist.push(resurrectionistAlias.model);
+
+  const requestedDocuments = [];
+  globalThis.fetch = async (url) => {
+    const document = decodeURIComponent(new URL(String(url)).pathname.split("/").at(-1));
+    requestedDocuments.push(document);
+    return Response.json(playWyrdModelsFixture(modelsByDocument[document] || []));
+  };
+
+  const cache = new FakeKv();
+  for (const item of [...cases, resurrectionistAlias]) {
+    const enriched = await enrichCharacterMarkers(
+      {
+        faction: item.faction,
+        slug: item.slug,
+        name: item.name,
+        title: item.title || null,
+        actions: [{ name: "Marked Action", is_signature: false, stone_cost: 0 }],
+      },
+      environment(cache),
+    );
+    assert.equal(enriched.actions[0].is_signature, true, item.faction);
+    assert.equal(enriched.marker_metadata.modelId, item.model.id, item.slug);
+  }
+
+  assert.deepEqual(new Set(requestedDocuments), new Set(cases.map((item) => item.document)));
+  assert.equal(requestedDocuments.length, 8);
 });
 test("rejects query variants that could bypass the cache", async (context) => {
   const originalFetch = globalThis.fetch;
