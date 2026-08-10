@@ -1208,6 +1208,16 @@ h1 {
   border-bottom: 1px solid var(--line);
 }
 
+.crew-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crew-card-title .action-marker {
+  flex: 0 0 auto;
+}
+
 .crew-action-stats > div {
   min-width: 0;
   padding: 7px 3px 8px;

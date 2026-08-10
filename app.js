@@ -1001,6 +1001,8 @@ const crewCards = [
     name: "The Plan Comes Together",
     effectType: "action",
     action: {
+      isSignature: true,
+      stoneCost: 1,
       rg: "6″",
       skl: 0,
       rst: CREW_STAT_NOT_APPLICABLE,
@@ -1016,6 +1018,8 @@ const crewCards = [
     name: "Forbidden Curse",
     effectType: "action",
     action: {
+      isSignature: true,
+      stoneCost: 1,
       rg: "6″",
       skl: 5,
       rst: "Wp",
@@ -1031,6 +1035,8 @@ const crewCards = [
     name: "Specialized Tools",
     effectType: "action",
     action: {
+      isSignature: true,
+      stoneCost: 1,
       rg: "6″",
       skl: 5,
       rst: "Wp",
@@ -1073,6 +1079,8 @@ const crewCards = [
     name: "Loot Their Stash",
     effectType: "action",
     action: {
+      isSignature: true,
+      stoneCost: 1,
       rg: CREW_STAT_NOT_APPLICABLE,
       skl: CREW_STAT_NOT_APPLICABLE,
       rst: CREW_STAT_NOT_APPLICABLE,
@@ -1088,6 +1096,8 @@ const crewCards = [
     name: "Sadistic Blow",
     effectType: "action",
     action: {
+      isSignature: true,
+      stoneCost: 1,
       rg: "1″",
       skl: 5,
       rst: "Df",
@@ -3488,6 +3498,16 @@ function actionMarkerHtml(kind, value = 1) {
   return `<span class="action-marker action-marker-${markerKind}" data-action-marker="${markerKind}"${signature ? "" : ` data-stone-cost="${amount}"`} title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"><span class="action-marker-glyph action-marker-glyph-${markerKind}" aria-hidden="true"></span>${count}</span>`;
 }
 
+function crewActionMarkersHtml(action) {
+  if (!action) return "";
+  return [
+    action.isSignature ? actionMarkerHtml("signature") : "",
+    action.stoneCost ? actionMarkerHtml("stone", action.stoneCost) : "",
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
 function actionMetaHtml(action) {
   if (!action) return "";
   const pieces = [action.typeLabel || action.type]
@@ -4399,7 +4419,7 @@ function renderCrewCards() {
           <span class="crew-effect-type">${escapeHtml(
             message(card.effectType === "action" ? "crewAction" : "crewAbility"),
           )}</span>
-          <h3>${escapeHtml(card.name)}</h3>
+          <h3 class="crew-card-title">${crewActionMarkersHtml(card.action)}<span>${escapeHtml(card.name)}</span></h3>
           ${renderCrewActionDetails(card)}
           <p class="crew-effect-text">${escapeHtml(localized(card.text, card.textEn))}</p>
         </button>`,

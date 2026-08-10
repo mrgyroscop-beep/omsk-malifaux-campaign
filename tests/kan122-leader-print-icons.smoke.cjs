@@ -151,6 +151,7 @@ function advancesFixture() {
     const expectedPrintCounts = await page.evaluate(() => {
       const advances = window.MalifauxBuilder.getState().leader.advances;
       return {
+        total: advances.length,
         leader: advances.filter(
           (advance) =>
             advance.recipient !== "totem" &&
@@ -164,23 +165,22 @@ function advancesFixture() {
         ).length,
       };
     });
-    const leaderAdvances = page.locator("[data-print-leader-advancements] li");
     assert.ok(expectedPrintCounts.leader >= 5, "Fixture should exercise a dense leader advancement list.");
     assert.equal(
-      await leaderAdvances.count(),
-      expectedPrintCounts.leader,
-      "Leader sheet should show every non-ability leader advancement.",
+      await page.locator("[data-print-leader-advancements]").count(),
+      0,
+      "The leader sheet must not repeat advancements already embedded in action cards.",
+    );
+    assert.equal(
+      await page.locator(".print-advances li").count(),
+      expectedPrintCounts.total,
+      "The complete advancement history must remain on the arsenal page.",
     );
     assert.equal(
       await page.locator('[data-print-section="abilities"] li').count(),
       expectedPrintCounts.abilities,
       "Ability advancements must remain visible in the leader abilities block.",
     );
-    assert.ok(
-      !(await page.locator("[data-print-leader-advancements]").textContent()).includes("Leader Advance 10"),
-      "Totem advancements must not leak onto the leader sheet.",
-    );
-
     await page.emulateMedia({ media: "print" });
     await page.locator(".print-leader-page").screenshot({
       path: path.join(artifactDir, "leader-sheet-a4-page.png"),

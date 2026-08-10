@@ -9,13 +9,14 @@ const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
 const screenshotDir = process.env.KAN55_SCREENSHOT_DIR || "";
 const NA = "not-applicable";
 const statOrder = ["rg", "skl", "rst", "tn", "dmg"];
+const actionMarkers = { isSignature: true, stoneCost: 1 };
 
 const expectedActions = {
-  "the-plan": { rg: "6″", skl: 0, rst: NA, tn: 5, dmg: NA },
-  "forbidden-curse": { rg: "6″", skl: 5, rst: "Wp", tn: NA, dmg: NA },
-  "specialized-tools": { rg: "6″", skl: 5, rst: "Wp", tn: 11, dmg: NA },
-  "loot-stash": { rg: NA, skl: NA, rst: NA, tn: NA, dmg: NA },
-  sadistic: { rg: "1″", skl: 5, rst: "Df", tn: NA, dmg: 2 },
+  "the-plan": { ...actionMarkers, rg: "6″", skl: 0, rst: NA, tn: 5, dmg: NA },
+  "forbidden-curse": { ...actionMarkers, rg: "6″", skl: 5, rst: "Wp", tn: NA, dmg: NA },
+  "specialized-tools": { ...actionMarkers, rg: "6″", skl: 5, rst: "Wp", tn: 11, dmg: NA },
+  "loot-stash": { ...actionMarkers, rg: NA, skl: NA, rst: NA, tn: NA, dmg: NA },
+  sadistic: { ...actionMarkers, rg: "1″", skl: 5, rst: "Df", tn: NA, dmg: 2 },
 };
 
 const expectedAbilities = [
@@ -179,7 +180,11 @@ async function assertCrewStatLabelContrast(page, label) {
     cards.forEach((card) => {
       if (card.effectType === "action") {
         assert.deepEqual(card.action, expectedActions[card.id], `${card.id} action metadata differs.`);
-        assert.deepEqual(Object.keys(card.action), statOrder, `${card.id} stat order differs.`);
+        assert.deepEqual(
+          Object.keys(card.action).filter((key) => statOrder.includes(key)),
+          statOrder,
+          `${card.id} stat order differs.`,
+        );
       } else {
         assert.equal(card.action, null, `${card.id} must be explicitly ability-only.`);
       }
@@ -188,6 +193,10 @@ async function assertCrewStatLabelContrast(page, label) {
     assert.equal(await page.locator(".crew-option").count(), 12);
     assert.equal(await page.locator('.crew-option[data-crew-effect="action"]').count(), 5);
     assert.equal(await page.locator('.crew-option[data-crew-effect="ability"]').count(), 7);
+    for (const card of await page.locator('.crew-option[data-crew-effect="action"]').all()) {
+      assert.equal(await card.locator('[data-action-marker="signature"]').count(), 1);
+      assert.equal(await card.locator('[data-action-marker="stone"][data-stone-cost="1"]').count(), 1);
+    }
     assert.equal(await page.locator(".crew-no-actions").count(), 7);
     assert.deepEqual(await page.locator(".crew-no-actions").allTextContents(), Array(7).fill("∅Действий нет"));
 
@@ -268,6 +277,8 @@ async function assertCrewStatLabelContrast(page, label) {
     }
 
     await page.evaluate(() => window.renderPrintDossier());
+    assert.equal(await page.locator('.print-crew-card-title [data-action-marker="signature"]').count(), 1);
+    assert.equal(await page.locator('.print-crew-card-title [data-action-marker="stone"][data-stone-cost="1"]').count(), 1);
     assert.deepEqual(
       await page.locator(".print-crew-action-stats [data-print-crew-stat]").evaluateAll((nodes) =>
         nodes.map((node) => ({

@@ -46,6 +46,7 @@ let remote = {
 };
 let accountGets = 0;
 let accountPuts = 0;
+let failedAccountGetsRemaining = 0;
 
 function contentType(file) {
   if (file.endsWith(".html")) return "text/html; charset=utf-8";
@@ -97,7 +98,7 @@ async function startServer() {
 
 (async () => {
   const indexSource = await readFile(path.join(root, "index.html"), "utf8");
-  assert.match(indexSource, /<script src="app\.js\?v=31"><\/script>/u);
+  assert.match(indexSource, /<script src="app\.js\?v=32"><\/script>/u);
   const server = await startServer();
   const port = server.address().port;
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
@@ -134,6 +135,15 @@ async function startServer() {
     assert.equal(route.request().headers().authorization, undefined);
     if (route.request().method() === "GET") {
       accountGets += 1;
+      if (failedAccountGetsRemaining > 0) {
+        failedAccountGetsRemaining -= 1;
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "temporary_unavailable" }),
+        });
+        return;
+      }
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ campaign: remote }) });
       return;
     }
@@ -197,16 +207,49 @@ async function startServer() {
       `A local save was not synchronized automatically (GET ${accountGets}, PUT ${accountPuts}).`,
     );
 
+    remote = {
+      ...remote,
+      dossier: {
+        ...structuredClone(remote.dossier),
+        crew: { ...remote.dossier.crew, name: "Phone Edit" },
+      },
+      revision: remote.revision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    const getsBeforeFocus = accountGets;
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.waitForFunction(() => window.MalifauxBuilder.getState().crew.name === "Phone Edit");
+    assert.ok(accountGets > getsBeforeFocus, "Returning to the tab did not check the cloud revision.");
+
+    remote = {
+      ...remote,
+      dossier: {
+        ...structuredClone(remote.dossier),
+        crew: { ...remote.dossier.crew, name: "Recovered Edit" },
+      },
+      revision: remote.revision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    failedAccountGetsRemaining = 1;
+    const getsBeforeRetry = accountGets;
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await page.waitForFunction(
+      () => window.MalifauxBuilder.getState().crew.name === "Recovered Edit",
+      null,
+      { timeout: 10_000 },
+    );
+    assert.ok(accountGets >= getsBeforeRetry + 2, "A temporary sync failure was not retried.");
+
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.MalifauxAccount?.getUser()?.email === "captain@example.com");
-    assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).crew.name, "Device Edit");
+    assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).crew.name, "Recovered Edit");
 
     await page.locator("#openAccountButton").click();
     await page.locator('[data-account-action="logout"]').click();
     await page.waitForFunction(() => window.MalifauxAccount.getUser() === null);
     assert.equal(await page.locator("#accountDialogKicker").textContent(), "Личный журнал");
     assert.doesNotMatch(await page.locator("#accountDialogKicker").textContent(), /судовой/u);
-    assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).crew.name, "Device Edit");
+    assert.equal((await page.evaluate(() => window.MalifauxBuilder.getState())).crew.name, "Recovered Edit");
     assert.ok(
       (await page.locator("#accountDialogContent").textContent()).includes(
         "\u0411\u0435\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0431\u0438\u043b\u0434\u0435\u0440",

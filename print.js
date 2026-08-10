@@ -301,7 +301,11 @@
       <section class="print-crew-card">
         <div>
           <span class="print-kicker">${printText("Карта команды", "Crew card")}</span>
-          <h3>${escapePrintHtml(card.name)}</h3>
+          <h3 class="print-crew-card-title">${
+            isAction && typeof crewActionMarkersHtml === "function"
+              ? crewActionMarkersHtml(card.action)
+              : ""
+          }<span>${escapePrintHtml(card.name)}</span></h3>
           <small class="print-crew-effect-type">${printText(
             isAction ? "Действие" : "Способность",
             isAction ? "Action" : "Ability",
@@ -474,37 +478,6 @@
               return `<li><b>${escapePrintHtml(label)}</b>${details ? `<small> · ${escapePrintHtml(details)}</small>` : ""}${advance?.notes ? `<p>${escapePrintHtml(advance.notes)}</p>` : ""}</li>`;
             })
             .join("")}
-        </ul>
-      </section>`;
-  }
-
-  function renderLeaderAdvancements(advances) {
-    const records = (Array.isArray(advances) ? advances : []).filter(
-      (advance) =>
-        advance?.recipient !== "totem" &&
-        advance?.tableId !== "ability" &&
-        advance?.resultType !== "ability",
-    );
-    if (!records.length) return "";
-    return `
-      <section class="print-permanent-block print-leader-advancements" data-print-leader-advancements>
-        <span class="print-kicker">XP · ${printText("Лист лидера", "Leader sheet")}</span>
-        <h3>${printText("Продвижения лидера", "Leader advancements")}</h3>
-        <ul>
-          ${records.map((advance) => {
-            const label = typeof advance === "string"
-              ? advance
-              : advance?.name || advance?.label || printText("Продвижение", "Advancement");
-            const details = typeof advance === "object" && advance
-              ? [
-                  advance.xp ? `XP ${advance.xp}` : "",
-                  advance.tier ? `Tier ${advance.tier}` : "",
-                  advance.appliesTo ? `${printText("для", "for")} ${advance.appliesTo}` : "",
-                  advance.flip?.card || "",
-                ].filter(Boolean).join(" · ")
-              : "";
-            return `<li><b>${escapePrintHtml(label)}</b>${details ? `<small>${escapePrintHtml(details)}</small>` : ""}${advance?.notes ? `<p>${escapePrintHtml(advance.notes)}</p>` : ""}</li>`;
-          }).join("")}
         </ul>
       </section>`;
   }
@@ -709,7 +682,6 @@
         <div class="print-permanent-grid print-leader-permanent">
           ${renderPrintAbilitySection(advances, "leader")}
           ${renderPrintInjurySection(leader.injuries)}
-          ${renderLeaderAdvancements(advances)}
           ${renderManualUpgrades(manualUpgrades)}
         </div>
 

@@ -769,7 +769,7 @@
       });
       cloudData = payload;
       cloudError = "";
-      updateLocation(connection.campaignId);
+      updateLocation("");
       notify(
         "Облачная папка создана. Сохраните ключ организатора.",
         "Cloud file created. Save the organizer key.",
@@ -838,7 +838,7 @@
       saveConnection({ campaignId, organizerToken: verifiedToken });
       cloudData = payload;
       if (cloudError) notify(cloudError);
-      updateLocation(campaignId);
+      updateLocation("");
     } catch (error) {
       cloudError = errorText(error.code);
       notify(cloudError);
@@ -1125,6 +1125,7 @@
     if (connection?.campaignId !== sharedCampaignId) {
       saveConnection({ campaignId: sharedCampaignId, organizerToken: "" });
     }
+    updateLocation("");
     renderCloud();
     cloudDialog.showModal();
     void loadCampaign();

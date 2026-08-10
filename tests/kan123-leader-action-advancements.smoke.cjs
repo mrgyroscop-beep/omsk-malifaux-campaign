@@ -256,7 +256,16 @@ async function actionCard(page, name, print = false) {
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.evaluate(() => window.renderPrintDossier());
+    assert.equal(
+      await page.locator("[data-print-leader-advancements]").count(),
+      0,
+      "Leader-sheet advancement ledger still duplicates embedded actions and triggers.",
+    );
+    assert.match(await page.locator(".print-advances").textContent(), /Heave/);
+    assert.match(await page.locator(".print-advances").textContent(), /Runic Blade/);
     assert.equal(await page.locator("[data-print-leader-action]").count(), 4);
+    assert.equal(await page.locator('.print-crew-card-title [data-action-marker="signature"]').count(), 1);
+    assert.equal(await page.locator('.print-crew-card-title [data-action-marker="stone"][data-stone-cost="1"]').count(), 1);
     const printBreath = await actionCard(page, "Breath of Frost", true);
     assert.equal(await printBreath.locator("[data-print-action-trigger]").count(), 2);
     assert.match(await (await actionCard(page, "Runic Blade", true)).textContent(), /This model heals 1/);

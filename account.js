@@ -6,6 +6,7 @@
   const CONFLICT_BACKUP_KEY = "m4e-account-conflict-backup-v1";
   const LEGACY_CONNECTION_KEY = "m4e-cloud-campaign-v1";
   const LEGACY_ORGANIZER_KEYS_KEY = "m4e-cloud-organizer-keys-v1";
+  const SYNC_RETRY_DELAYS = Object.freeze([2_000, 5_000, 15_000]);
   const API_ROOT =
     document.querySelector('meta[name="app-api-url"]')?.content.trim().replace(/\/+$/u, "") ||
     "";
@@ -24,6 +25,8 @@
   let syncStatus = "guest";
   let conflict = null;
   let syncTimer = null;
+  let syncRetryTimer = null;
+  let syncRetryAttempt = 0;
   let syncPromise = null;
   let syncQueued = false;
   let linkedCampaignId = null;
@@ -74,6 +77,12 @@
   }
 
   function clearAccount() {
+    if (syncTimer !== null) window.clearTimeout(syncTimer);
+    if (syncRetryTimer !== null) window.clearTimeout(syncRetryTimer);
+    syncTimer = null;
+    syncRetryTimer = null;
+    syncRetryAttempt = 0;
+    syncQueued = false;
     saveSession(null);
     user = null;
     conflict = null;
@@ -323,6 +332,7 @@
     syncQueued = false;
     syncPromise = (async () => {
       syncStatus = "syncing";
+      error = "";
       render();
       const local = window.MalifauxBuilder.getState();
       const localHash = await hashState(local);
@@ -371,9 +381,14 @@
         syncStatus = "synced";
       }
     })()
+      .then((result) => {
+        resetSyncRetry();
+        return result;
+      })
       .catch((reason) => {
         error = errorText(reason.code);
         if (!conflict) syncStatus = "error";
+        scheduleSyncRetry();
       })
       .finally(() => {
         syncPromise = null;
@@ -383,20 +398,46 @@
     return syncPromise;
   }
 
-  function scheduleSync() {
+  function resetSyncRetry() {
+    if (syncRetryTimer !== null) window.clearTimeout(syncRetryTimer);
+    syncRetryTimer = null;
+    syncRetryAttempt = 0;
+  }
+
+  function scheduleSyncRetry() {
+    if (!user || conflict || navigator.onLine === false) return;
+    if (syncRetryTimer !== null || syncRetryAttempt >= SYNC_RETRY_DELAYS.length) return;
+    const delay = SYNC_RETRY_DELAYS[syncRetryAttempt];
+    syncRetryAttempt += 1;
+    syncRetryTimer = window.setTimeout(() => {
+      syncRetryTimer = null;
+      void reconcile();
+    }, delay);
+  }
+
+  function scheduleSync(delay = 900) {
     if (!user || conflict) return;
     syncQueued = true;
     if (syncTimer !== null) window.clearTimeout(syncTimer);
+    if (syncRetryTimer !== null) {
+      window.clearTimeout(syncRetryTimer);
+      syncRetryTimer = null;
+    }
     syncTimer = window.setTimeout(() => {
       syncTimer = null;
       void reconcile();
-    }, 900);
+    }, delay);
+  }
+
+  function scheduleLifecycleSync() {
+    if (document.visibilityState === "hidden") return;
+    scheduleSync(150);
   }
 
   function statusText() {
     const labels = {
       guest: text("Гостевой режим · только это устройство", "Guest mode · this device only"),
-      syncing: text("Сверяю судовые журналы…", "Reconciling ship logs…"),
+      syncing: text("Сверяю досье…", "Reconciling dossier…"),
       synced: text("Досье синхронизировано", "Dossier synchronized"),
       conflict: text("Нужно выбрать копию", "A copy must be chosen"),
       claim: text("Можно привязать открытую кампанию", "The open campaign can be linked"),
@@ -439,8 +480,8 @@
           <div><span>${text("Владелец досье", "Dossier owner")}</span><h3>${escapeHtml(user.displayName)}</h3><p>${escapeHtml(user.email)}</p></div>
         </div>
         <div class="account-sync-state is-${escapeHtml(syncStatus)}"><i></i><span><b>${statusText()}</b><small>${text(
-          "Изменения автоматически отправляются после сохранения и появляются после входа на другом устройстве.",
-          "Changes are sent automatically after saving and appear after sign-in on another device.",
+          "Изменения отправляются после сохранения и подхватываются при возвращении в приложение.",
+          "Changes are sent after saving and picked up when you return to the application.",
         )}</small></span></div>
         ${error ? `<p class="account-error" role="alert">${escapeHtml(error)}</p>` : ""}
         ${conflictHtml()}
@@ -489,7 +530,7 @@
     openButton.classList.toggle("is-authenticated", Boolean(user));
     chipLabel.textContent = user ? user.displayName : text("Аккаунт", "Account");
     if (loading) {
-      content.innerHTML = `<div class="account-loading"><i></i><span>${text("Проверяю судовой журнал…", "Checking the ship log…")}</span></div>`;
+      content.innerHTML = `<div class="account-loading"><i></i><span>${text("Проверяю аккаунт…", "Checking the account…")}</span></div>`;
     } else {
       content.innerHTML = user ? accountHtml() : authHtml();
     }
@@ -657,6 +698,10 @@
   window.addEventListener("malifaux-state-saved", (event) => {
     if (event.detail?.source !== "account-cloud") scheduleSync();
   });
+  window.addEventListener("focus", scheduleLifecycleSync);
+  window.addEventListener("pageshow", scheduleLifecycleSync);
+  window.addEventListener("online", () => scheduleSync(0));
+  document.addEventListener("visibilitychange", scheduleLifecycleSync);
 
   window.MalifauxAccount = Object.freeze({
     getUser: () => (user ? { ...user } : null),

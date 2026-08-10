@@ -389,6 +389,32 @@
     font-size: 14pt;
   }
 
+  .print-crew-card-title {
+    display: flex;
+    align-items: center;
+    gap: 1.2mm;
+  }
+
+  .print-crew-card-title .action-marker {
+    display: inline-flex;
+    min-width: 2.2mm;
+    min-height: 3.4mm;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    color: #d5b777;
+  }
+
+  .print-crew-card-title .action-marker-glyph-signature {
+    width: 2mm;
+    height: 3.2mm;
+  }
+
+  .print-crew-card-title .action-marker-glyph-stone {
+    width: 1.5mm;
+    height: 3.2mm;
+  }
+
   .print-crew-card p {
     margin: 0;
   }
