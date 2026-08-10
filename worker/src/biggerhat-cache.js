@@ -1,3 +1,5 @@
+import { enrichCharacterMarkers } from "./playwyrd-markers.js";
+
 const UPSTREAM_BASE = "https://biggerhat.net/api/v1";
 const MAX_RESPONSE_BYTES = 2_000_000;
 const LIST_TTL_MS = 6 * 60 * 60 * 1000;
@@ -35,7 +37,8 @@ function normalizedTarget(url) {
   return {
     path,
     url: `${UPSTREAM_BASE}/${path}${query ? `?${query}` : ""}`,
-    cacheKey: `biggerhat:v1:${path}${query ? `?${query}` : ""}`,
+    cacheKey: `biggerhat:${match[2] ? "v2" : "v1"}:${path}${query ? `?${query}` : ""}`,
+    characterSlug: match[1] === "characters" ? match[2] || "" : "",
     ttl:
       match[2] ? DETAIL_TTL_MS : match[1] === "keywords" ? KEYWORD_TTL_MS : LIST_TTL_MS,
   };
@@ -79,9 +82,13 @@ async function fetchUpstream(target, env, options = {}) {
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`BiggerHat returned ${response.status}`);
-    const body = await response.text();
+    let body = await response.text();
     if (body.length > MAX_RESPONSE_BYTES) throw new Error("BiggerHat response is too large");
-    JSON.parse(body);
+    const payload = JSON.parse(body);
+    if (target.characterSlug && payload?.data) {
+      payload.data = await enrichCharacterMarkers(payload.data, env);
+      body = JSON.stringify(payload);
+    }
     const entry = { fetchedAt: Date.now(), status: 200, body };
     if (options.waitUntil) {
       options.waitUntil(storeEntry(env, target.cacheKey, entry));

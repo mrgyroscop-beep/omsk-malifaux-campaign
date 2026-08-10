@@ -8,7 +8,7 @@
   const API_BASE =
     location.protocol === "file:" || !PROXY_API_BASE ? SOURCE_API_BASE : PROXY_API_BASE;
   const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
-  const DETAILS_KEY = "m4e-biggerhat-details-v1";
+  const DETAILS_KEY = "m4e-biggerhat-details-v2";
   const KEYWORDS_KEY = "m4e-biggerhat-keywords-v1";
   const PAGE_SIZE = 100;
   const DETAIL_CACHE_LIMIT = 50;
