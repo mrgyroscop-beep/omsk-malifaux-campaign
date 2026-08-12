@@ -864,7 +864,7 @@ function displayFlip(flip) {
     .replace(/^(\d+) C\/T$/, "$1 of Crow or Tome");
 }
 
-const archetypes = {
+const archetypes = window.MalifauxCampaignRules?.archetypes || {
   "Lucky Upstart": {
     label: "Счастливчик",
     labelEn: "Lucky Upstart",

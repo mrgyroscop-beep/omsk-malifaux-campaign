@@ -2,13 +2,9 @@
   "use strict";
 
   const STORAGE_KEY = "m4e-cooperative-campaign-v1";
-  const archetypes = {
-    "Lucky Upstart": "6 / 6 / 6 / 14",
-    Generalist: "5 / 5 / 6 / 14",
-    "Heavy Hitter": "6 / 4 / 6 / 14",
-    Schemer: "6 / 5 / 7 / 13",
-    "Talented Individual": "5 / 5 / 5 / 13",
-  };
+  const archetypes = window.MalifauxCampaignRules?.archetypes || {};
+  const cardCatalog = window.BiggerHatCards || null;
+  const DEFAULT_ENCOUNTER_SIZE = 24;
 
   const scenarios = [
     { id: "intro", n: "00", name: "Just Another Day in the Neighborhood", next: "smash", weekEnd: true, fields: [["strategy", "Strategy на столе", "number"], ["firepower", "Все Firepower убиты", "check"], ["elite", "Elite убит", "check"], ["scrip", "Скрип, полученный в игре", "number"]] },
@@ -41,6 +37,7 @@
     scrip: 0,
     xp: 0,
     miraculousRecovery: true,
+    talents: (archetypes.Generalist?.talents || []).map((slot) => ({ slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null })),
     arsenal: [],
   });
 
@@ -50,13 +47,14 @@
     campaign: { name: "Новая кооперативная кампания", week: 1, scenario: "intro", losses: 0, status: "active" },
     settings: { challenge: false, threads: false, threadCount: 3, equipment: false, fateDeck: "physical" },
     players: [freshPlayer(0)],
-    run: { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1 },
+    run: { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: DEFAULT_ENCOUNTER_SIZE },
     aftermath: null,
     history: [],
   });
 
   let state = load();
   let locale = "ru";
+  let picker = null;
 
   function normalize(raw) {
     const base = freshState();
@@ -65,9 +63,31 @@
     next.campaign = { ...base.campaign, ...(raw.campaign || {}) };
     next.settings = { ...base.settings, ...(raw.settings || {}) };
     next.run = { ...base.run, ...(raw.run || {}) };
+    const savedSize = raw.run?.size;
+    next.run.size = savedSize !== null && savedSize !== undefined && savedSize !== "" && Number.isFinite(Number(savedSize))
+      ? Number(savedSize)
+      : DEFAULT_ENCOUNTER_SIZE;
     next.players = Array.isArray(raw.players) && raw.players.length
-      ? raw.players.slice(0, 3).map((p, i) => ({ ...freshPlayer(i), ...p, arsenal: Array.isArray(p.arsenal) ? p.arsenal : [] }))
+      ? raw.players.slice(0, 3).map((p, i) => {
+          const player = {
+            ...freshPlayer(i),
+            ...p,
+            arsenal: Array.isArray(p.arsenal) ? p.arsenal : [],
+            talents: Array.isArray(p.talents) ? p.talents : [],
+          };
+          const slots = archetypes[player.archetype]?.talents || [];
+          player.talents = slots.map((slot) => {
+            const saved = player.talents.find((talent) => talent?.slotId === slot.id && talent?.kind === slot.kind && talentFitsSlot(talent, player, slot));
+            return saved || { slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null };
+          });
+          return player;
+        })
       : base.players;
+    const arsenalIds = new Map(next.players.map((player) => [player.id, new Set(player.arsenal.map((model) => model.id))]));
+    next.run.crews = Object.fromEntries(Object.entries(next.run.crews || {}).map(([playerId, crew]) => [
+      playerId,
+      { ...crew, models: [...new Set(Array.isArray(crew?.models) ? crew.models : [])].filter((id) => arsenalIds.get(playerId)?.has(id)) },
+    ]));
     next.history = Array.isArray(raw.history) ? raw.history : [];
     return next;
   }
@@ -152,6 +172,8 @@
   function playerCard(p, index) {
     const total = p.arsenal.reduce((sum, m) => sum + Number(m.cost || 0), 0);
     const remainder = Math.max(0, 25 - total);
+    const archetype = archetypes[p.archetype] || archetypes.Generalist;
+    const stats = archetype?.stats || {};
     return `<article class="coop-player coop-card" data-player-id="${p.id}">
       <header class="coop-player-head"><div><span>Профиль ${String(index + 1).padStart(2, "0")}</span><h2>${esc(p.name)}</h2></div><div class="coop-player-money"><b>${p.scrip}</b><small>скрип</small></div>${state.players.length > 1 ? `<button class="coop-icon-button" data-coop-action="remove-player" data-id="${p.id}" title="Удалить профиль">×</button>` : ""}</header>
       <div class="coop-form-grid coop-profile-fields">
@@ -159,11 +181,25 @@
         <label class="coop-field"><span>Лидер</span><input data-player-path="leader" value="${esc(p.leader)}" placeholder="Уникальное имя"></label>
         <label class="coop-field"><span>Фракция</span><input data-player-path="faction" value="${esc(p.faction)}" placeholder="Guild"></label>
         <label class="coop-field"><span>Два ключевых слова</span><input data-player-path="keywords" value="${esc(p.keywords)}" placeholder="Marshal, Witch Hunter"></label>
-        <label class="coop-field"><span>Архетип</span><select data-player-path="archetype">${Object.entries(archetypes).map(([name, stats]) => `<option value="${name}" ${p.archetype === name ? "selected" : ""}>${name} · ${stats}</option>`).join("")}</select></label>
+        <label class="coop-field"><span>Архетип</span><select data-player-path="archetype">${Object.entries(archetypes).map(([name, data]) => `<option value="${name}" ${p.archetype === name ? "selected" : ""}>${locale === "en" ? data.labelEn : data.label} · ${data.stats.Df} / ${data.stats.Wp} / ${data.stats.Sp} / ${data.stats.Health}</option>`).join("")}</select></label>
         <label class="coop-field"><span>Улучшения лидера</span><input type="number" min="0" data-player-path="advances" value="${p.advances}"><small>Стоимость в отряде: ${leaderCost(p)} SS</small></label>
       </div>
+      <section class="coop-leader-talents">
+        <header><div><span>Стартовый профиль</span><h3>${locale === "en" ? archetype.labelEn : archetype.label}</h3></div><b>Df ${stats.Df} · Wp ${stats.Wp} · Sp ${stats.Sp} · Health ${stats.Health}</b></header>
+        <p>${esc(locale === "en" ? archetype.ruleEn : archetype.rule)}</p>
+        <div class="coop-talent-list">${(archetype.talents || []).map((slot) => talentSlot(p, slot)).join("")}</div>
+      </section>
       <div class="coop-arsenal-head"><div><span>Стартовый лимит</span><b>${total} / 25 SS</b><small>${total <= 25 ? `остаток превращается в ${Math.min(3, remainder)} скрип` : `превышение на ${total - 25} SS`}</small></div><button class="coop-button minor" data-coop-action="add-model" data-id="${p.id}">+ Модель</button></div>
       <div class="coop-models">${p.arsenal.length ? p.arsenal.map(m => `<div class="coop-model"><b>${esc(m.name)}</b><span>${m.cost} SS · ${esc(m.type)}</span><label>Ранения <input type="number" min="0" max="3" value="${m.injuries || 0}" data-model-path="injuries" data-model-id="${m.id}"></label><label>Снаряжение <input type="number" min="0" value="${m.equipment || 0}" data-model-path="equipment" data-model-id="${m.id}"></label><button data-coop-action="remove-model" data-player="${p.id}" data-id="${m.id}">×</button></div>`).join("") : `<p class="coop-empty">Арсенал пуст. Добавьте модели на сумму до 25 soulstones.</p>`}</div>
+    </article>`;
+  }
+
+  function talentSlot(player, slot) {
+    const talent = player.talents.find((item) => item.slotId === slot.id && item.kind === slot.kind);
+    const selected = talent?.snapshot?.entry;
+    return `<article class="coop-talent-slot ${selected ? "is-selected" : ""}">
+      <div><small>${esc(locale === "en" ? slot.typeEn : slot.type)} · Cost ≤ ${slot.limit}</small><b>${esc(selected?.name || (locale === "en" ? "Not selected" : "Не выбрано"))}</b><span>${esc(talent?.source || (locale === "en" ? "Choose an eligible allied card" : "Выберите допустимую карту союзника"))}</span></div>
+      <button class="coop-button minor" type="button" data-coop-action="pick-talent" data-player="${player.id}" data-slot="${slot.id}">${selected ? (locale === "en" ? "Change" : "Изменить") : (locale === "en" ? "Choose" : "Выбрать")}</button>
     </article>`;
   }
 
@@ -176,7 +212,7 @@
         <article class="coop-card">
           <header><span>01 / Составы</span><h2>Распределение сил</h2></header>
           <p class="coop-callout">Лимит сценария делится поровну. Остатки участников объединяются в общий пул; Masters запрещены.</p>
-          <label class="coop-field"><span>Общий размер встречи, SS</span><input type="number" min="0" data-run-path="size" value="${state.run.size || 30}" ${inProgress || resolved ? "disabled" : ""}></label>
+          <label class="coop-field"><span>Общий размер встречи, SS</span><input type="number" min="0" data-run-path="size" value="${state.run.size}" ${inProgress || resolved ? "disabled" : ""}></label>
           <div class="coop-crews">${state.players.map(p => crewPicker(p, inProgress || resolved)).join("")}</div>
           ${state.run.status === "setup" ? `<button class="coop-button primary wide" data-coop-action="start-encounter">Начать сценарий</button>` : ""}
         </article>
@@ -189,7 +225,7 @@
 
   function crewPicker(p, disabled) {
     const crew = state.run.crews[p.id] || { models: [] };
-    const allocation = Math.floor(Number(state.run.size || 30) / state.players.length);
+    const allocation = Math.floor(Number(state.run.size) / state.players.length);
     const selectedCost = (crew.models || []).reduce((sum, id) => sum + Number(p.arsenal.find(m => m.id === id)?.cost || 0), leaderCost(p));
     return `<section class="coop-crew"><div><b>${esc(p.name)}</b><span>Лидер ${leaderCost(p)} SS · лимит ${allocation} SS</span></div><output class="${selectedCost > allocation ? "is-over" : ""}">${selectedCost} / ${allocation}</output><div>${p.arsenal.map(m => `<label><input type="checkbox" data-crew-model="${m.id}" data-player="${p.id}" ${(crew.models || []).includes(m.id) ? "checked" : ""} ${disabled ? "disabled" : ""}><span><b>${esc(m.name)}</b><small>${m.cost} SS · ${m.injuries || 0} ран.</small></span></label>`).join("") || `<small>Нет моделей в арсенале</small>`}</div><footer>Campaign Rating <b>${rating(p)}</b></footer></section>`;
   }
@@ -237,9 +273,40 @@
       <div class="coop-history">${state.history.length ? [...state.history].reverse().map((h, index) => `<article class="coop-card"><span>${String(state.history.length - index).padStart(3, "0")} / ${esc(h.time)}</span><h2>${esc(h.scenario)} · ${h.outcome === "win" ? "Победа" : "Поражение"}</h2><p>Неделя ${h.week}, попытка ${h.attempt}. ${esc(h.notes || "Без заметок ведущего.")}</p><div>${h.players.map(p => `<b>${esc(p.name)} <small>${p.scripDelta >= 0 ? "+" : ""}${p.scripDelta} скрип · +${p.xp} XP</small></b>`).join("")}</div></article>`).join("") : `<div class="coop-lock"><b>Журнал пока пуст</b><p>Первая запись появится после полного подтверждения Aftermath.</p></div>`}</div>`;
   }
 
+  function pickerView() {
+    if (!picker) return "";
+    const talentMode = picker.kind === "talent";
+    const title = talentMode
+      ? (locale === "en" ? "Choose a leader talent" : "Выбор таланта лидера")
+      : (locale === "en" ? "Add a model from BiggerHat" : "Добавить модель из BiggerHat");
+    const hint = talentMode
+      ? (locale === "en" ? `${picker.slot.typeEn} · source Cost ${picker.slot.limit} or less` : `${picker.slot.type} · источник Cost ${picker.slot.limit} или меньше`)
+      : (locale === "en" ? "Hireable cards with a printed Cost" : "Нанимаемые карточки с указанной стоимостью");
+    return `<div class="coop-picker-backdrop" data-coop-action="close-picker"><section class="coop-picker" role="dialog" aria-modal="true" aria-labelledby="coopPickerTitle" data-coop-picker>
+      <header><div><span>BIGGERHAT / ARCHIVE INDEX</span><h2 id="coopPickerTitle">${title}</h2><p>${esc(hint)}</p></div><button type="button" data-coop-action="close-picker" aria-label="${locale === "en" ? "Close" : "Закрыть"}">×</button></header>
+      <label class="coop-picker-search"><span>${locale === "en" ? "Search" : "Поиск"}</span><input id="coopPickerSearch" value="${esc(picker.query || "")}" placeholder="${locale === "en" ? "Name, keyword, or faction" : "Название, ключевое слово или фракция"}" autocomplete="off"></label>
+      <div class="coop-picker-status" id="coopPickerStatus">${esc(picker.status || "")}</div>
+      <div class="coop-picker-results" id="coopPickerResults">${picker.results?.length ? picker.results.map(pickerResult).join("") : ""}</div>
+      ${talentMode && picker.card ? talentEntriesView() : ""}
+    </section></div>`;
+  }
+
+  function pickerResult(card) {
+    return `<button class="coop-picker-result" type="button" data-coop-action="select-card" data-slug="${esc(card.slug)}"><span><b>${esc(card.displayName)}</b><small>${esc([card.factionLabel, card.stationLabel, card.cost === null ? "" : `${card.cost} SS`].filter(Boolean).join(" · "))}</small></span><i>${esc((card.keywords || []).map((keyword) => keyword.name).slice(0, 3).join(" · "))}</i></button>`;
+  }
+
+  function talentEntriesView() {
+    const entries = picker.slot.kind === "ability"
+      ? picker.card.abilities || []
+      : (picker.card.actions || []).filter((action) => action.type === picker.slot.kind);
+    return `<section class="coop-picker-entries"><header><span>${esc(picker.card.displayName)}</span><b>${locale === "en" ? "Eligible entries" : "Допустимые записи"}</b></header>${entries.length ? entries.map((entry, index) => picker.slot.chooseTrigger
+      ? (entry.triggers || []).map((trigger, triggerIndex) => `<button type="button" data-coop-action="select-talent" data-entry="${index}" data-trigger="${triggerIndex}"><b>${esc(entry.name)}</b><small>${esc(entry.description || "")}</small><i>${locale === "en" ? "Trigger" : "Триггер"}: ${esc(trigger.name)} · ${esc(trigger.description || "")}</i></button>`).join("")
+      : `<button type="button" data-coop-action="select-talent" data-entry="${index}"><b>${esc(entry.name)}</b><small>${esc(entry.description || "")}</small></button>`).join("") : `<p>${locale === "en" ? "This card has no matching entries." : "На карточке нет подходящих записей."}</p>`}</section>`;
+  }
+
   function shell() {
     const labels = { hq: "Штаб", players: "Игроки", encounter: "Сценарий", aftermath: "Aftermath", history: "Журнал" };
-    return `<div class="coop-shell"><nav class="coop-tabs" aria-label="Разделы кооперативной кампании">${Object.entries(labels).map(([id, label], i) => `<button class="${state.active === id ? "is-active" : ""}" data-coop-tab="${id}"><span>0${i + 1}</span>${label}${id === "aftermath" && state.aftermath ? `<i>${Math.min(6, state.aftermath.step + 1)}</i>` : ""}</button>`).join("")}</nav><div class="coop-content">${state.active === "hq" ? hqView() : state.active === "players" ? playersView() : state.active === "encounter" ? encounterView() : state.active === "aftermath" ? aftermathView() : historyView()}</div></div>`;
+    return `<div class="coop-shell"><nav class="coop-tabs" aria-label="Разделы кооперативной кампании">${Object.entries(labels).map(([id, label], i) => `<button class="${state.active === id ? "is-active" : ""}" data-coop-tab="${id}"><span>0${i + 1}</span>${label}${id === "aftermath" && state.aftermath ? `<i>${Math.min(6, state.aftermath.step + 1)}</i>` : ""}</button>`).join("")}</nav><div class="coop-content">${state.active === "hq" ? hqView() : state.active === "players" ? playersView() : state.active === "encounter" ? encounterView() : state.active === "aftermath" ? aftermathView() : historyView()}</div>${pickerView()}</div>`;
   }
 
   function setPath(root, path, value) {
@@ -248,12 +315,92 @@
   }
   function readInput(input) { return input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value) : input.value; }
 
+  function canonical(value) { return String(value || "").trim().toLocaleLowerCase("en"); }
+  function keywordNames(value) {
+    return String(value || "").split(/[,;]+/u).map(canonical).filter(Boolean);
+  }
+  function isForbiddenCard(card) {
+    const station = canonical(card.station || card.stationLabel);
+    const flags = [...(card.characteristics || []), station].map(canonical);
+    return card.cost === null || card.isUnhirable || flags.some((value) => ["master", "totem", "fate-bound", "fate bound"].includes(value));
+  }
+  function canHire(card, player) {
+    if (isForbiddenCard(card)) return false;
+    const faction = canonical(player.faction);
+    const factions = [card.faction, card.factionLabel, card.secondFaction, card.secondFactionLabel].map(canonical);
+    const playerKeywords = keywordNames(player.keywords);
+    const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]);
+    const versatile = [...(card.characteristics || []), card.station, card.stationLabel].map(canonical).includes("versatile");
+    return versatile || (faction && factions.includes(faction)) || playerKeywords.some((keyword) => cardKeywords.includes(keyword));
+  }
+  function canSourceTalent(card, player, slot) {
+    if (isForbiddenCard(card) || Number(card.cost) > slot.limit) return false;
+    const playerKeywords = keywordNames(player.keywords);
+    const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]);
+    return playerKeywords.some((keyword) => cardKeywords.includes(keyword));
+  }
+  function talentFitsSlot(talent, player, slot) {
+    const card = talent?.snapshot?.sourceCard;
+    const entry = talent?.snapshot?.entry;
+    if (!card || !entry) return !talent?.name;
+    if (!canSourceTalent(card, player, slot)) return false;
+    if (slot.kind === "ability") return (card.abilities || []).some((ability) => ability.id === entry.id || ability.slug === entry.slug);
+    if (entry.type !== slot.kind) return false;
+    if (slot.chooseTrigger) return Array.isArray(entry.triggers) && entry.triggers.length === 1;
+    return !entry.triggers?.length;
+  }
+  function syncPlayerTalents(player) {
+    const slots = archetypes[player.archetype]?.talents || [];
+    player.talents = slots.map((slot) => player.talents.find((talent) => talent.slotId === slot.id && talent.kind === slot.kind && talentFitsSlot(talent, player, slot)) || { slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null });
+  }
+  async function runPickerSearch() {
+    if (!picker) return;
+    if (!cardCatalog) { picker.status = locale === "en" ? "BiggerHat is unavailable." : "Каталог BiggerHat недоступен."; render(); return; }
+    const requestId = (picker.requestId || 0) + 1;
+    picker.requestId = requestId;
+    picker.status = locale === "en" ? "Loading catalog…" : "Загружаю каталог…";
+    render();
+    try {
+      const found = await cardCatalog.searchCharacters(picker.query || "", { limit: 1000 });
+      if (!picker || picker.requestId !== requestId) return;
+      const player = state.players.find((item) => item.id === picker.playerId);
+      picker.results = found.filter((card) => picker.kind === "model" ? canHire(card, player) : canSourceTalent(card, player, picker.slot)).slice(0, 30);
+      picker.status = picker.results.length ? (locale === "en" ? `${picker.results.length} cards found` : `Найдено карточек: ${picker.results.length}`) : (locale === "en" ? "No eligible cards found." : "Подходящих карточек не найдено.");
+      render();
+    } catch {
+      if (!picker || picker.requestId !== requestId) return;
+      picker.results = [];
+      picker.status = locale === "en" ? "Could not load BiggerHat. Try again." : "Не удалось загрузить BiggerHat. Повторите попытку.";
+      render();
+    }
+  }
+  async function selectPickerCard(slug) {
+    if (!picker || !cardCatalog) return;
+    picker.status = locale === "en" ? "Loading the full card…" : "Загружаю полную карточку…";
+    render();
+    try {
+      const card = await cardCatalog.getCharacter(slug);
+      if (!picker) return;
+      const player = state.players.find((item) => item.id === picker.playerId);
+      if (picker.kind === "model") {
+        if (!canHire(card, player)) return notify(locale === "en" ? "This model is not eligible for this arsenal." : "Эту модель нельзя добавить в данный арсенал.");
+        if (player.arsenal.some((model) => model.cardSlug === card.slug)) return notify(locale === "en" ? "This model is already in the arsenal." : "Эта модель уже есть в арсенале.");
+        player.arsenal.push({ id: crypto.randomUUID?.() || `${Date.now()}`, name: card.displayName, cost: card.cost, type: card.stationLabel || card.station || "Model", faction: card.factionLabel || card.faction || "", keywords: (card.keywords || []).map((keyword) => keyword.name), cardSlug: card.slug, cardSnapshot: card, injuries: 0, equipment: 0, addedWeek: state.run.status === "resolved" || state.aftermath ? state.campaign.week : 0 });
+        picker = null; save(); render(); return;
+      }
+      picker.card = card;
+      picker.status = locale === "en" ? "Choose an entry from the card." : "Выберите запись с карточки.";
+      render();
+    } catch { if (picker) { picker.status = locale === "en" ? "Could not load this card." : "Не удалось загрузить карточку."; render(); } }
+  }
+
   function bind(root) {
     root.onclick = (event) => {
       const tab = event.target.closest("[data-coop-tab]");
       if (tab) { state.active = tab.dataset.coopTab; save(); render(); return; }
       const scenarioButton = event.target.closest("[data-coop-scenario]");
-      if (scenarioButton && state.run.status === "setup" && confirm("Перейти к выбранному сценарию? Текущая подготовка будет очищена.")) { state.campaign.scenario = scenarioButton.dataset.coopScenario; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1 }; save(); render(); return; }
+      if (scenarioButton && state.run.status === "setup" && confirm("Перейти к выбранному сценарию? Текущая подготовка будет очищена.")) { state.campaign.scenario = scenarioButton.dataset.coopScenario; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: Number(state.run.size) || DEFAULT_ENCOUNTER_SIZE }; save(); render(); return; }
+      if (event.target.classList.contains("coop-picker-backdrop") && event.target.dataset.coopAction === "close-picker") { picker = null; render(); return; }
       const button = event.target.closest("[data-coop-action]"); if (!button) return;
       action(button.dataset.coopAction, button);
     };
@@ -263,32 +410,38 @@
       if ((event.type === "input" && changeOnly) || (event.type === "change" && !changeOnly)) return;
       if (el.dataset.coopPath) { setPath(state, el.dataset.coopPath, readInput(el)); save(); if (changeOnly || el.type === "number") render(); return; }
       const playerCard = el.closest("[data-player-id]");
-      if (playerCard && el.dataset.playerPath) { const p = state.players.find(x => x.id === playerCard.dataset.playerId); setPath(p, el.dataset.playerPath, readInput(el)); save(); if (event.type === "change" || el.type === "number") render(); return; }
+      if (playerCard && el.dataset.playerPath) { const p = state.players.find(x => x.id === playerCard.dataset.playerId); setPath(p, el.dataset.playerPath, readInput(el)); if (el.dataset.playerPath === "archetype") syncPlayerTalents(p); save(); if (event.type === "change" || el.type === "number") render(); return; }
       if (playerCard && el.dataset.modelPath) { const p = state.players.find(x => x.id === playerCard.dataset.playerId); const m = p.arsenal.find(x => x.id === el.dataset.modelId); m[el.dataset.modelPath] = readInput(el); save(); return; }
       if (el.dataset.runPath) { setPath(state.run, el.dataset.runPath, readInput(el)); save(); if (event.type === "change" || el.type === "number") render(); return; }
       if (el.dataset.tracker) { state.run.tracker[el.dataset.tracker] = readInput(el); save(); return; }
-      if (el.dataset.crewModel) { const id = el.dataset.player; state.run.crews[id] ||= { models: [] }; const models = state.run.crews[id].models; el.checked ? models.push(el.dataset.crewModel) : models.splice(models.indexOf(el.dataset.crewModel), 1); save(); render(); return; }
+      if (el.dataset.crewModel) { const id = el.dataset.player; state.run.crews[id] ||= { models: [] }; const models = new Set(state.run.crews[id].models || []); el.checked ? models.add(el.dataset.crewModel) : models.delete(el.dataset.crewModel); state.run.crews[id].models = [...models]; save(); render(); return; }
+      if (el.id === "coopPickerSearch") { picker.query = el.value; clearTimeout(picker.timer); picker.timer = setTimeout(runPickerSearch, 160); return; }
       if (el.dataset.phasePlayer) { const draft = state.aftermath.players[el.dataset.phasePlayer] ||= {}; draft[el.dataset.key] = readInput(el); save(); }
-      if (el.dataset.coopAction === "scenario-select") { state.campaign.scenario = el.value; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1 }; save(); render(); }
+      if (el.dataset.coopAction === "scenario-select") { state.campaign.scenario = el.value; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: Number(state.run.size) || DEFAULT_ENCOUNTER_SIZE }; save(); render(); }
     };
-    root.addEventListener("input", handleField);
-    root.addEventListener("change", handleField);
+    root.oninput = handleField;
+    root.onchange = handleField;
+    root.onkeydown = (event) => {
+      if (event.key === "Escape" && picker) { picker = null; render(); }
+    };
   }
 
   function action(name, button) {
     if (name === "add-player") { state.players.push(freshPlayer(state.players.length)); save(); render(); }
     if (name === "remove-player" && confirm("Удалить профиль и его арсенал?")) { state.players = state.players.filter(p => p.id !== button.dataset.id); save(); render(); }
     if (name === "add-model") {
-      const title = prompt("Название модели"); if (!title) return;
-      const cost = Number(prompt("Стоимость модели, SS", "5")); if (!Number.isFinite(cost) || cost < 0) return;
-      state.players.find(p => p.id === button.dataset.id).arsenal.push({ id: crypto.randomUUID?.() || `${Date.now()}`, name: title, cost, type: "Minion", injuries: 0, equipment: 0, addedWeek: state.run.status === "resolved" || state.aftermath ? state.campaign.week : 0 }); save(); render();
+      picker = { kind: "model", playerId: button.dataset.id, query: "", results: [], status: "" }; render(); runPickerSearch();
     }
-    if (name === "remove-model") { const p = state.players.find(x => x.id === button.dataset.player); p.arsenal = p.arsenal.filter(m => m.id !== button.dataset.id); save(); render(); }
+    if (name === "pick-talent") { const player = state.players.find((item) => item.id === button.dataset.player); const slot = archetypes[player?.archetype]?.talents?.find((item) => item.id === button.dataset.slot); if (!player || !slot) return; picker = { kind: "talent", playerId: player.id, slot, query: "", results: [], status: "", card: null }; render(); runPickerSearch(); }
+    if (name === "close-picker") { picker = null; render(); }
+    if (name === "select-card") selectPickerCard(button.dataset.slug);
+    if (name === "select-talent" && picker?.kind === "talent" && picker.card) { const entries = picker.slot.kind === "ability" ? picker.card.abilities || [] : (picker.card.actions || []).filter((entry) => entry.type === picker.slot.kind); const entry = entries[Number(button.dataset.entry)]; const player = state.players.find((item) => item.id === picker.playerId); if (!entry || !player) return; const selectedTrigger = picker.slot.chooseTrigger ? entry.triggers?.[Number(button.dataset.trigger)] : null; if (picker.slot.chooseTrigger && !selectedTrigger) return; const selectedEntry = { ...entry, triggers: selectedTrigger ? [selectedTrigger] : [] }; const talent = player.talents.find((item) => item.slotId === picker.slot.id && item.kind === picker.slot.kind); Object.assign(talent, { name: entry.name, source: picker.card.displayName, snapshot: { entry: selectedEntry, sourceCard: picker.card } }); picker = null; save(); render(); }
+    if (name === "remove-model") { const p = state.players.find(x => x.id === button.dataset.player); p.arsenal = p.arsenal.filter(m => m.id !== button.dataset.id); if (state.run.crews[p.id]) state.run.crews[p.id].models = (state.run.crews[p.id].models || []).filter((id) => id !== button.dataset.id); save(); render(); }
     if (name === "start-encounter") {
       const invalidArsenal = state.players.some(p => p.arsenal.reduce((sum, m) => sum + Number(m.cost || 0), 0) > 25 && state.history.length === 0);
       if (invalidArsenal) return notify("Стартовый арсенал одного из игроков превышает 25 soulstones.");
       const invalid = state.players.some(p => {
-        const max = Math.floor(Number(state.run.size || 30) / state.players.length);
+        const max = Math.floor(Number(state.run.size) / state.players.length);
         const crew = state.run.crews[p.id]?.models || [];
         return leaderCost(p) + crew.reduce((sum, id) => sum + Number(p.arsenal.find(m => m.id === id)?.cost || 0), 0) > max;
       });
@@ -351,7 +504,9 @@
   function render(nextLocale = locale) {
     locale = nextLocale || locale;
     const root = document.querySelector("#cooperativeApp"); if (!root) return;
+    document.body.classList.toggle("has-coop-picker", Boolean(picker));
     root.innerHTML = shell(); bind(root);
+    if (picker) requestAnimationFrame(() => root.querySelector("#coopPickerSearch")?.focus());
     const input = root.querySelector("#coopImport");
     if (input) input.onchange = async () => { try { const raw = JSON.parse(await input.files[0].text()); state = normalize(raw.kind === "m4e-cooperative-backup" ? raw.data : raw); save(); render(); notify("Кооперативная кампания импортирована."); } catch { notify("Не удалось импортировать файл."); } };
   }
