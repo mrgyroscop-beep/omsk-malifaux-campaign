@@ -3852,8 +3852,35 @@ function activateReferenceTab(tab = "flow") {
   });
 }
 
+let lastStandardRoute = "dossier";
+
+function updateCooperativeModeButton(route = activeRoute()) {
+  const button = document.querySelector("#cooperativeModeButton");
+  const label = document.querySelector("#cooperativeModeLabel");
+  const sigil = document.querySelector("#cooperativeModeSigil");
+  const cooperativeMode = route === "cooperative";
+  if (!button || !label || !sigil) return;
+
+  document.body.classList.toggle("is-cooperative-mode", cooperativeMode);
+  button.classList.toggle("is-active", cooperativeMode);
+  button.setAttribute("aria-pressed", String(cooperativeMode));
+  label.textContent = cooperativeMode
+    ? localized("Обычный", "Standard")
+    : localized("Кооп", "Co-op");
+  sigil.textContent = cooperativeMode ? "↩" : "CO";
+  button.setAttribute(
+    "aria-label",
+    cooperativeMode
+      ? localized("Вернуться в обычный режим", "Return to standard mode")
+      : localized("Перейти в кооперативный режим", "Switch to cooperative mode"),
+  );
+  button.title = button.getAttribute("aria-label");
+}
+
 function activateRoute(route) {
   const target = ROUTE_META[route] ? route : "dossier";
+  if (target !== "cooperative") lastStandardRoute = target;
+  updateCooperativeModeButton(target);
   document.querySelectorAll(".route").forEach((section) => {
     section.classList.toggle("is-active", section.id === `route-${target}`);
   });
@@ -9510,12 +9537,17 @@ function renderAll() {
   calculateRating();
   renderFateFlip();
   window.CooperativeCampaign?.render(currentLocale);
+  updateCooperativeModeButton(activeRoute());
   if (activeRoute() === "rules") renderRulesPage();
   applyStaticTranslations();
 }
 
 document.querySelectorAll("[data-route]").forEach((button) => {
   button.addEventListener("click", () => routeTo(button.dataset.route));
+});
+
+document.querySelector("#cooperativeModeButton")?.addEventListener("click", () => {
+  routeTo(activeRoute() === "cooperative" ? lastStandardRoute : "cooperative");
 });
 
 const brandMark = document.querySelector(".brand-mark");
