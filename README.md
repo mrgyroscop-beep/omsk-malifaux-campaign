@@ -230,6 +230,13 @@ another copy of the builder.
 - clickable page references throughout the builder with contextual back navigation;
 - browser autosave, JSON import/export, and print layout.
 
+### Cooperative mode
+
+The separate **Co-op** tab keeps an independent local campaign for one to three
+players. It includes player profiles and arsenals, the complete narrative encounter
+chain, per-scenario input fields, crew budgets and Campaign Rating, the ordered
+six-step Aftermath flow, Threads of Fate, immutable history, and its own JSON backup.
+
 ### Rules and navigation
 
 The app includes a structured standalone PDF of the **Campaign Mode** section.

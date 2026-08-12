@@ -27,6 +27,8 @@ const STATIC_TEXT_EN = {
   "Модели и снаряжение": "Models & equipment",
   "Хроника": "Chronicle",
   "Недели и последствия": "Weeks & aftermath",
+  "Кооператив": "Co-op",
+  "Кампания для 1–3 игроков": "Campaign for 1–3 players",
   "Справочник": "Reference",
   "Правила и таблицы": "Rules & tables",
   "Правила": "Rules",
@@ -752,6 +754,7 @@ const ROUTE_META = {
   leader: { index: "02", ru: "Лидер", en: "Leader" },
   arsenal: { index: "03", ru: "Арсенал", en: "Arsenal" },
   chronicle: { index: "04", ru: "Хроника", en: "Chronicle" },
+  cooperative: { index: "CO", ru: "Кооператив", en: "Co-op" },
   reference: { index: "05", ru: "Справочник", en: "Reference" },
   rules: { index: "06", ru: "Правила", en: "Rules" },
 };
@@ -3865,6 +3868,15 @@ function activateRoute(route) {
   });
   const railIndex = document.querySelector("#railIndex");
   if (railIndex) railIndex.textContent = `INDEX / ${ROUTE_META[target].index}`;
+  if (target === "cooperative") {
+    const cooperativeState = window.CooperativeCampaign?.getState();
+    if (cooperativeState) {
+      document.querySelector("#headerCampaign").textContent = cooperativeState.campaign.name;
+      document.querySelector("#headerWeek").textContent = message("week", { n: cooperativeState.campaign.week });
+    }
+  } else {
+    renderChrome();
+  }
   const activeNav = document.querySelector(`.nav-item[data-route="${target}"]`);
   if (activeNav && window.matchMedia("(max-width: 860px)").matches) {
     requestAnimationFrame(() => {
@@ -9382,6 +9394,7 @@ function renderAll() {
   renderGamePreview();
   calculateRating();
   renderFateFlip();
+  window.CooperativeCampaign?.render(currentLocale);
   if (activeRoute() === "rules") renderRulesPage();
   applyStaticTranslations();
 }

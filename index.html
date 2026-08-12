@@ -23,13 +23,14 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.07.31" />
+    <meta name="app-version" content="2026.08.12" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css?v=12" />
     <link rel="stylesheet" href="dossier-theme.css?v=17" />
     <link rel="stylesheet" href="feedback.css?v=1" />
+    <link rel="stylesheet" href="cooperative.css?v=1" />
     <link rel="stylesheet" href="print.css?v=6" media="print" />
   </head>
   <body class="theme-dossier">
@@ -206,6 +207,11 @@
             <span>04</span>
             <b>Хроника</b>
             <small>Недели и последствия</small>
+          </button>
+          <button class="nav-item nav-item-coop" type="button" data-route="cooperative">
+            <span>CO</span>
+            <b>Кооператив</b>
+            <small>Кампания для 1–3 игроков</small>
           </button>
           <button class="nav-item" type="button" data-route="reference">
             <span>05</span>
@@ -889,6 +895,10 @@
             </div>
             <div id="advancementLedger" class="advancement-ledger"></div>
           </article>
+        </section>
+
+        <section class="route cooperative-route" id="route-cooperative" aria-labelledby="cooperativeTitle">
+          <div id="cooperativeApp"></div>
         </section>
 
         <section class="route" id="route-reference" aria-labelledby="referenceTitle">
@@ -1853,6 +1863,7 @@
     ></script>
     <script src="biggerhat.js?v=4"></script>
     <script src="advancement-data.js?v=2"></script>
+    <script src="cooperative.js?v=1"></script>
     <script src="app.js?v=33"></script>
     <script src="account.js?v=2"></script>
     <script src="cloud.js?v=2"></script>
