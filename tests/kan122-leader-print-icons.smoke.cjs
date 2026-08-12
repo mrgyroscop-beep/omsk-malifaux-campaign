@@ -177,9 +177,9 @@ function advancesFixture() {
       "The complete advancement history must remain on the arsenal page.",
     );
     assert.equal(
-      await page.locator('[data-print-section="abilities"] li').count(),
+      await page.locator('[data-print-leader-action-group="ability"] [data-print-leader-ability]').count(),
       expectedPrintCounts.abilities,
-      "Ability advancements must remain visible in the leader abilities block.",
+      "Ability advancements must remain visible in the unified leader abilities group.",
     );
     await page.emulateMedia({ media: "print" });
     await page.locator(".print-leader-page").screenshot({

@@ -248,6 +248,36 @@
     gap: 1.7mm;
   }
 
+  .print-leader-action-groups {
+    display: grid;
+    gap: 3mm;
+  }
+
+  .print-leader-action-group {
+    display: grid;
+    gap: 1.5mm;
+  }
+
+  .print-leader-action-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+    padding-bottom: 1mm;
+    border-bottom: 0.7pt solid var(--print-line);
+  }
+
+  .print-leader-action-group-heading h3 {
+    margin: 0;
+    color: var(--print-red);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 12pt;
+  }
+
+  .print-leader-action-group-heading b {
+    color: var(--print-muted);
+    font-size: 7pt;
+  }
+
   .print-talent.has-triggers {
     grid-column: 1 / -1;
   }

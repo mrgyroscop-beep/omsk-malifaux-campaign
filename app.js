@@ -5651,13 +5651,6 @@ function renderLeaderPermanentRecords() {
   const wrap = document.querySelector("#leaderPermanentRecords");
   if (!wrap) return;
   wrap.innerHTML = `
-    <section class="permanent-record-section" data-permanent-section="abilities">
-      <div class="permanent-record-heading">
-        <span>${localized("Способности", "Abilities")}</span>
-        <b>${abilityRecords("leader").length}</b>
-      </div>
-      ${abilityListHtml(abilityRecords("leader"), { removable: true })}
-    </section>
     <section class="permanent-record-section" data-permanent-section="injuries">
       <div class="permanent-record-heading">
         <span>${localized("Травмы", "Injuries")}</span>
@@ -6360,6 +6353,81 @@ function leaderActionRecords({
   return records;
 }
 
+function leaderAbilityRecords({
+  talents = state.leader.talents,
+  advances = state.leader.advances,
+  includeLegacy = false,
+} = {}) {
+  const records = [];
+  (Array.isArray(talents) ? talents : []).forEach((talent, index) => {
+    if (talent?.kind !== "ability") return;
+    const snapshot = talent?.snapshot?.entry || {};
+    const name = snapshot.name || talent?.name || "";
+    if (!name) return;
+    records.push({
+      id: `talent-ability-${talent?.slotId || index + 1}`,
+      origin: "talent",
+      originLabel: localized("Заимствованный талант", "Borrowed talent"),
+      source: talent?.source || "",
+      ability: {
+        name,
+        effect: snapshot.description || snapshot.text || snapshot.effect || "",
+      },
+      removable: false,
+    });
+  });
+  const earnedAbilities = includeLegacy
+    ? (Array.isArray(advances) ? advances : [])
+        .filter(
+          (advance) =>
+            advance?.recipient === "leader" &&
+            (advance.tableId === "ability" || advance.resultType === "ability"),
+        )
+        .map(abilityRecordFromAdvancement)
+    : abilityRecords("leader", advances);
+  earnedAbilities.forEach((ability) => {
+    records.push({
+      id: `advancement-ability-${ability.id}`,
+      origin: "advancement",
+      originLabel: advancementTableLabel(ability.tableId),
+      source: ability.source || "",
+      ability,
+      advancementId: ability.advancementId,
+      removable: true,
+    });
+  });
+  return records;
+}
+
+function leaderPresentationGroups({
+  talents = state.leader.talents,
+  advances = state.leader.advances,
+  includeLegacyAbilities = false,
+} = {}) {
+  const actionGroups = { attack: [], tactical: [] };
+  leaderActionRecords({ talents, advances }).forEach((record) => {
+    const type = advancementActionType(record?.action?.type, record?.action?.tableId);
+    actionGroups[type === "attack" ? "attack" : "tactical"].push(record);
+  });
+  return [
+    {
+      id: "attack",
+      label: localized("Атаки", "Attack Actions"),
+      records: actionGroups.attack,
+    },
+    {
+      id: "tactical",
+      label: localized("Тактические действия", "Tactical Actions"),
+      records: actionGroups.tactical,
+    },
+    {
+      id: "ability",
+      label: localized("Способности", "Abilities"),
+      records: leaderAbilityRecords({ talents, advances, includeLegacy: includeLegacyAbilities }),
+    },
+  ].filter((group) => group.records.length);
+}
+
 function leaderActionPreviewCard(record) {
   const source = [
     record.originLabel,
@@ -6375,21 +6443,68 @@ function leaderActionPreviewCard(record) {
     </div>`;
 }
 
+function leaderAbilityPreviewCard(record) {
+  const ability = record.ability || {};
+  const source = [
+    record.originLabel,
+    record.source ? `${localized("Источник", "Source")}: ${record.source}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return `
+    <div class="leader-action-record leader-ability-record" data-leader-ability-name="${escapeHtml(ability.name)}">
+      <span class="leader-action-origin">${escapeHtml(source)}</span>
+      ${cardRuleHtml(
+        {
+          name: ability.name,
+          description: ability.effect || "",
+          typeLabel: localized("Способность", "Ability"),
+        },
+        "ability",
+      )}
+      ${
+        record.removable
+          ? `<button type="button" class="leader-record-delete" data-delete-ability-advancement="${escapeHtml(record.advancementId)}" aria-label="${localized("Удалить способность", "Delete ability")} ${escapeHtml(ability.name)}">×</button>`
+          : ""
+      }
+    </div>`;
+}
+
+function leaderPresentationGroupHtml(group) {
+  return `<section class="leader-action-group" data-leader-action-group="${group.id}">
+    <header class="leader-action-group-heading">
+      <h4>${escapeHtml(group.label)}</h4>
+      <b>${group.records.length}</b>
+    </header>
+    <div class="leader-action-records">
+      ${group.records
+        .map((record) =>
+          group.id === "ability"
+            ? leaderAbilityPreviewCard(record)
+            : leaderActionPreviewCard(record),
+        )
+        .join("")}
+    </div>
+  </section>`;
+}
+
 function renderLeaderActionPreview() {
   const wrap = document.querySelector("#leaderActionPreview");
   if (!wrap) return;
-  const records = leaderActionRecords();
-  wrap.hidden = !records.length;
-  wrap.innerHTML = records.length
+  const groups = leaderPresentationGroups();
+  const count = groups.reduce((sum, group) => sum + group.records.length, 0);
+  wrap.hidden = !count;
+  wrap.innerHTML = count
     ? `<div class="leader-action-preview-heading">
         <div>
           <span class="kicker">${localized("Сводка карточки лидера", "Leader card summary")}</span>
-          <h3>${localized("Действия с продвижениями", "Actions with advancements")}</h3>
+          <h3>${localized("Действия и способности", "Actions & abilities")}</h3>
         </div>
-        <b aria-label="${localized("Количество действий", "Action count")}">${records.length}</b>
+        <b aria-label="${localized("Количество записей", "Record count")}">${count}</b>
       </div>
-      <div class="leader-action-records">${records.map(leaderActionPreviewCard).join("")}</div>`
+      <div class="leader-action-groups">${groups.map(leaderPresentationGroupHtml).join("")}</div>`
     : "";
+  bindPermanentRecordActions(wrap);
 }
 
 function abilityChoiceAlreadyUsed(recipient, choice, selectedName = "") {

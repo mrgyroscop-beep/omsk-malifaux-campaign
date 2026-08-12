@@ -4691,11 +4691,65 @@ h1 {
   gap: 8px;
 }
 
+.leader-action-groups {
+  display: grid;
+  gap: 15px;
+}
+
+.leader-action-group {
+  display: grid;
+  gap: 8px;
+}
+
+.leader-action-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(145, 113, 60, 0.34);
+}
+
+.leader-action-group-heading h4 {
+  margin: 0;
+  color: var(--red);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.leader-action-group-heading b {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  place-items: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .leader-action-record {
   position: relative;
   padding: 10px 14px 4px;
   border-left: 3px solid var(--red);
   background: rgba(255, 252, 242, 0.58);
+}
+
+.leader-ability-record {
+  padding-right: 44px;
+  border-left-color: var(--brass);
+}
+
+.leader-record-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 25px;
+  height: 25px;
+  color: var(--red);
+  border: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
 }
 
 .leader-action-origin {

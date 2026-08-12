@@ -196,9 +196,10 @@ const fixture = {
 
     await page.locator('.nav-item[data-route="leader"]').click();
     const leaderPermanent = page.locator("#leaderPermanentRecords");
-    assert.match(await leaderPermanent.textContent(), /Способности/);
+    const leaderPresentation = page.locator("#leaderActionPreview");
+    assert.match(await leaderPresentation.textContent(), /Способности/);
     assert.match(await leaderPermanent.textContent(), /Травмы/);
-    assert.match(await leaderPermanent.textContent(), /Ruthless/);
+    assert.match(await leaderPresentation.textContent(), /Ruthless/);
     assert.match(await leaderPermanent.textContent(), /Leader Wound/);
     const totemCard = page.locator("#totemCard");
     assert.match(await totemCard.textContent(), /Chatty/);
@@ -340,7 +341,7 @@ const fixture = {
 
     await page.locator('.nav-item[data-route="leader"]').click();
     const paidDelete = page.locator(
-      '#leaderPermanentRecords [data-delete-ability-advancement="leader-paid"]',
+      '#leaderActionPreview [data-delete-ability-advancement="leader-paid"]',
     );
     page.once("dialog", (dialog) => dialog.dismiss());
     await paidDelete.click();
@@ -584,7 +585,7 @@ const fixture = {
 
     await page.locator('.nav-item[data-route="leader"]').click();
     await page.locator('[data-locale="en"]').click();
-    assert.match(await page.locator("#leaderPermanentRecords").textContent(), /Abilities/);
+    assert.match(await page.locator("#leaderActionPreview").textContent(), /Abilities/);
     assert.match(await page.locator("#leaderPermanentRecords").textContent(), /Injuries/);
     await page.locator('[data-locale="ru"]').click();
 

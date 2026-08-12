@@ -307,6 +307,45 @@
       </article>`;
   }
 
+  function renderLeaderAbility(record) {
+    const ability = record?.ability || {};
+    const source = [
+      record?.originLabel,
+      record?.source ? `${printText("Источник", "Source")}: ${record.source}` : "",
+      ability.flip?.card || "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return `<article class="print-talent print-talent-ability" data-print-leader-ability="${escapePrintHtml(ability.name)}">
+      <div class="print-talent-heading">
+        <span class="print-kicker">${printText("Способность", "Ability")}</span>
+        <div>
+          <h3>${escapePrintHtml(ability.name || printText("Способность", "Ability"))}</h3>
+          ${source ? `<small>${escapePrintHtml(source)}</small>` : ""}
+        </div>
+      </div>
+      ${ability.effect ? `<p class="print-rule-text">${richPrintText(ability.effect)}</p>` : ""}
+    </article>`;
+  }
+
+  function renderLeaderPresentationGroup(group) {
+    return `<section class="print-leader-action-group" data-print-leader-action-group="${escapePrintHtml(group.id)}">
+      <header class="print-leader-action-group-heading">
+        <h3>${escapePrintHtml(group.label)}</h3>
+        <b>${group.records.length}</b>
+      </header>
+      <div class="print-talent-list">
+        ${group.records
+          .map((record) =>
+            group.id === "ability"
+              ? renderLeaderAbility(record)
+              : renderLeaderAction(record),
+          )
+          .join("")}
+      </div>
+    </section>`;
+  }
+
   function renderCrewCard(card) {
     if (!card) return "";
     const text = isEnglishPrint() ? card.textEn || card.text : card.text || card.textEn;
@@ -696,9 +735,12 @@
       ? leaderActionRecords({ talents, advances, recipient: "leader" })
       : [];
     const leaderEquipment = assignedPrintEquipment(equipment, loadout, "leader");
-    const abilityTalents = talents
-      .map((talent, index) => ({ talent, index }))
-      .filter(({ talent }) => talent?.kind === "ability");
+    const presentationGroups =
+      typeof leaderPresentationGroups === "function"
+        ? leaderPresentationGroups({ talents, advances, includeLegacyAbilities: true })
+        : [
+            { id: "attack", label: printText("Действия", "Actions"), records: leaderActions },
+          ].filter((group) => group.records.length);
     const stats = archetype?.stats || {};
     const keywords = Array.isArray(crew.keywords) ? crew.keywords.filter(Boolean) : [];
     const characteristics = Array.isArray(leader.characteristics)
@@ -781,7 +823,6 @@
         </section>
 
         <div class="print-permanent-grid print-leader-permanent">
-          ${renderPrintAbilitySection(advances, "leader")}
           ${renderPrintInjurySection(leader.injuries)}
           ${renderPrintEquipmentSection(leaderEquipment)}
           ${renderManualUpgrades(manualUpgrades)}
@@ -792,13 +833,8 @@
             <span class="print-kicker">${printText("Таланты и продвижения", "Talents & advancements")}</span>
             <h2>${printText("Действия и способности", "Actions & abilities")}</h2>
           </div>
-          <div class="print-talent-list">
-            ${leaderActions.map(renderLeaderAction).join("")}
-            ${abilityTalents
-              .map(({ talent, index }) =>
-                renderTalent(talent, talentSlot(archetype, talent, index)),
-              )
-              .join("")}
+          <div class="print-leader-action-groups">
+            ${presentationGroups.map(renderLeaderPresentationGroup).join("")}
           </div>
         </section>
 
