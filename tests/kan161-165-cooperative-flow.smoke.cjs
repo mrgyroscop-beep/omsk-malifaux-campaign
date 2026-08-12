@@ -75,6 +75,12 @@ const detail = {
   const browserDialogs = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("dialog", async (dialog) => { browserDialogs.push(dialog.type()); await dialog.accept(); });
+  await page.route(/\/api\/(?:biggerhat\/v1\/)?keywords/u, async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [
+      { id: 1, name: "Marshal", slug: "marshal", game_mode_type: "standard" },
+      { id: 2, name: "Witch Hunter", slug: "witch-hunter", game_mode_type: "standard" },
+    ], meta: { last_page: 1 } }) });
+  });
   await page.route(/\/api\/(?:biggerhat\/v1\/)?characters/u, async (route) => {
     const url = new URL(route.request().url());
     const isDetail = /\/characters\/alpha-marshal$/u.test(url.pathname);
@@ -82,6 +88,13 @@ const detail = {
   });
   await page.route("https://biggerhat.net/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
+    if (/\/keywords$/u.test(url.pathname)) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [
+        { id: 1, name: "Marshal", slug: "marshal", game_mode_type: "standard" },
+        { id: 2, name: "Witch Hunter", slug: "witch-hunter", game_mode_type: "standard" },
+      ], meta: { last_page: 1 } }) });
+      return;
+    }
     const isDetail = /\/characters\/alpha-marshal$/u.test(url.pathname);
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: isDetail ? detail : [summary], meta: { last_page: 1 } }) });
   });

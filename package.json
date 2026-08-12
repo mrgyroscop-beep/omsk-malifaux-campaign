@@ -24,7 +24,8 @@
     "test:kan125": "node tests/kan125-feedback-fixes.smoke.cjs",
     "test:kan158-160": "node tests/kan158-160-feedback.smoke.cjs",
     "test:kan161-165": "node tests/kan161-165-cooperative-flow.smoke.cjs",
-    "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs"
+    "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs",
+    "test:kan170-172": "node tests/kan170-172-cooperative-builder-ux.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"
