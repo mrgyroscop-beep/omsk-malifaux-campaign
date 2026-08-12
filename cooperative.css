@@ -18,7 +18,7 @@ body:has(#route-cooperative.is-active) #printButton { display: none; }
 body.theme-dossier.is-cooperative-mode { --sticky-chrome-height: 76px; }
 body.theme-dossier.is-cooperative-mode .app-shell { grid-template-rows: 76px 0 minmax(0,1fr); }
 body.theme-dossier.is-cooperative-mode .rail { display: none; }
-@media(min-width:861px) and (max-width:1200px){.theme-dossier .cooperative-mode-button{min-width:42px;width:42px;padding:0}.theme-dossier .cooperative-mode-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+@media(min-width:861px) and (max-width:1500px){.theme-dossier .cooperative-mode-button{min-width:42px;width:42px;padding:0}.theme-dossier .cooperative-mode-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
 .coop-shell { min-height: calc(100vh - 76px); color: #272820; background: #dcd4c0; background-image: linear-gradient(rgba(68,65,53,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(68,65,53,.035) 1px, transparent 1px); background-size: 26px 26px; }
 .coop-tabs { position: sticky; top: calc(var(--sticky-top-gap) + 76px); z-index: 8; display: flex; padding: 0 38px; overflow-x: auto; border-bottom: 1px solid #797461; background: rgba(33,35,30,.97); color: #eee6d2; scrollbar-width: none; }
 .coop-tabs button { position: relative; min-width: 128px; min-height: 58px; padding: 0 18px; color: rgba(238,230,210,.56); border: 0; border-left: 1px solid rgba(238,230,210,.1); background: transparent; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
