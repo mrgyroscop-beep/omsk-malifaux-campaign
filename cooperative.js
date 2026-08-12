@@ -2,10 +2,12 @@
   "use strict";
 
   const STORAGE_KEY = "m4e-cooperative-campaign-v1";
+  const rules = window.CooperativeCampaignRules;
   const archetypes = window.MalifauxCampaignRules?.archetypes || {};
+  const advancement = window.MalifauxAdvancementData || {};
   const cardCatalog = window.BiggerHatCards || null;
   const DEFAULT_ENCOUNTER_SIZE = 24;
-
+  const phases = ["Draw Aftermath Hand", "Payday", "Barter", "Advance Leader", "Back-Alley Doctor", "Determine Injuries"];
   const scenarios = [
     { id: "intro", n: "00", name: "Just Another Day in the Neighborhood", next: "smash", weekEnd: true, fields: [["strategy", "Strategy на столе", "number"], ["firepower", "Все Firepower убиты", "check"], ["elite", "Elite убит", "check"], ["scrip", "Скрип, полученный в игре", "number"]] },
     { id: "smash", n: "01", name: "Smash and Grab", next: "mine", fields: [["elites", "Убитые Elite", "number"], ["loot", "Модели, сбежавшие с Loot", "number"], ["boss", "Boss убит", "check"], ["extraInjury", "Дополнительная модель для Injury Flip", "text"]] },
@@ -22,494 +24,193 @@
     { id: "workshop", n: "11", name: "Crack the Workshop Door", next: "ritual", fields: [["escaped", "Сбежавшие модели", "number"], ["turn", "Ход завершения", "number"]] },
     { id: "ritual", n: "12", name: "Disrupt the Ritual", next: "pillars", fields: [["scheme", "Enemy Scheme", "text"], ["clues", "Найденные Clues", "number"], ["phase", "Способ перехода фазы", "text"]] },
     { id: "pillars", n: "13", name: "Pillars of Power", next: null, fields: [["pillars", "Убитые Pillars", "number"], ["wounded", "Погибшие / ≤ половины здоровья", "number"], ["leaders", "Живые лидеры", "number"]] },
-  ];
+  ].map((item) => Object.freeze({ ...item, version: rules?.version || 2 }));
   const scenarioMap = Object.fromEntries(scenarios.map((item) => [item.id, item]));
-  const phases = ["Draw Aftermath Hand", "Payday", "Barter", "Advance Leader", "Back-Alley Doctor", "Determine Injuries"];
 
+  const uid = (prefix) => rules?.uid(prefix) || `${prefix}-${crypto.randomUUID?.() || Date.now()}`;
+  const emptyTalent = (slot) => ({ slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null });
+  const freshLeader = () => ({ characteristics: ["Master"], extraCharacteristics: "", size: 2, base: 30, miniature: "", path: "Bruiser", progress: 0, upgrades: [], crewCard: { id: "expert-coordination", parameter: "", master: "" }, luckyFlip: "", luckyEquipment: null, totem: null, injuries: [], luckyMisses: [] });
   const freshPlayer = (index = 0) => ({
-    id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-    name: `Игрок ${index + 1}`,
-    leader: "",
-    faction: "",
-    keywords: "",
-    archetype: "Generalist",
-    advances: 0,
-    scrip: 0,
-    xp: 0,
-    miraculousRecovery: true,
-    talents: (archetypes.Generalist?.talents || []).map((slot) => ({ slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null })),
-    arsenal: [],
+    id: uid("player"), name: `Игрок ${index + 1}`, leader: "", faction: "", keywords: "", archetype: "Generalist",
+    advances: 0, scrip: 0, xp: 0, miraculousRecovery: true,
+    leaderProfile: freshLeader(), talents: (archetypes.Generalist?.talents || []).map(emptyTalent), arsenal: [], equipment: [],
   });
+  const freshRun = (size = DEFAULT_ENCOUNTER_SIZE) => ({ status: "setup", outcome: "", tracker: {}, crews: {}, modelStates: {}, killCredits: [], notes: "", branch: "deal", attempt: 1, size, crewCardId: "expert-coordination", crewCardParameter: "", turn: 1, phase: "Start", challenge: false, rulesVersion: rules?.version || 2, locked: false });
+  const freshState = () => ({ version: 2, active: "hq", campaign: { name: "Новая кооперативная кампания", week: 1, scenario: "intro", losses: 0, status: "active" }, settings: { challenge: false, threads: false, threadCount: 3, equipment: false, fateDeck: "physical" }, players: [freshPlayer()], run: freshRun(), aftermath: null, history: [], ledger: [], corrections: [] });
 
-  const freshState = () => ({
-    version: 1,
-    active: "hq",
-    campaign: { name: "Новая кооперативная кампания", week: 1, scenario: "intro", losses: 0, status: "active" },
-    settings: { challenge: false, threads: false, threadCount: 3, equipment: false, fateDeck: "physical" },
-    players: [freshPlayer(0)],
-    run: { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: DEFAULT_ENCOUNTER_SIZE },
-    aftermath: null,
-    history: [],
-  });
-
-  let state = load();
   let locale = "ru";
   let picker = null;
+  let state = load();
 
+  function clone(value) { return JSON.parse(JSON.stringify(value)); }
+  function esc(value) { return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function canonical(value) { return String(value || "").trim().toLocaleLowerCase("en"); }
+  function keywordNames(value) { return String(value || "").split(/[,;]+/u).map(canonical).filter(Boolean); }
+  function keywordLabels(value) { return String(value || "").split(/[,;]+/u).map((item) => item.trim()).filter(Boolean); }
+  function scenario() { return scenarioMap[state.campaign.scenario] || scenarios[0]; }
+  function timestamp() { return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(new Date()); }
+  function notify(text) { const region = document.querySelector("#toastRegion"); if (!region) return; const node = document.createElement("div"); node.className = "toast"; node.textContent = text; region.append(node); setTimeout(() => node.remove(), 3200); }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function leaderCost(player) { return player.advances >= 7 ? 10 : player.advances >= 4 ? 8 : 6; }
+  function crewCards() { return window.MalifauxBuilder?.getCrewCards?.() || rules?.crewCardsFallback || []; }
+  function equipmentCatalog() {
+    return (window.MalifauxBuilder?.getEquipment?.() || []).map((item, index) => Array.isArray(item) ? { id: `equipment-${index}`, name: item[0], br: item[1], cost: Number(item[2] || 0), effect: item[3], effectEn: item[4], flags: item.at(-1) && typeof item.at(-1) === "object" ? item.at(-1) : {} } : item);
+  }
+  function injuryCatalog() { return window.MalifauxBuilder?.getInjuries?.() || []; }
+  function normalizeInjuries(model) {
+    if (Array.isArray(model.injuryList)) return model.injuryList;
+    return Array.from({ length: Number(model.injuries || 0) }, (_, index) => ({ id: uid("legacy-injury"), name: `Legacy injury ${index + 1}`, effect: "Imported from v1" }));
+  }
   function normalize(raw) {
     const base = freshState();
     if (!raw || typeof raw !== "object") return base;
-    const next = { ...base, ...raw };
+    const next = { ...base, ...raw, version: 2 };
     next.campaign = { ...base.campaign, ...(raw.campaign || {}) };
     next.settings = { ...base.settings, ...(raw.settings || {}) };
-    next.run = { ...base.run, ...(raw.run || {}) };
-    const savedSize = raw.run?.size;
-    next.run.size = savedSize !== null && savedSize !== undefined && savedSize !== "" && Number.isFinite(Number(savedSize))
-      ? Number(savedSize)
-      : DEFAULT_ENCOUNTER_SIZE;
-    next.players = Array.isArray(raw.players) && raw.players.length
-      ? raw.players.slice(0, 3).map((p, i) => {
-          const player = {
-            ...freshPlayer(i),
-            ...p,
-            arsenal: Array.isArray(p.arsenal) ? p.arsenal : [],
-            talents: Array.isArray(p.talents) ? p.talents : [],
-          };
-          const slots = archetypes[player.archetype]?.talents || [];
-          player.talents = slots.map((slot) => {
-            const saved = player.talents.find((talent) => talent?.slotId === slot.id && talent?.kind === slot.kind && talentFitsSlot(talent, player, slot));
-            return saved || { slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null };
-          });
-          return player;
-        })
-      : base.players;
+    const size = raw.run?.size;
+    next.run = { ...freshRun(size !== null && size !== undefined && size !== "" && Number.isFinite(Number(size)) ? Number(size) : DEFAULT_ENCOUNTER_SIZE), ...(raw.run || {}) };
+    next.run.modelStates = raw.run?.modelStates && typeof raw.run.modelStates === "object" ? raw.run.modelStates : {};
+    next.run.killCredits = Array.isArray(raw.run?.killCredits) ? raw.run.killCredits : [];
+    next.players = Array.isArray(raw.players) && raw.players.length ? raw.players.slice(0, 3).map((rawPlayer, index) => {
+      const player = { ...freshPlayer(index), ...rawPlayer };
+      player.leaderProfile = { ...freshLeader(), ...(rawPlayer.leaderProfile || {}) };
+      player.leaderProfile.crewCard = { ...freshLeader().crewCard, ...(rawPlayer.leaderProfile?.crewCard || {}) };
+      player.leaderProfile.upgrades = Array.isArray(rawPlayer.leaderProfile?.upgrades) ? rawPlayer.leaderProfile.upgrades : [];
+      player.leaderProfile.injuries = Array.isArray(rawPlayer.leaderProfile?.injuries) ? rawPlayer.leaderProfile.injuries : [];
+      player.leaderProfile.luckyMisses = Array.isArray(rawPlayer.leaderProfile?.luckyMisses) ? rawPlayer.leaderProfile.luckyMisses : [];
+      player.arsenal = (Array.isArray(rawPlayer.arsenal) ? rawPlayer.arsenal : []).map((model) => ({ ...model, status: model.status || "available", injuryList: normalizeInjuries(model), equipmentItems: Array.isArray(model.equipmentItems) ? model.equipmentItems : [] }));
+      player.equipment = Array.isArray(rawPlayer.equipment) ? rawPlayer.equipment : [];
+      const savedTalents = Array.isArray(rawPlayer.talents) ? rawPlayer.talents : [];
+      player.talents = (archetypes[player.archetype]?.talents || []).map((slot) => savedTalents.find((talent) => talent?.slotId === slot.id && talent?.kind === slot.kind && talentFitsSlot(talent, player, slot)) || emptyTalent(slot));
+      return player;
+    }) : base.players;
     const arsenalIds = new Map(next.players.map((player) => [player.id, new Set(player.arsenal.map((model) => model.id))]));
-    next.run.crews = Object.fromEntries(Object.entries(next.run.crews || {}).map(([playerId, crew]) => [
-      playerId,
-      { ...crew, models: [...new Set(Array.isArray(crew?.models) ? crew.models : [])].filter((id) => arsenalIds.get(playerId)?.has(id)) },
-    ]));
+    next.run.crews = Object.fromEntries(Object.entries(next.run.crews || {}).map(([playerId, crew]) => [playerId, { ...crew, models: [...new Set(Array.isArray(crew?.models) ? crew.models : [])].filter((id) => arsenalIds.get(playerId)?.has(id)), equipment: Array.isArray(crew?.equipment) ? crew.equipment : [] }]));
     next.history = Array.isArray(raw.history) ? raw.history : [];
+    next.ledger = Array.isArray(raw.ledger) ? raw.ledger : [];
+    next.corrections = Array.isArray(raw.corrections) ? raw.corrections : [];
+    if (raw.aftermath) next.aftermath = normalizeAftermath(raw.aftermath, next);
     return next;
   }
+  function normalizeAftermath(value, owner = state) {
+    const source = value || {};
+    return { id: source.id || uid("aftermath"), step: Math.max(0, Math.min(6, Number(source.step || 0))), rulesVersion: source.rulesVersion || rules?.version || 2, deck: Array.isArray(source.deck) ? source.deck : [], discard: Array.isArray(source.discard) ? source.discard : [], operations: Array.isArray(source.operations) ? source.operations : [], committing: false, players: Object.fromEntries(owner.players.map((player) => {
+      const draft = source.players?.[player.id] || {};
+      return [player.id, { hand: draft.hand || "", handCards: Array.isArray(draft.handCards) ? draft.handCards : [], usedHandIds: Array.isArray(draft.usedHandIds) ? draft.usedHandIds : [], duplicateOverride: Boolean(draft.duplicateOverride), calculated: draft.calculated || rules.formula(owner.campaign.scenario, owner.run.tracker, owner.run.outcome), paydayAdjustment: Number(draft.paydayAdjustment || 0), adjustmentReason: draft.adjustmentReason || "", flips: draft.flips || {}, purchases: Array.isArray(draft.purchases) ? draft.purchases : [], upgrades: Array.isArray(draft.upgrades) ? draft.upgrades : [], doctorAttempts: Array.isArray(draft.doctorAttempts) ? draft.doctorAttempts : [], injuryQueue: Array.isArray(draft.injuryQueue) ? draft.injuryQueue : buildInjuryQueue(player, owner.run), injuryResults: Array.isArray(draft.injuryResults) ? draft.injuryResults : [], workingPlayer: draft.workingPlayer ? clone(draft.workingPlayer) : clone(player) }];
+    })) };
+  }
+  function load() { try { return normalize(JSON.parse(localStorage.getItem(STORAGE_KEY))); } catch { return freshState(); } }
 
-  function load() {
-    try { return normalize(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
-    catch { return freshState(); }
-  }
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-  function esc(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-  function scenario() { return scenarioMap[state.campaign.scenario] || scenarios[0]; }
-  function leaderCost(player) { return player.advances >= 7 ? 10 : player.advances >= 4 ? 8 : 6; }
-  function rating(player) {
-    const crew = state.run.crews[player.id] || {};
-    const selected = Array.isArray(crew.models) ? crew.models : [];
-    return selected.reduce((sum, id) => {
-      const model = player.arsenal.find((item) => item.id === id);
-      return sum + (model?.equipment || 0) - (model?.injuries || 0);
-    }, player.advances || 0);
-  }
-  function timestamp() {
-    return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
-  }
-  function notify(text) {
-    const region = document.querySelector("#toastRegion");
-    if (!region) return;
-    const node = document.createElement("div"); node.className = "toast"; node.textContent = text; region.append(node);
-    setTimeout(() => node.remove(), 2800);
-  }
+  function isForbiddenCard(card) { const station = canonical(card.station || card.stationLabel); const flags = [...(card.characteristics || []), station].map(canonical); return card.cost === null || card.isUnhirable || flags.some((value) => ["master", "totem", "fate-bound", "fate bound"].includes(value)); }
+  function canHire(card, player) { if (isForbiddenCard(card)) return false; const faction = canonical(player.faction); const factions = [card.faction, card.factionLabel, card.secondFaction, card.secondFactionLabel].map(canonical); const playerKeywords = keywordNames(player.keywords); const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]); const versatile = [...(card.characteristics || []), card.station, card.stationLabel].map(canonical).includes("versatile"); return versatile || (faction && factions.includes(faction)) || playerKeywords.some((keyword) => cardKeywords.includes(keyword)); }
+  function canSourceTalent(card, player, slot) { if (isForbiddenCard(card) || Number(card.cost) > slot.limit) return false; const playerKeywords = keywordNames(player.keywords); const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]); return playerKeywords.some((keyword) => cardKeywords.includes(keyword)); }
+  function talentBlockedReason(entry) { const text = canonical(entry?.description); return /(hire|recruit|crew building|arsenal|keyword when hiring)/u.test(text) ? (locale === "en" ? "Changes recruitment rules" : "Изменяет правила найма") : ""; }
+  function talentFitsSlot(talent, player, slot) { const card = talent?.snapshot?.sourceCard; const entry = talent?.snapshot?.entry; if (!card || !entry) return !talent?.name; if (!canSourceTalent(card, player, slot) || talentBlockedReason(entry)) return false; if (slot.kind === "ability") return (card.abilities || []).some((ability) => ability.id === entry.id || ability.slug === entry.slug); if (entry.type !== slot.kind) return false; return slot.chooseTrigger ? Array.isArray(entry.triggers) && entry.triggers.length === 1 : !entry.triggers?.length; }
+  function syncPlayerTalents(player) { player.talents = (archetypes[player.archetype]?.talents || []).map((slot) => player.talents.find((talent) => talent.slotId === slot.id && talent.kind === slot.kind && talentFitsSlot(talent, player, slot)) || emptyTalent(slot)); }
+  function validatePlayer(player) { const errors = []; const extra = String(player.leaderProfile.extraCharacteristics || "").split(/[,;]+/u).map((item) => item.trim()).filter(Boolean); const crewCard = crewCards().find((item) => item.id === player.leaderProfile.crewCard.id); if (player.requiresStartingAnew) errors.push("Создайте нового лидера после Starting Anew"); if (!player.leader.trim()) errors.push("Укажите имя лидера"); if (state.players.some((item) => item.id !== player.id && canonical(item.leader) === canonical(player.leader) && player.leader)) errors.push("Имя лидера уже используется"); if (player.arsenal.some((model) => canonical(model.name) === canonical(player.leader) && player.leader)) errors.push("Имя совпадает с уникальной моделью"); if (keywordNames(player.keywords).length !== 2) errors.push("Укажите ровно два ключевых слова"); if (extra.length > 2) errors.push("Можно выбрать не более двух дополнительных характеристик"); if (player.talents.some((talent) => !talent.name)) errors.push("Заполните все стартовые действия и способности"); if (crewCard?.parameterType && !["ability", "action"].includes(crewCard.parameterType) && !player.leaderProfile.crewCard.parameter.trim()) errors.push("Укажите параметр стартовой Crew Card"); return errors; }
+  function equipmentCount(player, modelId) { return player.equipment.filter((item) => item.assignedTo === modelId && item.status === "attached").length; }
+  function rating(player) { const crew = state.run.crews[player.id] || {}; const ids = crew.models || []; const selected = new Set([`leader:${player.id}`, `totem:${player.id}`, ...ids]); const equipmentRating = player.equipment.filter((item) => item.status === "attached" && selected.has(item.assignedTo) && !item.ratingExempt).length; const modelInjuries = ids.reduce((sum, id) => sum + Number(player.arsenal.find((item) => item.id === id)?.injuryList?.length || 0), 0); const leaderInjuries = Number(player.leaderProfile.injuries?.length || 0); const totemAdvances = Number(player.leaderProfile.totem?.advances || 0); return Number(player.advances || 0) + totemAdvances + equipmentRating - modelInjuries - leaderInjuries; }
+  function crewCost(player) { const crew = state.run.crews[player.id] || {}; return leaderCost(player) + (player.leaderProfile.totem ? 4 : 0) + (crew.models || []).reduce((sum, id) => sum + Number(player.arsenal.find((model) => model.id === id)?.cost || 0), 0); }
+  function sharedPool() { return Number(state.run.size) - state.players.reduce((sum, player) => sum + crewCost(player), 0); }
+  function buildInjuryQueue(player, run = state.run) { const queue = []; const leaderState = run.modelStates[`leader:${player.id}`]; if (leaderState?.status === "killed") queue.push({ id: uid("injury-target"), kind: "leader", targetId: `leader:${player.id}`, name: player.leader || "Leader", done: false }); player.arsenal.forEach((model) => { const status = run.modelStates[model.id]?.status; const peon = canonical(model.type) === "peon" || (model.cardSnapshot?.characteristics || []).map(canonical).includes("peon"); if (status === "killed" && !peon) queue.push({ id: uid("injury-target"), kind: "model", targetId: model.id, name: model.name, done: false }); }); return queue; }
 
   function hqView() {
-    const s = scenario();
-    const completed = state.history.length;
-    return `
-      <div class="coop-hero">
-        <div><p class="coop-overline">COOPERATIVE OPERATIONS / LOCAL DOSSIER</p><h1 id="cooperativeTitle">${esc(state.campaign.name)}</h1><p>Одна кампания, отдельные лидеры и арсеналы. Все решения сохраняются на этом устройстве.</p></div>
-        <div class="coop-scenario-seal"><small>Текущий приказ</small><b>${s.n}</b><span>${esc(s.name)}</span></div>
-      </div>
-      <div class="coop-kpis">
-        <article><small>Участники</small><b>${state.players.length}<i>/3</i></b><span>локальных профиля</span></article>
-        <article><small>Неделя</small><b>${state.campaign.week}</b><span>${s.weekEnd ? "рубеж недели" : "операция продолжается"}</span></article>
-        <article><small>Завершено</small><b>${completed}</b><span>записей в журнале</span></article>
-        <article class="${state.settings.threads ? "is-lit" : ""}"><small>Threads of Fate</small><b>${state.settings.threads ? state.settings.threadCount : "—"}</b><span>${state.settings.threads ? "общий резерв" : "правило выключено"}</span></article>
-      </div>
-      <div class="coop-grid coop-grid-hq">
-        <article class="coop-card">
-          <header><span>01 / Паспорт</span><h2>Параметры кампании</h2></header>
-          <div class="coop-form-grid">
-            <label class="coop-field wide"><span>Название</span><input data-coop-path="campaign.name" value="${esc(state.campaign.name)}"></label>
-            <label class="coop-field"><span>Стартовый сценарий</span><select data-coop-action="scenario-select">${scenarios.map(x => `<option value="${x.id}" ${x.id === s.id ? "selected" : ""}>${x.n} · ${esc(x.name)}</option>`).join("")}</select></label>
-            <label class="coop-field"><span>Режим Fate Deck</span><select data-coop-path="settings.fateDeck"><option value="physical" ${state.settings.fateDeck === "physical" ? "selected" : ""}>Физическая · ручной ввод</option><option value="digital" ${state.settings.fateDeck === "digital" ? "selected" : ""}>Цифровая колода</option></select></label>
-          </div>
-          <div class="coop-toggles">
-            ${toggle("settings.challenge", "Challenge Mode", "Условия сложности и отдельные награды")}
-            ${toggle("settings.threads", "Threads of Fate", "Поражение расходует общую нить")}
-            ${toggle("settings.equipment", "Cooperative Equipment", "Общие правила снаряжения")}
-          </div>
-          ${state.settings.threads ? `<label class="coop-thread-count"><span>Начальный резерв нитей</span><input type="number" min="0" max="9" data-coop-path="settings.threadCount" value="${state.settings.threadCount}"></label>` : ""}
-        </article>
-        <article class="coop-card coop-map-card">
-          <header><span>02 / Маршрут</span><h2>Цепочка операций</h2></header>
-          <div class="coop-route-map">${scenarios.map(x => `<button type="button" data-coop-scenario="${x.id}" class="${x.id === s.id ? "is-current" : ""} ${state.history.some(h => h.scenarioId === x.id) ? "is-done" : ""}"><small>${x.n}</small><span>${esc(x.name)}</span></button>`).join("")}</div>
-          <p class="coop-caption">Развилка после A Reasonable Bargain фиксируется в трекере сценария. Переход выполняется только после подтверждения всего Aftermath.</p>
-        </article>
-      </div>`;
+    const current = scenario();
+    return `<div class="coop-hero"><div><p class="coop-overline">COOPERATIVE OPERATIONS / RULESET ${rules.version}</p><h1>${esc(state.campaign.name)}</h1><p>Одна локальная кампания, отдельные лидеры и атомарный журнал операций.</p></div><div class="coop-scenario-seal"><small>Текущий приказ</small><b>${current.n}</b><span>${esc(current.name)}</span></div></div>
+    <div class="coop-kpis"><article><small>Участники</small><b>${state.players.length}<i>/3</i></b><span>локальных профиля</span></article><article><small>Неделя</small><b>${state.campaign.week}</b><span>${current.weekEnd ? "рубеж недели" : "операция"}</span></article><article><small>Ledger</small><b>${state.ledger.length}</b><span>неизменяемых операций</span></article><article class="${state.settings.threads ? "is-lit" : ""}"><small>Threads of Fate</small><b>${state.settings.threads ? state.settings.threadCount : "—"}</b><span>общий резерв</span></article></div>
+    <div class="coop-grid coop-grid-hq"><article class="coop-card"><header><span>01 / Паспорт</span><h2>Параметры кампании</h2></header><div class="coop-form-grid"><label class="coop-field wide"><span>Название</span><input data-coop-path="campaign.name" value="${esc(state.campaign.name)}"></label><label class="coop-field"><span>Стартовый сценарий</span><select data-coop-action="scenario-select">${scenarios.map((item) => `<option value="${item.id}" ${item.id === current.id ? "selected" : ""}>${item.n} · ${esc(item.name)}</option>`).join("")}</select></label><label class="coop-field"><span>Fate Deck</span><select data-coop-path="settings.fateDeck"><option value="physical" ${state.settings.fateDeck === "physical" ? "selected" : ""}>Физическая · ручной ввод</option><option value="digital" ${state.settings.fateDeck === "digital" ? "selected" : ""}>Цифровая · 54 карты</option></select></label></div><div class="coop-toggles">${toggle("settings.challenge", "Challenge Mode", "Отслеживать условия сложности")}${toggle("settings.threads", "Threads of Fate", "Поражение расходует общую нить")}${toggle("settings.equipment", "Cooperative Equipment", "Учитывать снаряжение и Campaign Rating")}</div></article>
+    <article class="coop-card"><header><span>02 / Маршрут</span><h2>Цепочка операций</h2></header><div class="coop-route-map">${scenarios.map((item) => `<button type="button" data-coop-scenario="${item.id}" class="${item.id === current.id ? "is-current" : ""} ${state.history.some((entry) => entry.scenarioId === item.id) ? "is-done" : ""}"><small>${item.n}</small><span>${esc(item.name)}</span></button>`).join("")}</div></article></div>`;
   }
-
-  function toggle(path, title, note) {
-    const value = path.split(".").reduce((v, k) => v[k], state);
-    return `<label class="coop-toggle"><input type="checkbox" data-coop-path="${path}" ${value ? "checked" : ""}><span><b>${title}</b><small>${note}</small></span></label>`;
+  function toggle(path, title, note) { const value = path.split(".").reduce((result, key) => result[key], state); return `<label class="coop-toggle"><input type="checkbox" data-coop-path="${path}" ${value ? "checked" : ""}><span><b>${title}</b><small>${note}</small></span></label>`; }
+  function playersView() { return `<div class="coop-section-heading"><div><p class="coop-overline">ПЕРСОНАЛЬНЫЕ ДОСЬЕ</p><h1>Лидеры и арсеналы</h1><p>Полная стартовая карточка, Crew Card, прогресс и экземпляры снаряжения.</p></div>${state.players.length < 3 ? `<button class="coop-button" data-coop-action="add-player">+ Добавить игрока</button>` : ""}</div><div class="coop-player-list">${state.players.map(playerCard).join("")}</div>`; }
+  function playerCard(player, index) {
+    const archetype = archetypes[player.archetype] || archetypes.Generalist; const stats = archetype.stats || {}; const total = player.arsenal.reduce((sum, model) => sum + Number(model.cost || 0), 0); const errors = validatePlayer(player); const profile = player.leaderProfile;
+    return `<article class="coop-player coop-card" data-player-id="${player.id}"><header class="coop-player-head"><div><span>Профиль ${String(index + 1).padStart(2, "0")}</span><h2>${esc(player.name)}</h2></div><div class="coop-player-money"><b>${player.scrip}</b><small>скрип</small></div>${state.players.length > 1 ? `<button class="coop-icon-button" data-coop-action="remove-player" data-id="${player.id}">×</button>` : ""}</header>
+    ${errors.length ? `<div class="coop-validation"><b>Карточка не готова</b>${errors.map((error) => `<span>${esc(error)}</span>`).join("")}</div>` : ""}
+    <div class="coop-form-grid coop-profile-fields"><label class="coop-field"><span>Игрок</span><input data-player-path="name" value="${esc(player.name)}"></label><label class="coop-field"><span>Уникальное имя лидера</span><input data-player-path="leader" value="${esc(player.leader)}"></label><label class="coop-field"><span>Фракция</span><input data-player-path="faction" value="${esc(player.faction)}"></label><label class="coop-field"><span>Ровно два ключевых слова</span><input data-player-path="keywords" value="${esc(player.keywords)}"></label><label class="coop-field"><span>Архетип</span><select data-player-path="archetype">${Object.entries(archetypes).map(([name, data]) => `<option value="${name}" ${player.archetype === name ? "selected" : ""}>${locale === "en" ? data.labelEn : data.label}</option>`).join("")}</select></label><label class="coop-field"><span>Путь</span><select data-leader-path="path"><option ${profile.path === "Bruiser" ? "selected" : ""}>Bruiser</option><option ${profile.path === "Strategist" ? "selected" : ""}>Strategist</option></select></label><label class="coop-field"><span>Доп. характеристики (до 2)</span><input data-leader-path="extraCharacteristics" value="${esc(profile.extraCharacteristics)}" placeholder="Living, Construct"></label><label class="coop-field"><span>Sz / база</span><span class="coop-inline-inputs"><select data-leader-path="size">${[1,2,3,4].map((value) => `<option ${Number(profile.size) === value ? "selected" : ""}>${value}</option>`).join("")}</select><select data-leader-path="base">${[30,40,50].map((value) => `<option ${Number(profile.base) === value ? "selected" : ""}>${value}</option>`).join("")}</select></span></label><label class="coop-field"><span>Миниатюра / описание</span><input data-leader-path="miniature" value="${esc(profile.miniature)}"></label><label class="coop-field"><span>XP / улучшения</span><span class="coop-inline-inputs"><input type="number" min="0" max="39" data-player-path="xp" value="${player.xp}"><input type="number" min="0" data-player-path="advances" value="${player.advances}"></span><small>Стоимость лидера ${leaderCost(player)} SS</small></label></div>
+    <section class="coop-leader-talents"><header><div><span>Master · ${esc(profile.extraCharacteristics || "без дополнительных характеристик")}</span><h3>${locale === "en" ? archetype.labelEn : archetype.label}</h3></div><b>Df ${stats.Df} · Wp ${stats.Wp} · Sp ${stats.Sp} · Health ${stats.Health}</b></header><p>${esc(locale === "en" ? archetype.ruleEn : archetype.rule)}</p><div class="coop-talent-list">${archetype.talents.map((slot) => talentSlot(player, slot)).join("")}</div>${player.archetype === "Lucky Upstart" ? luckyUpstartView(player) : ""}</section>
+    <section class="coop-leader-options"><div><span>Стартовая Crew Card</span><select data-crew-card="id">${crewCards().map((card) => `<option value="${card.id}" ${profile.crewCard.id === card.id ? "selected" : ""}>${esc(card.name)}</option>`).join("")}</select><input data-crew-card="parameter" value="${esc(profile.crewCard.parameter)}" placeholder="Маркер, токен или тип улучшения"><input data-crew-card="master" value="${esc(profile.crewCard.master)}" placeholder="Связанный Master / Crew Card"></div><div><span>Кооперативный Totem</span><select data-leader-totem><option value="">Нет Totem</option>${(advancement.tier3?.totems || []).map((totem) => `<option value="${totem.id}" ${profile.totem?.id === totem.id ? "selected" : ""}>${esc(totem.name)} · 4 SS</option>`).join("")}</select><small>${profile.totem ? `Df ${profile.totem.stats?.df} · Wp ${profile.totem.stats?.wp} · Sp ${profile.totem.stats?.sp} · Health ${profile.totem.stats?.health}` : "Получается через Tier 3; второй Totem запрещён"}</small></div></section>
+    <div class="coop-arsenal-head"><div><span>Стартовый лимит</span><b>${total} / 25 SS</b><small>${total <= 25 ? `остаток → ${Math.min(3, 25-total)} скрип` : `превышение ${total-25} SS`}</small></div><button class="coop-button minor" data-coop-action="add-model" data-id="${player.id}">+ Модель</button></div><div class="coop-models">${player.arsenal.length ? player.arsenal.map((model) => modelRow(player, model)).join("") : `<p class="coop-empty">Арсенал пуст.</p>`}</div></article>`;
   }
-
-  function playersView() {
-    return `<div class="coop-section-heading"><div><p class="coop-overline">ПЕРСОНАЛЬНЫЕ ДОСЬЕ</p><h1>Лидеры и арсеналы</h1><p>Каждый профиль хранит собственную экономику, опыт и модели.</p></div>${state.players.length < 3 ? `<button class="coop-button" data-coop-action="add-player">+ Добавить игрока</button>` : ""}</div>
-      <div class="coop-player-list">${state.players.map((p, i) => playerCard(p, i)).join("")}</div>`;
-  }
-
-  function playerCard(p, index) {
-    const total = p.arsenal.reduce((sum, m) => sum + Number(m.cost || 0), 0);
-    const remainder = Math.max(0, 25 - total);
-    const archetype = archetypes[p.archetype] || archetypes.Generalist;
-    const stats = archetype?.stats || {};
-    return `<article class="coop-player coop-card" data-player-id="${p.id}">
-      <header class="coop-player-head"><div><span>Профиль ${String(index + 1).padStart(2, "0")}</span><h2>${esc(p.name)}</h2></div><div class="coop-player-money"><b>${p.scrip}</b><small>скрип</small></div>${state.players.length > 1 ? `<button class="coop-icon-button" data-coop-action="remove-player" data-id="${p.id}" title="Удалить профиль">×</button>` : ""}</header>
-      <div class="coop-form-grid coop-profile-fields">
-        <label class="coop-field"><span>Игрок</span><input data-player-path="name" value="${esc(p.name)}"></label>
-        <label class="coop-field"><span>Лидер</span><input data-player-path="leader" value="${esc(p.leader)}" placeholder="Уникальное имя"></label>
-        <label class="coop-field"><span>Фракция</span><input data-player-path="faction" value="${esc(p.faction)}" placeholder="Guild"></label>
-        <label class="coop-field"><span>Два ключевых слова</span><input data-player-path="keywords" value="${esc(p.keywords)}" placeholder="Marshal, Witch Hunter"></label>
-        <label class="coop-field"><span>Архетип</span><select data-player-path="archetype">${Object.entries(archetypes).map(([name, data]) => `<option value="${name}" ${p.archetype === name ? "selected" : ""}>${locale === "en" ? data.labelEn : data.label} · ${data.stats.Df} / ${data.stats.Wp} / ${data.stats.Sp} / ${data.stats.Health}</option>`).join("")}</select></label>
-        <label class="coop-field"><span>Улучшения лидера</span><input type="number" min="0" data-player-path="advances" value="${p.advances}"><small>Стоимость в отряде: ${leaderCost(p)} SS</small></label>
-      </div>
-      <section class="coop-leader-talents">
-        <header><div><span>Стартовый профиль</span><h3>${locale === "en" ? archetype.labelEn : archetype.label}</h3></div><b>Df ${stats.Df} · Wp ${stats.Wp} · Sp ${stats.Sp} · Health ${stats.Health}</b></header>
-        <p>${esc(locale === "en" ? archetype.ruleEn : archetype.rule)}</p>
-        <div class="coop-talent-list">${(archetype.talents || []).map((slot) => talentSlot(p, slot)).join("")}</div>
-      </section>
-      <div class="coop-arsenal-head"><div><span>Стартовый лимит</span><b>${total} / 25 SS</b><small>${total <= 25 ? `остаток превращается в ${Math.min(3, remainder)} скрип` : `превышение на ${total - 25} SS`}</small></div><button class="coop-button minor" data-coop-action="add-model" data-id="${p.id}">+ Модель</button></div>
-      <div class="coop-models">${p.arsenal.length ? p.arsenal.map(m => `<div class="coop-model"><b>${esc(m.name)}</b><span>${m.cost} SS · ${esc(m.type)}</span><label>Ранения <input type="number" min="0" max="3" value="${m.injuries || 0}" data-model-path="injuries" data-model-id="${m.id}"></label><label>Снаряжение <input type="number" min="0" value="${m.equipment || 0}" data-model-path="equipment" data-model-id="${m.id}"></label><button data-coop-action="remove-model" data-player="${p.id}" data-id="${m.id}">×</button></div>`).join("") : `<p class="coop-empty">Арсенал пуст. Добавьте модели на сумму до 25 soulstones.</p>`}</div>
-    </article>`;
-  }
-
-  function talentSlot(player, slot) {
-    const talent = player.talents.find((item) => item.slotId === slot.id && item.kind === slot.kind);
-    const selected = talent?.snapshot?.entry;
-    return `<article class="coop-talent-slot ${selected ? "is-selected" : ""}">
-      <div><small>${esc(locale === "en" ? slot.typeEn : slot.type)} · Cost ≤ ${slot.limit}</small><b>${esc(selected?.name || (locale === "en" ? "Not selected" : "Не выбрано"))}</b><span>${esc(talent?.source || (locale === "en" ? "Choose an eligible allied card" : "Выберите допустимую карту союзника"))}</span></div>
-      <button class="coop-button minor" type="button" data-coop-action="pick-talent" data-player="${player.id}" data-slot="${slot.id}">${selected ? (locale === "en" ? "Change" : "Изменить") : (locale === "en" ? "Choose" : "Выбрать")}</button>
-    </article>`;
-  }
+  function talentSlot(player, slot) { const talent = player.talents.find((item) => item.slotId === slot.id && item.kind === slot.kind); const selected = talent?.snapshot?.entry; return `<article class="coop-talent-slot ${selected ? "is-selected" : ""}"><div><small>${esc(locale === "en" ? slot.typeEn : slot.type)} · Cost ≤ ${slot.limit}</small><b>${esc(selected?.name || "Не выбрано")}</b><span>${esc(talent?.source || "Выберите допустимую карту союзника")}</span></div><button class="coop-button minor" data-coop-action="pick-talent" data-player="${player.id}" data-slot="${slot.id}">${selected ? "Изменить" : "Выбрать"}</button></article>`; }
+  function luckyUpstartView(player) { const profile = player.leaderProfile; const misses=window.MalifauxBuilder?.getLuckyMisses?.()||[]; const flip=String(profile.luckyFlip||""); const eligible=equipmentCatalog().filter((item)=>item.flags?.group==="lucky-miss"&&(flip?canonical(item.br).endsWith(`· ${canonical(flip)}`):false)); return `<div class="coop-lucky"><b>Lucky Upstart · Lucky Miss Flip</b><span><select data-lucky-flip><option value="">Результат Flip</option>${misses.map((item)=>`<option value="${item.flip}" ${flip===item.flip?"selected":""}>${esc(item.flip)} · ${esc(item.name)}</option>`).join("")}</select><select data-lucky-equipment><option value="">Результат таблицы</option>${eligible.map((item)=>`<option value="${item.id}" ${profile.luckyEquipment?.catalogId===item.id?"selected":""}>${esc(item.name)}</option>`).join("")}</select></span><small>Экземпляр бесплатный, не влияет на CR и возвращается после игры.</small></div>`; }
+  function modelRow(player, model) { return `<div class="coop-model"><div><b>${esc(model.name)}</b><small>${esc(model.status)} · ${esc((model.keywords || []).join(", "))}</small></div><span>${model.cost} SS · ${esc(model.type)}</span><label>Ранения <b>${model.injuryList.length}</b></label><label>Equipment <b>${player.equipment.filter((item)=>item.assignedTo===model.id).length}</b></label><button data-coop-action="remove-model" data-player="${player.id}" data-id="${model.id}">×</button></div>`; }
 
   function encounterView() {
-    const s = scenario();
-    const inProgress = state.run.status === "active";
-    const resolved = state.run.status === "resolved";
-    return `<div class="coop-section-heading"><div><p class="coop-overline">ОПЕРАЦИЯ ${s.n} / ПОПЫТКА ${state.run.attempt}</p><h1>${esc(s.name)}</h1><p>${inProgress ? "Трекер открыт. Вводите показатели постепенно или после партии." : resolved ? "Исход зафиксирован. Перейдите к Aftermath." : "Соберите допустимые отряды и подтвердите начало партии."}</p></div><span class="coop-status ${state.run.status}">${state.run.status === "setup" ? "Подготовка" : state.run.status === "active" ? "В игре" : "Завершён"}</span></div>
-      <div class="coop-grid">
-        <article class="coop-card">
-          <header><span>01 / Составы</span><h2>Распределение сил</h2></header>
-          <p class="coop-callout">Лимит сценария делится поровну. Остатки участников объединяются в общий пул; Masters запрещены.</p>
-          <label class="coop-field"><span>Общий размер встречи, SS</span><input type="number" min="0" data-run-path="size" value="${state.run.size}" ${inProgress || resolved ? "disabled" : ""}></label>
-          <div class="coop-crews">${state.players.map(p => crewPicker(p, inProgress || resolved)).join("")}</div>
-          ${state.run.status === "setup" ? `<button class="coop-button primary wide" data-coop-action="start-encounter">Начать сценарий</button>` : ""}
-        </article>
-        <article class="coop-card coop-tracker-card">
-          <header><span>02 / Трекер</span><h2>Только необходимые данные</h2></header>
-          ${state.run.status === "setup" ? `<div class="coop-lock"><b>Трекер запечатан</b><p>Подтвердите составы. Приложение не управляет моделями и не раскрывает скрытые награды.</p></div>` : trackerFields(s, resolved)}
-        </article>
-      </div>`;
+    const current = scenario(); const locked = state.run.status !== "setup"; const pool = sharedPool();
+    return `<div class="coop-section-heading"><div><p class="coop-overline">ОПЕРАЦИЯ ${current.n} / ПОПЫТКА ${state.run.attempt}</p><h1>${esc(current.name)}</h1><p>Индивидуальные остатки объединяются: валиден общий бюджет, а не отдельный потолок каждого игрока.</p></div><span class="coop-status ${state.run.status}">${state.run.status}</span></div><div class="coop-grid"><article class="coop-card"><header><span>01 / Подготовка</span><h2>Общий пул сил</h2></header><div class="coop-prep-ledger"><label class="coop-field"><span>Размер встречи</span><input type="number" min="0" data-run-path="size" value="${state.run.size}" ${locked ? "disabled" : ""}></label><div class="${pool < 0 ? "is-over" : ""}"><small>Общий остаток</small><b>${pool} SS</b></div><div><small>Challenge</small><b>${state.settings.challenge || state.run.challenge ? "ON" : "OFF"}</b></div></div><label class="coop-field"><span>Общая Crew Card</span><select data-run-path="crewCardId" ${locked ? "disabled" : ""}>${crewCards().map((card)=>`<option value="${card.id}" ${state.run.crewCardId===card.id?"selected":""}>${esc(card.name)}</option>`).join("")}</select></label><label class="coop-field"><span>Параметр общей карты</span><input data-run-path="crewCardParameter" value="${esc(state.run.crewCardParameter)}" ${locked ? "disabled" : ""}></label><div class="coop-crews">${state.players.map((player)=>crewPicker(player,locked)).join("")}</div>${!locked ? `<button class="coop-button primary wide" data-coop-action="start-encounter">Начать сценарий</button>` : ""}</article><article class="coop-card"><header><span>02 / Трекер</span><h2>Состояние операции</h2></header>${state.run.status === "setup" ? `<div class="coop-lock"><b>Трекер запечатан</b><p>Скрытые награды не раскрываются до фиксации исхода.</p></div>` : trackerView(current,state.run.status==="resolved")}</article></div>`;
   }
+  function crewPicker(player, disabled) { const crew = state.run.crews[player.id] || {models:[]}; const allocation = Math.floor(Number(state.run.size)/state.players.length); const cost = crewCost(player); return `<section class="coop-crew"><div><b>${esc(player.name)}</b><span>доля ${allocation} · лидер ${leaderCost(player)}${player.leaderProfile.totem?" · Totem 4":""}</span></div><output class="${cost>allocation?"uses-pool":""}">${cost} SS · CR ${rating(player)}</output><div>${player.arsenal.map((model)=>`<label><input type="checkbox" data-crew-model="${model.id}" data-player="${player.id}" ${(crew.models||[]).includes(model.id)?"checked":""} ${disabled||model.status!=="available"?"disabled":""}><span><b>${esc(model.name)}</b><small>${model.cost} SS · ${model.injuryList.length} ран.</small></span></label>`).join("")||"<small>Нет моделей</small>"}</div>${state.settings.equipment?equipmentAssignments(player,disabled):""}<footer>Все ключи группы: <b>${esc([...new Set(state.players.flatMap((item)=>keywordNames(item.keywords)))].join(", "))}</b></footer></section>`; }
+  function equipmentAssignments(player, disabled) { return `<div class="coop-equipment-assignments">${player.equipment.map((item)=>`<label><span>${esc(item.name)}</span><select data-equipment-assignment="${item.id}" data-player="${player.id}" ${disabled?"disabled":""}><option value="">Доступно</option><option value="leader:${player.id}" ${item.assignedTo===`leader:${player.id}`?"selected":""}>Лидер</option>${player.leaderProfile.totem?`<option value="totem:${player.id}" ${item.assignedTo===`totem:${player.id}`?"selected":""}>Totem</option>`:""}${(state.run.crews[player.id]?.models||[]).map((id)=>{const model=player.arsenal.find((entry)=>entry.id===id);return `<option value="${id}" ${item.assignedTo===id?"selected":""}>${esc(model?.name)}</option>`}).join("")}</select></label>`).join("")||"<small>Нет снаряжения в арсенале</small>"}</div>`; }
+  function trackerView(current, disabled) { return `<div class="coop-tracker-core"><label class="coop-field"><span>Ход</span><input type="number" min="1" data-run-path="turn" value="${state.run.turn}" ${disabled?"disabled":""}></label><label class="coop-field"><span>Фаза</span><select data-run-path="phase" ${disabled?"disabled":""}>${["Start","Activation","End"].map((item)=>`<option ${state.run.phase===item?"selected":""}>${item}</option>`).join("")}</select></label></div><div class="coop-model-tracker">${state.players.map((player)=>modelTracker(player,disabled)).join("")}</div><div class="coop-tracker-fields">${current.fields.map(([key,label,type])=>type==="check"?`<label class="coop-check"><input type="checkbox" data-tracker="${key}" ${state.run.tracker[key]?"checked":""} ${disabled?"disabled":""}><span>${label}</span></label>`:`<label class="coop-field"><span>${label}</span><input type="${type}" data-tracker="${key}" value="${esc(state.run.tracker[key]??"")}" ${disabled?"disabled":""}></label>`).join("")}</div>${current.branches&&!disabled?`<label class="coop-field"><span>Решение группы</span><select data-run-path="branch">${current.branches.map((branch)=>`<option value="${branch.value}">${branch.label}</option>`).join("")}</select></label>`:""}<div class="coop-kill-credit"><label class="coop-field"><span>Kill Credit</span><select id="coopKillType"><option>Boss</option><option>Elite</option></select></label><label class="coop-field"><span>Лидер-убийца</span><select id="coopKillLeader">${state.players.map((player)=>`<option value="${player.id}">${esc(player.leader||player.name)}</option>`).join("")}</select></label>${!disabled?`<button class="coop-button minor" data-coop-action="add-kill-credit">Записать</button>`:""}</div><div class="coop-credit-list">${state.run.killCredits.map((credit)=>`<span>${esc(credit.type)} · ${esc(credit.leaderName)}</span>`).join("")}</div><label class="coop-field"><span>Заметки ведущего</span><textarea data-run-path="notes" ${disabled?"disabled":""}>${esc(state.run.notes)}</textarea></label>${!disabled?`<div class="coop-outcomes"><button data-coop-action="resolve" data-outcome="win">Подтвердить победу</button><button data-coop-action="resolve" data-outcome="loss">Подтвердить поражение</button></div>`:`<div class="coop-result ${state.run.outcome}"><b>${state.run.outcome==="win"?"Победа":"Поражение"}</b></div>`}`; }
+  function modelTracker(player,disabled) { const targets=[{id:`leader:${player.id}`,name:player.leader||"Лидер",health:(archetypes[player.archetype]?.stats?.Health||14)},...player.arsenal.filter((model)=>(state.run.crews[player.id]?.models||[]).includes(model.id)).map((model)=>({id:model.id,name:model.name,health:model.cardSnapshot?.health||0}))]; return `<section><b>${esc(player.name)}</b>${targets.map((target)=>{const stored=state.run.modelStates[target.id]||{};return `<div><span>${esc(target.name)}</span><input type="number" min="0" max="${target.health}" value="${stored.health??target.health}" data-model-state="${target.id}" data-state-key="health" ${disabled?"disabled":""}><select data-model-state="${target.id}" data-state-key="status" ${disabled?"disabled":""}>${["active","killed","escaped","removed"].map((status)=>`<option ${stored.status===status?"selected":""}>${status}</option>`).join("")}</select></div>`}).join("")}</section>`; }
 
-  function crewPicker(p, disabled) {
-    const crew = state.run.crews[p.id] || { models: [] };
-    const allocation = Math.floor(Number(state.run.size) / state.players.length);
-    const selectedCost = (crew.models || []).reduce((sum, id) => sum + Number(p.arsenal.find(m => m.id === id)?.cost || 0), leaderCost(p));
-    return `<section class="coop-crew"><div><b>${esc(p.name)}</b><span>Лидер ${leaderCost(p)} SS · лимит ${allocation} SS</span></div><output class="${selectedCost > allocation ? "is-over" : ""}">${selectedCost} / ${allocation}</output><div>${p.arsenal.map(m => `<label><input type="checkbox" data-crew-model="${m.id}" data-player="${p.id}" ${(crew.models || []).includes(m.id) ? "checked" : ""} ${disabled ? "disabled" : ""}><span><b>${esc(m.name)}</b><small>${m.cost} SS · ${m.injuries || 0} ран.</small></span></label>`).join("") || `<small>Нет моделей в арсенале</small>`}</div><footer>Campaign Rating <b>${rating(p)}</b></footer></section>`;
-  }
+  function aftermathView() { if(!state.aftermath)return `<div class="coop-section-heading"><div><p class="coop-overline">AFTERMATH / ЗАКРЫТО</p><h1>Сначала завершите сценарий</h1></div><button class="coop-button" data-coop-tab="encounter">К трекеру</button></div>`; const a=state.aftermath; return `<div class="coop-section-heading"><div><p class="coop-overline">AFTERMATH / ШАГ ${Math.min(a.step+1,6)} ИЗ 6</p><h1>${a.step<6?phases[a.step]:"Итоговая сверка"}</h1><p>Каждый Flip должен быть принят или изменён картой руки до следующего.</p></div><span class="coop-status active">Ruleset ${a.rulesVersion} · автосохранение</span></div><div class="coop-aftermath-rail">${phases.map((phase,index)=>`<div class="${index===a.step?"is-current":""} ${index<a.step?"is-done":""}"><span>${index+1}</span><b>${phase}</b></div>`).join("")}</div><article class="coop-card coop-aftermath-card">${a.step<6?phaseView(a):summaryView(a)}</article>`; }
+  function phaseView(a) { const skipped=a.step===2&&scenario().id==="call"&&state.run.outcome==="loss"&&!(state.settings.threads&&state.settings.threadCount>0); return `<header><span>${String(a.step+1).padStart(2,"0")} / ${phases[a.step]}</span><h2>${phaseHelp(a.step)}</h2></header>${skipped?`<div class="coop-lock"><b>Barter пропущен</b><p>Call for Help при обычном поражении.</p></div>`:`<div class="coop-phase-players">${state.players.map((player)=>phasePlayer(player,a)).join("")}</div>`}<footer class="coop-phase-actions">${a.step>0?`<button class="coop-button minor" data-coop-action="phase-back">← Назад</button>`:"<span></span>"}<button class="coop-button primary" data-coop-action="phase-next">Подтвердить шаг →</button></footer>`; }
+  function phaseHelp(step){return ["Зафиксируйте индивидуальную руку; цифровая колода раздаёт её автоматически.","Проверьте объяснимый расчёт и пометьте ручную корректировку как house rule.","Один Flip, cheat из доступной руки, затем покупки по точному BR или Always.","Начислите XP и разрешите открывшиеся улучшения строго по очереди.","Каждая попытка немедленно списывает 1 скрип и обрабатывает конкретное ранение.","Обрабатывайте очередь погибших non-Peon моделей по одной."][step];}
+  function phasePlayer(player,a){const draft=a.players[player.id];const calculation=draft.calculated;const bodies=[handPhase,paydayPhase,barterPhase,advancePhase,doctorPhase,injuryPhase];return `<section data-aftermath-player="${player.id}"><div><b>${esc(player.name)}</b><small>${esc(player.leader||"лидер не назван")} · ${player.scrip} скрип · ${player.xp} XP</small></div><div>${bodies[a.step](player,draft,calculation)}</div></section>`;}
+  function handPhase(player,draft,calc){return `<div class="coop-rule-explain">${calc.explanation.map((item)=>`<span>${esc(item)}</span>`).join("")}</div>${state.settings.fateDeck==="physical"?`<label class="coop-field"><span>Рука · нужно ${calc.hand}</span><input data-hand-input="${player.id}" value="${esc(draft.hand)}" placeholder="13 C, 8 T, RJ"></label><div class="coop-hand-status">${handStatus(draft,calc)}</div>`:`<div class="coop-digital-hand"><b>${draft.handCards.map((card)=>card.label).join(" · ")||"Рука будет роздана при входе в Aftermath"}</b><small>Колода ${state.aftermath.deck.length} · сброс ${state.aftermath.discard.length}</small></div>`}`;}
+  function handStatus(draft,calc){const parsed=rules.parseHand(draft.hand);if(parsed.invalid.length)return `Не распознано: ${esc(parsed.invalid.join(", "))}`;if(parsed.duplicates.length&&!draft.duplicateOverride)return `Дубликаты: ${esc(parsed.duplicates.join(", "))} <button data-coop-action="override-duplicates">Подтвердить исключение</button>`;return `${parsed.cards.length} / ${calc.hand} карт`;}
+  function paydayPhase(player,draft,calc){return `<div class="coop-rule-explain"><b>Предварительный расчёт: ${calc.payday} скрип</b>${calc.explanation.map((item)=>`<span>${esc(item)}</span>`).join("")}</div><label class="coop-field"><span>Ручная корректировка</span><input type="number" data-payday-adjust="${player.id}" value="${draft.paydayAdjustment}"></label><label class="coop-field"><span>Причина house rule</span><input data-adjust-reason="${player.id}" value="${esc(draft.adjustmentReason)}"></label><output>Итого: ${calc.payday+draft.paydayAdjustment} скрип</output>`;}
+  function barterPhase(player,draft){const flip=draft.flips.barter;return `${flipWidget(player,"barter",flip)}${flip?.resolved?barterShop(player,draft,flip):""}<div class="coop-purchases">${draft.purchases.map((item)=>`<span>${esc(item.name)} · ${item.cost} скрип</span>`).join("")}</div>`;}
+  function flipWidget(player,purpose,flip){if(!flip)return `<button class="coop-button" data-coop-action="start-flip" data-player="${player.id}" data-purpose="${purpose}">Выполнить Flip</button>`;if(flip.resolved)return `<div class="coop-flip is-resolved"><b>${esc(flip.final.label)}${flip.final.cheated?" · CHEATED":" · NATURAL"}</b><span>Результат принят</span></div>`;return `<div class="coop-flip"><label class="coop-field"><span>Текущая карта</span>${state.settings.fateDeck==="physical"?`<input data-flip-input="${player.id}" data-purpose="${purpose}" value="${esc(flip.input||"")}" placeholder="10 R / RJ">`:`<b>${esc(flip.card?.label||"—")}</b>`}</label><label class="coop-field"><span>Изменить картой руки</span><select data-cheat-flip="${player.id}" data-purpose="${purpose}"><option value="">Не изменять</option>${availableHand(player).map((card)=>`<option value="${card.id}">${esc(card.label)}</option>`).join("")}</select></label><button class="coop-button primary" data-coop-action="accept-flip" data-player="${player.id}" data-purpose="${purpose}">Принять результат</button></div>`;}
+  function availableHand(player){const draft=state.aftermath.players[player.id];return draft.handCards.filter((card)=>!draft.usedHandIds.includes(card.id));}
+  function barterShop(player,draft,flip){const rating=rules.barterRating(flip.final);const thirst=flip.final.joker==="red"&&!flip.final.cheated;const available=equipmentCatalog().filter((item)=>canonical(item.br).includes("всегда")||canonical(item.br).includes("always")||Number(String(item.br).match(/\d+/u)?.[0])===rating||(thirst&&item.flags?.group==="those-who-thirst"));const balance=player.scrip+draft.calculated.payday+draft.paydayAdjustment-draft.purchases.reduce((sum,item)=>sum+item.cost,0)-draft.doctorAttempts.length;return `<div class="coop-shop"><header><b>Barter Rating ${rating}</b><span>Доступно ${balance} скрип</span></header>${available.map((item)=>`<button data-coop-action="buy-equipment" data-player="${player.id}" data-equipment="${item.id}" ${item.cost>balance?"disabled":""}><b>${esc(item.name)}</b><small>${item.cost} скрип · BR ${esc(item.br)}</small></button>`).join("")||"<p>Нет точных совпадений.</p>"}${thirst?`<p class="coop-special-reward">Natural Red Joker: таблица Those Who Thirst открыта полностью.</p>`:""}</div>`;}
+  function advancementKinds(maxTier){return [{id:"attack-modification",tier:1,name:"Attack Modification"},{id:"tactical-modification",tier:1,name:"Tactical Modification"},{id:"action",tier:2,name:"Action Advancement"},{id:"ability",tier:2,name:"Ability Advancement"},{id:"totem",tier:3,name:"Totem Advancement"},{id:"summoning",tier:3,name:"Summoning Advancement"},{id:"crew-card",tier:4,name:"Crew Card Advancement"}].filter((item)=>item.tier<=maxTier);}
+  function advancePhase(player,draft,calc){const oldXp=player.xp,newXp=oldXp+calc.xp;const thresholds=(advancement.xpThresholds||[]).filter((entry)=>entry.xp>oldXp&&entry.xp<=newXp);return `<div class="coop-rule-explain"><b>XP ${oldXp} → ${newXp}</b><span>Открыто улучшений: ${thresholds.length}</span></div>${thresholds.map((entry,index)=>`<div class="coop-upgrade-choice"><label class="coop-field"><span>Tier ${entry.maxTier} или ниже</span><select data-upgrade-type="${player.id}" data-upgrade-index="${index}">${advancementKinds(entry.maxTier).map((kind)=>`<option value="${kind.id}" ${draft.upgrades[index]?.type===kind.id?"selected":""}>Tier ${kind.tier} · ${kind.name}</option>`).join("")}</select></label><label class="coop-field"><span>Зафиксированный результат</span><input data-upgrade-name="${player.id}" data-upgrade-index="${index}" value="${esc(draft.upgrades[index]?.name||"")}" placeholder="Результат таблицы / выбранная запись"></label></div>`).join("")||"<p>Новых клеток улучшений нет.</p>"}`;}
+  function doctorPhase(player,draft){const working=draft.workingPlayer;const wounded=[...(working.leaderProfile.injuries.length?[{id:`leader:${player.id}`,name:working.leader||"Лидер",injuryList:working.leaderProfile.injuries}]:[]),...working.arsenal.filter((model)=>model.injuryList.length&&model.status!=="destroyed")];const flip=draft.flips.doctor;return `<div class="coop-doctor-select"><select data-doctor-model="${player.id}"><option value="">Модель с ранением</option>${wounded.map((model)=>`<option value="${model.id}">${esc(model.name)}</option>`).join("")}</select><select data-doctor-injury="${player.id}"><option value="">Конкретное ранение</option>${wounded.flatMap((model)=>model.injuryList.map((injury)=>`<option value="${model.id}|${injury.id}">${esc(model.name)} · ${esc(injury.name)}</option>`)).join("")}</select></div>${flipWidget(player,"doctor",flip)}${flip?.resolved?`<button class="coop-button primary" data-coop-action="apply-doctor" data-player="${player.id}">Применить лечение · −1 скрип</button>`:""}<div>${draft.doctorAttempts.map((item)=>`<span>${esc(item.modelName)} · ${esc(item.result)}</span>`).join("")}</div>`;}
+  function injuryPhase(player,draft){const current=draft.injuryQueue.find((item)=>!item.done);if(!current)return `<div class="coop-lock"><b>Очередь обработана</b><p>Повторные одноимённые ранения исключены.</p></div>`;const flip=draft.flips.injury;return `<div class="coop-injury-current"><small>Текущая модель</small><b>${esc(current.name)}</b><span>${draft.injuryQueue.filter((item)=>!item.done).length} в очереди</span></div>${flipWidget(player,"injury",flip)}${flip?.resolved?`<button class="coop-button primary" data-coop-action="apply-injury" data-player="${player.id}">Применить Injury Flip</button>`:""}`;}
+  function summaryView(a){return `<header><span>06 / Атомарное сохранение</span><h2>Проверьте весь набор операций</h2></header><div class="coop-summary">${state.players.map((player)=>{const draft=a.players[player.id];return `<section><h3>${esc(player.name)}</h3><dl><div><dt>Скрип</dt><dd>+${draft.calculated.payday+draft.paydayAdjustment} / −${draft.purchases.reduce((sum,item)=>sum+item.cost,0)+draft.doctorAttempts.length}</dd></div><div><dt>XP</dt><dd>+${draft.calculated.xp}</dd></div><div><dt>Покупки</dt><dd>${esc(draft.purchases.map((item)=>item.name).join(", ")||"—")}</dd></div><div><dt>Doctor</dt><dd>${draft.doctorAttempts.length}</dd></div><div><dt>Injuries</dt><dd>${esc(draft.injuryResults.map((item)=>item.result).join(", ")||"—")}</dd></div></dl></section>`}).join("")}</div><div class="coop-atomic-note"><b>Сохранение единым commit.</b><span>Двойное подтверждение заблокировано; исправления создаются отдельной ledger-операцией.</span></div><button class="coop-button primary wide" data-coop-action="commit-aftermath" ${a.committing?"disabled":""}>Подтвердить весь Aftermath</button>`;}
+  function historyView(){return `<div class="coop-section-heading"><div><p class="coop-overline">НЕИЗМЕНЯЕМАЯ ХРОНИКА</p><h1>Журнал операций</h1><p>Сценарии, ledger и отдельные корректировки.</p></div><div><button class="coop-button minor" data-coop-action="import">Импорт</button> <button class="coop-button" data-coop-action="export">Экспорт JSON</button><input id="coopImport" type="file" accept="application/json" hidden></div></div><div class="coop-ledger-correction"><input id="coopCorrectionAmount" type="number" placeholder="Скрип ±"><input id="coopCorrectionReason" placeholder="Причина house rule"><select id="coopCorrectionPlayer">${state.players.map((player)=>`<option value="${player.id}">${esc(player.name)}</option>`).join("")}</select><button class="coop-button minor" data-coop-action="add-correction">Добавить корректировку</button></div><div class="coop-history">${[...state.history].reverse().map((entry)=>`<article class="coop-card"><span>${esc(entry.time)}</span><h2>${esc(entry.scenario)} · ${entry.outcome}</h2><p>Неделя ${entry.week}, попытка ${entry.attempt}</p><div>${entry.players.map((player)=>`<b>${esc(player.name)} <small>${player.scripDelta>=0?"+":""}${player.scripDelta} скрип · +${player.xp} XP</small></b>`).join("")}</div></article>`).join("")||`<div class="coop-lock"><b>Журнал пока пуст</b></div>`}</div><div class="coop-ledger">${[...state.ledger,...state.corrections].reverse().map((entry)=>`<article><small>${esc(entry.time)} · ${esc(entry.kind)}</small><b>${esc(entry.playerName||entry.scenario||"")}</b><span>${esc(entry.reason||entry.summary||"")}${entry.amount?` · ${entry.amount>0?"+":""}${entry.amount}`:""}</span></article>`).join("")}</div>`;}
 
-  function trackerFields(s, disabled) {
-    return `<div class="coop-tracker-fields">${s.fields.map(([key, label, type]) => type === "check" ? `<label class="coop-check"><input type="checkbox" data-tracker="${key}" ${state.run.tracker[key] ? "checked" : ""} ${disabled ? "disabled" : ""}><span>${label}</span></label>` : `<label class="coop-field"><span>${label}</span><input type="${type}" data-tracker="${key}" value="${esc(state.run.tracker[key] || "")}" ${disabled ? "disabled" : ""}></label>`).join("")}</div>
-      ${s.branches && !disabled ? `<label class="coop-field"><span>Решение группы</span><select data-run-path="branch">${s.branches.map(b => `<option value="${b.value}" ${state.run.branch === b.value ? "selected" : ""}>${b.label} → ${scenarioMap[b.next].name}</option>`).join("")}</select></label>` : ""}
-      <label class="coop-field"><span>Заметки ведущего</span><textarea data-run-path="notes" ${disabled ? "disabled" : ""}>${esc(state.run.notes)}</textarea></label>
-      ${!disabled ? `<div class="coop-outcomes"><button data-coop-action="resolve" data-outcome="win">Подтвердить победу</button><button data-coop-action="resolve" data-outcome="loss">Подтвердить поражение</button></div>` : `<div class="coop-result ${state.run.outcome}"><small>Подтверждённый исход</small><b>${state.run.outcome === "win" ? "Победа" : "Поражение"}</b></div>`}`;
-  }
+  function pickerView(){if(!picker)return"";const talent=picker.kind==="talent";const title=locale==="en"?(talent?"Choose a leader talent":"Add a model from BiggerHat"):(talent?"Выбор таланта лидера":"Добавить модель из BiggerHat");return `<div class="coop-picker-backdrop" data-coop-action="close-picker"><section class="coop-picker" role="dialog" aria-modal="true"><header><div><span>BIGGERHAT / ARCHIVE INDEX</span><h2 id="coopPickerTitle">${title}</h2><p>${talent?`${esc(picker.slot.type)} · Cost ≤ ${picker.slot.limit}`:"Нанимаемые карточки с Cost"}</p></div><button data-coop-action="close-picker">×</button></header><label class="coop-picker-search"><span>Поиск</span><input id="coopPickerSearch" value="${esc(picker.query||"")}" autocomplete="off"></label><div class="coop-picker-status" id="coopPickerStatus">${esc(picker.status||"")}</div><div class="coop-picker-results">${(picker.results||[]).map((card)=>`<button class="coop-picker-result" data-coop-action="select-card" data-slug="${esc(card.slug)}"><span><b>${esc(card.displayName)}</b><small>${esc([card.factionLabel,card.stationLabel,card.cost===null?"":`${card.cost} SS`].filter(Boolean).join(" · "))}</small></span><i>${esc((card.keywords||[]).map((keyword)=>keyword.name).join(" · "))}</i></button>`).join("")}</div>${talent&&picker.card?talentEntriesView():""}</section></div>`;}
+  function talentEntriesView(){const entries=picker.slot.kind==="ability"?(picker.card.abilities||[]):(picker.card.actions||[]).filter((entry)=>entry.type===picker.slot.kind);return `<section class="coop-picker-entries"><header><span>${esc(picker.card.displayName)}</span><b>Допустимые записи</b></header>${entries.map((entry,index)=>{const blocked=talentBlockedReason(entry);if(picker.slot.chooseTrigger)return(entry.triggers||[]).map((trigger,triggerIndex)=>`<button data-coop-action="select-talent" data-entry="${index}" data-trigger="${triggerIndex}" ${blocked?"disabled":""}><b>${esc(entry.name)}</b><small>${esc(entry.description||"")}</small><i>${blocked||`Триггер: ${trigger.name}`}</i></button>`).join("");return `<button data-coop-action="select-talent" data-entry="${index}" ${blocked?"disabled":""}><b>${esc(entry.name)}</b><small>${esc(entry.description||"")}</small>${blocked?`<i>${esc(blocked)}</i>`:""}</button>`}).join("")||"<p>Подходящих записей нет.</p>"}</section>`;}
+  function shell(){const labels={hq:"Штаб",players:"Игроки",encounter:"Сценарий",aftermath:"Aftermath",history:"Журнал"};return `<div class="coop-shell"><nav class="coop-tabs">${Object.entries(labels).map(([id,label],index)=>`<button class="${state.active===id?"is-active":""}" data-coop-tab="${id}"><span>0${index+1}</span>${label}${id==="aftermath"&&state.aftermath?`<i>${Math.min(6,state.aftermath.step+1)}</i>`:""}</button>`).join("")}</nav><div class="coop-content">${state.active==="hq"?hqView():state.active==="players"?playersView():state.active==="encounter"?encounterView():state.active==="aftermath"?aftermathView():historyView()}</div>${pickerView()}</div>`;}
 
-  function aftermathView() {
-    if (!state.aftermath) return `<div class="coop-section-heading"><div><p class="coop-overline">AFTERMATH / ЗАКРЫТО</p><h1>Сначала завершите сценарий</h1><p>Мастер последствий становится доступен после подтверждения победы или поражения.</p></div><button class="coop-button" data-coop-tab="encounter">К трекеру</button></div>`;
-    const a = state.aftermath;
-    return `<div class="coop-section-heading"><div><p class="coop-overline">AFTERMATH / ШАГ ${Math.min(a.step + 1, 6)} ИЗ 6</p><h1>${a.step < 6 ? phases[a.step] : "Итоговая сверка"}</h1><p>Шаги выполняются строго по порядку. Изменения применятся только при итоговом подтверждении.</p></div><span class="coop-status active">Черновик сохранён</span></div>
-      <div class="coop-aftermath-rail">${phases.map((p, i) => `<div class="${i === a.step ? "is-current" : ""} ${i < a.step ? "is-done" : ""}"><span>${i + 1}</span><b>${p}</b></div>`).join("")}</div>
-      <article class="coop-card coop-aftermath-card">${a.step < 6 ? phaseView(a) : summaryView(a)}</article>`;
-  }
+  function setPath(root,path,value){const keys=path.split(".");let current=root;keys.slice(0,-1).forEach((key)=>current=current[key]);current[keys.at(-1)]=value;}
+  function readInput(input){return input.type==="checkbox"?input.checked:input.type==="number"?Number(input.value):input.value;}
+  function bind(root){root.onclick=(event)=>{const tab=event.target.closest("[data-coop-tab]");if(tab){state.active=tab.dataset.coopTab;save();render();return;}const scenarioButton=event.target.closest("[data-coop-scenario]");if(scenarioButton&&state.run.status==="setup"&&confirm("Перейти к сценарию? Подготовка будет очищена.")){state.campaign.scenario=scenarioButton.dataset.coopScenario;state.run=freshRun(state.run.size);save();render();return;}if(event.target.classList.contains("coop-picker-backdrop")){picker=null;render();return;}const button=event.target.closest("[data-coop-action]");if(button)action(button.dataset.coopAction,button);};const field=(event)=>{const el=event.target;const changeOnly=el.type==="checkbox"||el.tagName==="SELECT";if((event.type==="input"&&changeOnly)||(event.type==="change"&&!changeOnly))return;if(el.dataset.coopPath){setPath(state,el.dataset.coopPath,readInput(el));save();if(changeOnly||el.type==="number")render();return;}const playerCard=el.closest("[data-player-id]");const player=playerCard&&state.players.find((item)=>item.id===playerCard.dataset.playerId);if(player&&el.dataset.playerPath){setPath(player,el.dataset.playerPath,readInput(el));if(el.dataset.playerPath==="archetype")syncPlayerTalents(player);save();if(changeOnly||el.type==="number")render();return;}if(player&&el.dataset.leaderPath){player.leaderProfile[el.dataset.leaderPath]=readInput(el);save();return;}if(player&&el.dataset.crewCard){player.leaderProfile.crewCard[el.dataset.crewCard]=readInput(el);save();return;}if(player&&el.dataset.leaderTotem!==undefined){const profile=(advancement.tier3?.totems||[]).find((item)=>item.id===el.value);player.leaderProfile.totem=profile?{...clone(profile),advances:0}:null;save();render();return;}if(player&&el.dataset.luckyFlip!==undefined){player.leaderProfile.luckyFlip=el.value;player.leaderProfile.luckyEquipment=null;save();render();return;}if(player&&el.dataset.luckyEquipment!==undefined){const item=equipmentCatalog().find((entry)=>entry.id===el.value);player.leaderProfile.luckyEquipment=item?{id:uid("equipment"),catalogId:item.id,name:item.name,free:true,ratingExempt:true,status:"available",assignedTo:""}:null;save();render();return;}if(el.dataset.runPath){setPath(state.run,el.dataset.runPath,readInput(el));save();if(changeOnly||el.type==="number")render();return;}if(el.dataset.tracker){state.run.tracker[el.dataset.tracker]=readInput(el);save();return;}if(el.dataset.crewModel){const id=el.dataset.player;state.run.crews[id]||={models:[],equipment:[]};const models=new Set(state.run.crews[id].models||[]);el.checked?models.add(el.dataset.crewModel):models.delete(el.dataset.crewModel);state.run.crews[id].models=[...models];save();render();return;}if(el.dataset.equipmentAssignment){const owner=state.players.find((item)=>item.id===el.dataset.player);const item=owner.equipment.find((entry)=>entry.id===el.dataset.equipmentAssignment);item.assignedTo=el.value;item.status=el.value?"attached":"available";save();render();return;}if(el.dataset.modelState){state.run.modelStates[el.dataset.modelState]||={};state.run.modelStates[el.dataset.modelState][el.dataset.stateKey]=readInput(el);save();return;}if(el.id==="coopPickerSearch"){picker.query=el.value;clearTimeout(picker.timer);picker.timer=setTimeout(runPickerSearch,160);return;}if(el.dataset.handInput){const draft=state.aftermath.players[el.dataset.handInput];draft.hand=el.value;draft.handCards=rules.parseHand(el.value).cards;save();render();return;}if(el.dataset.paydayAdjust){state.aftermath.players[el.dataset.paydayAdjust].paydayAdjustment=Number(el.value);save();render();return;}if(el.dataset.adjustReason){state.aftermath.players[el.dataset.adjustReason].adjustmentReason=el.value;save();return;}if(el.dataset.flipInput){state.aftermath.players[el.dataset.flipInput].flips[el.dataset.purpose].input=el.value;save();return;}if(el.dataset.cheatFlip){state.aftermath.players[el.dataset.cheatFlip].flips[el.dataset.purpose].cheatId=el.value;save();return;}if(el.dataset.upgradeType){const draft=state.aftermath.players[el.dataset.upgradeType];const index=Number(el.dataset.upgradeIndex);draft.upgrades[index]={...(draft.upgrades[index]||{}),type:el.value};save();return;}if(el.dataset.upgradeName){const draft=state.aftermath.players[el.dataset.upgradeName];const index=Number(el.dataset.upgradeIndex);draft.upgrades[index]={...(draft.upgrades[index]||{}),name:el.value};save();return;}};root.oninput=field;root.onchange=field;root.onkeydown=(event)=>{if(event.key==="Escape"&&picker){picker=null;render();}};}
 
-  function phaseView(a) {
-    const barterSkipped = a.step === 2 && scenario().id === "call" && state.run.outcome === "loss";
-    const help = ["Запишите индивидуальную руку. Для физической колоды используйте формат «13 C, 8 T…».", "Подтвердите скрип и предметные награды по сценарию.", barterSkipped ? "Call for Help: при поражении Barter пропускается." : "Один Barter Flip на игрока. Покупки не могут увести баланс ниже нуля.", "Начислите базовый и бонусный XP; открытые улучшения разрешайте по очереди.", "Каждая попытка стоит 1 скрип до Flip. Запишите выбранную модель и результат.", "Обработайте погибшие non-Peon модели по одной; повторное одноимённое ранение не добавляется."][a.step];
-    return `<header><span>${String(a.step + 1).padStart(2, "0")} / ${phases[a.step]}</span><h2>${help}</h2></header>${barterSkipped ? `<div class="coop-lock"><b>Barter пропущен</b><p>Система зафиксирует переход к Advance Leader без Barter Flip и покупок.</p></div>` : `<div class="coop-phase-players">${state.players.map(p => phasePlayer(p, a)).join("")}</div>`}<footer class="coop-phase-actions">${a.step > 0 ? `<button class="coop-button minor" data-coop-action="phase-back">← Назад</button>` : "<span></span>"}<button class="coop-button primary" data-coop-action="phase-next">Подтвердить шаг →</button></footer>`;
+  async function runPickerSearch(){if(!picker||!cardCatalog)return;const requestId=(picker.requestId||0)+1;picker.requestId=requestId;picker.status="Загружаю каталог…";render();try{const found=await cardCatalog.searchCharacters(picker.query||"",{limit:1000});if(!picker||picker.requestId!==requestId)return;const player=state.players.find((item)=>item.id===picker.playerId);picker.results=found.filter((card)=>picker.kind==="model"?canHire(card,player):canSourceTalent(card,player,picker.slot)).slice(0,30);picker.status=`Найдено карточек: ${picker.results.length}`;render();}catch{if(picker){picker.status="Не удалось загрузить BiggerHat.";render();}}}
+  async function selectPickerCard(slug){if(!picker||!cardCatalog)return;const card=await cardCatalog.getCharacter(slug);if(!picker)return;const player=state.players.find((item)=>item.id===picker.playerId);if(picker.kind==="model"){if(!canHire(card,player))return notify("Модель недопустима для этого арсенала.");if(player.arsenal.some((model)=>model.cardSlug===card.slug))return notify("Модель уже есть в арсенале.");const keywords=(card.keywords||[]).map((keyword)=>keyword.name);const playerKeys=keywordNames(player.keywords);if(keywords.some((keyword)=>playerKeys.includes(canonical(keyword))))keywordLabels(player.keywords).forEach((keyword)=>{if(!keywords.map(canonical).includes(canonical(keyword)))keywords.push(keyword);});player.arsenal.push({id:uid("model"),name:card.displayName,cost:card.cost,type:card.stationLabel||card.station||"Model",faction:card.factionLabel||card.faction||"",keywords,cardSlug:card.slug,cardSnapshot:card,status:"available",injuryList:[],equipmentItems:[],addedWeek:state.run.status==="resolved"||state.aftermath?state.campaign.week:1});picker=null;save();render();return;}picker.card=card;picker.status="Выберите запись с карточки.";render();}
+  function action(name,button){
+    if(name==="add-player"){state.players.push(freshPlayer(state.players.length));save();render();}
+    if(name==="remove-player"&&confirm("Удалить профиль?")){state.players=state.players.filter((player)=>player.id!==button.dataset.id);save();render();}
+    if(name==="add-model"){picker={kind:"model",playerId:button.dataset.id,query:"",results:[],status:""};render();runPickerSearch();}
+    if(name==="pick-talent"){const player=state.players.find((item)=>item.id===button.dataset.player);const slot=archetypes[player.archetype].talents.find((item)=>item.id===button.dataset.slot);picker={kind:"talent",playerId:player.id,slot,query:"",results:[],status:"",card:null};render();runPickerSearch();}
+    if(name==="close-picker"){picker=null;render();}
+    if(name==="select-card")selectPickerCard(button.dataset.slug);
+    if(name==="select-talent"&&picker?.card){const entries=picker.slot.kind==="ability"?(picker.card.abilities||[]):(picker.card.actions||[]).filter((entry)=>entry.type===picker.slot.kind);const entry=entries[Number(button.dataset.entry)];if(!entry||talentBlockedReason(entry))return;const player=state.players.find((item)=>item.id===picker.playerId);const trigger=picker.slot.chooseTrigger?entry.triggers?.[Number(button.dataset.trigger)]:null;if(picker.slot.chooseTrigger&&!trigger)return;const target=player.talents.find((item)=>item.slotId===picker.slot.id);Object.assign(target,{name:entry.name,source:picker.card.displayName,snapshot:{entry:{...entry,triggers:trigger?[trigger]:[]},sourceCard:picker.card}});picker=null;save();render();}
+    if(name==="remove-model"){const player=state.players.find((item)=>item.id===button.dataset.player);player.arsenal=player.arsenal.filter((model)=>model.id!==button.dataset.id);if(state.run.crews[player.id])state.run.crews[player.id].models=(state.run.crews[player.id].models||[]).filter((id)=>id!==button.dataset.id);save();render();}
+    if(name==="add-kill-credit"){const type=document.querySelector("#coopKillType").value;const player=state.players.find((item)=>item.id===document.querySelector("#coopKillLeader").value);state.run.killCredits.push({id:uid("credit"),type,leaderId:player.id,leaderName:player.leader||player.name});save();render();}
+    if(name==="start-encounter"){const errors=state.players.flatMap(validatePlayer);if(errors.length)return notify(errors[0]);const commonCard=crewCards().find((item)=>item.id===state.run.crewCardId);if(commonCard?.parameterType&&!['ability','action'].includes(commonCard.parameterType)&&!state.run.crewCardParameter.trim())return notify("Укажите параметр общей Crew Card.");if(state.players.some((player)=>player.arsenal.reduce((sum,model)=>sum+Number(model.cost||0),0)>25)&&!state.history.length)return notify("Стартовый арсенал превышает 25 SS.");if(sharedPool()<0)return notify("Общий размер встречи превышен.");state.run.status="active";state.run.challenge=state.settings.challenge||state.players.some((player)=>rating(player)>=5);state.run.locked=true;initializeModelStates();save();render();}
+    if(name==="resolve"){if(state.run.status!=="active"||!confirm(`Зафиксировать ${button.dataset.outcome==="win"?"победу":"поражение"}?`))return;state.run.status="resolved";state.run.outcome=button.dataset.outcome;state.aftermath=createAftermath();state.active="aftermath";save();render();}
+    if(name==="override-duplicates"){const id=button.closest("[data-aftermath-player]").dataset.aftermathPlayer;state.aftermath.players[id].duplicateOverride=true;save();render();}
+    if(name==="start-flip")startFlip(button.dataset.player,button.dataset.purpose);
+    if(name==="accept-flip")acceptFlip(button.dataset.player,button.dataset.purpose);
+    if(name==="buy-equipment")buyEquipment(button.dataset.player,button.dataset.equipment);
+    if(name==="apply-doctor")applyDoctor(button.dataset.player);
+    if(name==="apply-injury")applyInjury(button.dataset.player);
+    if(name==="phase-next")nextPhase();
+    if(name==="phase-back"){state.aftermath.step=Math.max(0,state.aftermath.step-1);save();render();}
+    if(name==="commit-aftermath")commitAftermath();
+    if(name==="add-correction")addCorrection();
+    if(name==="export")exportBackup();
+    if(name==="import")document.querySelector("#coopImport")?.click();
   }
-
-  function phasePlayer(p, a) {
-    const draft = a.players[p.id] || {};
-    const fields = [
-      `<label class="coop-field"><span>Карты руки</span><input data-phase-player="${p.id}" data-key="hand" value="${esc(draft.hand || "")}" placeholder="Например: 13 C, 8 T"></label>`,
-      `<label class="coop-field"><span>Получено скрип</span><input type="number" min="0" data-phase-player="${p.id}" data-key="payday" value="${draft.payday || 0}"></label><label class="coop-field"><span>Предметные награды</span><input data-phase-player="${p.id}" data-key="rewards" value="${esc(draft.rewards || "")}"></label>`,
-      `<label class="coop-field"><span>Потрачено скрип</span><input type="number" min="0" max="${p.scrip + Number(draft.payday || 0)}" data-phase-player="${p.id}" data-key="spent" value="${draft.spent || 0}"></label><label class="coop-field"><span>Покупки</span><input data-phase-player="${p.id}" data-key="purchases" value="${esc(draft.purchases || "")}"></label>`,
-      `<label class="coop-field"><span>Получено XP</span><input type="number" min="0" data-phase-player="${p.id}" data-key="xp" value="${draft.xp ?? (state.run.outcome === "loss" ? 2 : 1)}"></label><label class="coop-field"><span>Выбранные улучшения</span><input data-phase-player="${p.id}" data-key="advances" value="${esc(draft.advances || "")}"></label>`,
-      `<label class="coop-field"><span>Потрачено на Doctor</span><input type="number" min="0" data-phase-player="${p.id}" data-key="doctorCost" value="${draft.doctorCost || 0}"></label><label class="coop-field"><span>Результаты лечения</span><input data-phase-player="${p.id}" data-key="doctor" value="${esc(draft.doctor || "")}"></label>`,
-      `<label class="coop-field"><span>Новые ранения / Lucky Miss</span><input data-phase-player="${p.id}" data-key="injuries" value="${esc(draft.injuries || "")}"></label><label class="coop-field"><span>Уничтоженные модели</span><input data-phase-player="${p.id}" data-key="destroyed" value="${esc(draft.destroyed || "")}"></label>`,
-    ][a.step];
-    return `<section><div><b>${esc(p.name)}</b><small>${esc(p.leader || "лидер не назван")} · ${p.scrip} скрип · ${p.xp} XP</small></div><div class="coop-form-grid">${fields}</div></section>`;
-  }
-
-  function summaryView(a) {
-    return `<header><span>06 / Атомарное сохранение</span><h2>Проверьте все операции</h2></header><div class="coop-summary">${state.players.map(p => { const d = a.players[p.id] || {}; return `<section><h3>${esc(p.name)}</h3><dl><div><dt>Aftermath Hand</dt><dd>${esc(d.hand || "—")}</dd></div><div><dt>Скрип</dt><dd>+${d.payday || 0} / −${Number(d.spent || 0) + Number(d.doctorCost || 0)}</dd></div><div><dt>XP</dt><dd>+${d.xp || 0}</dd></div><div><dt>Покупки и награды</dt><dd>${esc([d.purchases, d.rewards].filter(Boolean).join("; ") || "—")}</dd></div><div><dt>Ранения</dt><dd>${esc(d.injuries || "—")}</dd></div></dl></section>`; }).join("")}</div><div class="coop-atomic-note"><b>После подтверждения запись станет неизменяемой.</b><span>Исправления следует вносить отдельной корректирующей операцией в журнале.</span></div><button class="coop-button primary wide" data-coop-action="commit-aftermath">Подтвердить весь Aftermath</button>`;
-  }
-
-  function historyView() {
-    return `<div class="coop-section-heading"><div><p class="coop-overline">НЕИЗМЕНЯЕМАЯ ХРОНИКА</p><h1>Журнал операций</h1><p>Сценарии и атомарно сохранённые последствия.</p></div><div><button class="coop-button minor" data-coop-action="import">Импорт</button> <button class="coop-button" data-coop-action="export">Экспорт JSON</button><input id="coopImport" type="file" accept="application/json" hidden></div></div>
-      <div class="coop-history">${state.history.length ? [...state.history].reverse().map((h, index) => `<article class="coop-card"><span>${String(state.history.length - index).padStart(3, "0")} / ${esc(h.time)}</span><h2>${esc(h.scenario)} · ${h.outcome === "win" ? "Победа" : "Поражение"}</h2><p>Неделя ${h.week}, попытка ${h.attempt}. ${esc(h.notes || "Без заметок ведущего.")}</p><div>${h.players.map(p => `<b>${esc(p.name)} <small>${p.scripDelta >= 0 ? "+" : ""}${p.scripDelta} скрип · +${p.xp} XP</small></b>`).join("")}</div></article>`).join("") : `<div class="coop-lock"><b>Журнал пока пуст</b><p>Первая запись появится после полного подтверждения Aftermath.</p></div>`}</div>`;
-  }
-
-  function pickerView() {
-    if (!picker) return "";
-    const talentMode = picker.kind === "talent";
-    const title = talentMode
-      ? (locale === "en" ? "Choose a leader talent" : "Выбор таланта лидера")
-      : (locale === "en" ? "Add a model from BiggerHat" : "Добавить модель из BiggerHat");
-    const hint = talentMode
-      ? (locale === "en" ? `${picker.slot.typeEn} · source Cost ${picker.slot.limit} or less` : `${picker.slot.type} · источник Cost ${picker.slot.limit} или меньше`)
-      : (locale === "en" ? "Hireable cards with a printed Cost" : "Нанимаемые карточки с указанной стоимостью");
-    return `<div class="coop-picker-backdrop" data-coop-action="close-picker"><section class="coop-picker" role="dialog" aria-modal="true" aria-labelledby="coopPickerTitle" data-coop-picker>
-      <header><div><span>BIGGERHAT / ARCHIVE INDEX</span><h2 id="coopPickerTitle">${title}</h2><p>${esc(hint)}</p></div><button type="button" data-coop-action="close-picker" aria-label="${locale === "en" ? "Close" : "Закрыть"}">×</button></header>
-      <label class="coop-picker-search"><span>${locale === "en" ? "Search" : "Поиск"}</span><input id="coopPickerSearch" value="${esc(picker.query || "")}" placeholder="${locale === "en" ? "Name, keyword, or faction" : "Название, ключевое слово или фракция"}" autocomplete="off"></label>
-      <div class="coop-picker-status" id="coopPickerStatus">${esc(picker.status || "")}</div>
-      <div class="coop-picker-results" id="coopPickerResults">${picker.results?.length ? picker.results.map(pickerResult).join("") : ""}</div>
-      ${talentMode && picker.card ? talentEntriesView() : ""}
-    </section></div>`;
-  }
-
-  function pickerResult(card) {
-    return `<button class="coop-picker-result" type="button" data-coop-action="select-card" data-slug="${esc(card.slug)}"><span><b>${esc(card.displayName)}</b><small>${esc([card.factionLabel, card.stationLabel, card.cost === null ? "" : `${card.cost} SS`].filter(Boolean).join(" · "))}</small></span><i>${esc((card.keywords || []).map((keyword) => keyword.name).slice(0, 3).join(" · "))}</i></button>`;
-  }
-
-  function talentEntriesView() {
-    const entries = picker.slot.kind === "ability"
-      ? picker.card.abilities || []
-      : (picker.card.actions || []).filter((action) => action.type === picker.slot.kind);
-    return `<section class="coop-picker-entries"><header><span>${esc(picker.card.displayName)}</span><b>${locale === "en" ? "Eligible entries" : "Допустимые записи"}</b></header>${entries.length ? entries.map((entry, index) => picker.slot.chooseTrigger
-      ? (entry.triggers || []).map((trigger, triggerIndex) => `<button type="button" data-coop-action="select-talent" data-entry="${index}" data-trigger="${triggerIndex}"><b>${esc(entry.name)}</b><small>${esc(entry.description || "")}</small><i>${locale === "en" ? "Trigger" : "Триггер"}: ${esc(trigger.name)} · ${esc(trigger.description || "")}</i></button>`).join("")
-      : `<button type="button" data-coop-action="select-talent" data-entry="${index}"><b>${esc(entry.name)}</b><small>${esc(entry.description || "")}</small></button>`).join("") : `<p>${locale === "en" ? "This card has no matching entries." : "На карточке нет подходящих записей."}</p>`}</section>`;
-  }
-
-  function shell() {
-    const labels = { hq: "Штаб", players: "Игроки", encounter: "Сценарий", aftermath: "Aftermath", history: "Журнал" };
-    return `<div class="coop-shell"><nav class="coop-tabs" aria-label="Разделы кооперативной кампании">${Object.entries(labels).map(([id, label], i) => `<button class="${state.active === id ? "is-active" : ""}" data-coop-tab="${id}"><span>0${i + 1}</span>${label}${id === "aftermath" && state.aftermath ? `<i>${Math.min(6, state.aftermath.step + 1)}</i>` : ""}</button>`).join("")}</nav><div class="coop-content">${state.active === "hq" ? hqView() : state.active === "players" ? playersView() : state.active === "encounter" ? encounterView() : state.active === "aftermath" ? aftermathView() : historyView()}</div>${pickerView()}</div>`;
-  }
-
-  function setPath(root, path, value) {
-    const keys = path.split("."); let current = root;
-    keys.slice(0, -1).forEach(k => current = current[k]); current[keys.at(-1)] = value;
-  }
-  function readInput(input) { return input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value) : input.value; }
-
-  function canonical(value) { return String(value || "").trim().toLocaleLowerCase("en"); }
-  function keywordNames(value) {
-    return String(value || "").split(/[,;]+/u).map(canonical).filter(Boolean);
-  }
-  function isForbiddenCard(card) {
-    const station = canonical(card.station || card.stationLabel);
-    const flags = [...(card.characteristics || []), station].map(canonical);
-    return card.cost === null || card.isUnhirable || flags.some((value) => ["master", "totem", "fate-bound", "fate bound"].includes(value));
-  }
-  function canHire(card, player) {
-    if (isForbiddenCard(card)) return false;
-    const faction = canonical(player.faction);
-    const factions = [card.faction, card.factionLabel, card.secondFaction, card.secondFactionLabel].map(canonical);
-    const playerKeywords = keywordNames(player.keywords);
-    const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]);
-    const versatile = [...(card.characteristics || []), card.station, card.stationLabel].map(canonical).includes("versatile");
-    return versatile || (faction && factions.includes(faction)) || playerKeywords.some((keyword) => cardKeywords.includes(keyword));
-  }
-  function canSourceTalent(card, player, slot) {
-    if (isForbiddenCard(card) || Number(card.cost) > slot.limit) return false;
-    const playerKeywords = keywordNames(player.keywords);
-    const cardKeywords = (card.keywords || []).flatMap((keyword) => [canonical(keyword.name), canonical(keyword.slug)]);
-    return playerKeywords.some((keyword) => cardKeywords.includes(keyword));
-  }
-  function talentFitsSlot(talent, player, slot) {
-    const card = talent?.snapshot?.sourceCard;
-    const entry = talent?.snapshot?.entry;
-    if (!card || !entry) return !talent?.name;
-    if (!canSourceTalent(card, player, slot)) return false;
-    if (slot.kind === "ability") return (card.abilities || []).some((ability) => ability.id === entry.id || ability.slug === entry.slug);
-    if (entry.type !== slot.kind) return false;
-    if (slot.chooseTrigger) return Array.isArray(entry.triggers) && entry.triggers.length === 1;
-    return !entry.triggers?.length;
-  }
-  function syncPlayerTalents(player) {
-    const slots = archetypes[player.archetype]?.talents || [];
-    player.talents = slots.map((slot) => player.talents.find((talent) => talent.slotId === slot.id && talent.kind === slot.kind && talentFitsSlot(talent, player, slot)) || { slotId: slot.id, kind: slot.kind, name: "", source: "", snapshot: null });
-  }
-  async function runPickerSearch() {
-    if (!picker) return;
-    if (!cardCatalog) { picker.status = locale === "en" ? "BiggerHat is unavailable." : "Каталог BiggerHat недоступен."; render(); return; }
-    const requestId = (picker.requestId || 0) + 1;
-    picker.requestId = requestId;
-    picker.status = locale === "en" ? "Loading catalog…" : "Загружаю каталог…";
-    render();
-    try {
-      const found = await cardCatalog.searchCharacters(picker.query || "", { limit: 1000 });
-      if (!picker || picker.requestId !== requestId) return;
-      const player = state.players.find((item) => item.id === picker.playerId);
-      picker.results = found.filter((card) => picker.kind === "model" ? canHire(card, player) : canSourceTalent(card, player, picker.slot)).slice(0, 30);
-      picker.status = picker.results.length ? (locale === "en" ? `${picker.results.length} cards found` : `Найдено карточек: ${picker.results.length}`) : (locale === "en" ? "No eligible cards found." : "Подходящих карточек не найдено.");
-      render();
-    } catch {
-      if (!picker || picker.requestId !== requestId) return;
-      picker.results = [];
-      picker.status = locale === "en" ? "Could not load BiggerHat. Try again." : "Не удалось загрузить BiggerHat. Повторите попытку.";
-      render();
-    }
-  }
-  async function selectPickerCard(slug) {
-    if (!picker || !cardCatalog) return;
-    picker.status = locale === "en" ? "Loading the full card…" : "Загружаю полную карточку…";
-    render();
-    try {
-      const card = await cardCatalog.getCharacter(slug);
-      if (!picker) return;
-      const player = state.players.find((item) => item.id === picker.playerId);
-      if (picker.kind === "model") {
-        if (!canHire(card, player)) return notify(locale === "en" ? "This model is not eligible for this arsenal." : "Эту модель нельзя добавить в данный арсенал.");
-        if (player.arsenal.some((model) => model.cardSlug === card.slug)) return notify(locale === "en" ? "This model is already in the arsenal." : "Эта модель уже есть в арсенале.");
-        player.arsenal.push({ id: crypto.randomUUID?.() || `${Date.now()}`, name: card.displayName, cost: card.cost, type: card.stationLabel || card.station || "Model", faction: card.factionLabel || card.faction || "", keywords: (card.keywords || []).map((keyword) => keyword.name), cardSlug: card.slug, cardSnapshot: card, injuries: 0, equipment: 0, addedWeek: state.run.status === "resolved" || state.aftermath ? state.campaign.week : 0 });
-        picker = null; save(); render(); return;
-      }
-      picker.card = card;
-      picker.status = locale === "en" ? "Choose an entry from the card." : "Выберите запись с карточки.";
-      render();
-    } catch { if (picker) { picker.status = locale === "en" ? "Could not load this card." : "Не удалось загрузить карточку."; render(); } }
-  }
-
-  function bind(root) {
-    root.onclick = (event) => {
-      const tab = event.target.closest("[data-coop-tab]");
-      if (tab) { state.active = tab.dataset.coopTab; save(); render(); return; }
-      const scenarioButton = event.target.closest("[data-coop-scenario]");
-      if (scenarioButton && state.run.status === "setup" && confirm("Перейти к выбранному сценарию? Текущая подготовка будет очищена.")) { state.campaign.scenario = scenarioButton.dataset.coopScenario; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: Number(state.run.size) || DEFAULT_ENCOUNTER_SIZE }; save(); render(); return; }
-      if (event.target.classList.contains("coop-picker-backdrop") && event.target.dataset.coopAction === "close-picker") { picker = null; render(); return; }
-      const button = event.target.closest("[data-coop-action]"); if (!button) return;
-      action(button.dataset.coopAction, button);
-    };
-    const handleField = (event) => {
-      const el = event.target;
-      const changeOnly = el.type === "checkbox" || el.tagName === "SELECT";
-      if ((event.type === "input" && changeOnly) || (event.type === "change" && !changeOnly)) return;
-      if (el.dataset.coopPath) { setPath(state, el.dataset.coopPath, readInput(el)); save(); if (changeOnly || el.type === "number") render(); return; }
-      const playerCard = el.closest("[data-player-id]");
-      if (playerCard && el.dataset.playerPath) { const p = state.players.find(x => x.id === playerCard.dataset.playerId); setPath(p, el.dataset.playerPath, readInput(el)); if (el.dataset.playerPath === "archetype") syncPlayerTalents(p); save(); if (event.type === "change" || el.type === "number") render(); return; }
-      if (playerCard && el.dataset.modelPath) { const p = state.players.find(x => x.id === playerCard.dataset.playerId); const m = p.arsenal.find(x => x.id === el.dataset.modelId); m[el.dataset.modelPath] = readInput(el); save(); return; }
-      if (el.dataset.runPath) { setPath(state.run, el.dataset.runPath, readInput(el)); save(); if (event.type === "change" || el.type === "number") render(); return; }
-      if (el.dataset.tracker) { state.run.tracker[el.dataset.tracker] = readInput(el); save(); return; }
-      if (el.dataset.crewModel) { const id = el.dataset.player; state.run.crews[id] ||= { models: [] }; const models = new Set(state.run.crews[id].models || []); el.checked ? models.add(el.dataset.crewModel) : models.delete(el.dataset.crewModel); state.run.crews[id].models = [...models]; save(); render(); return; }
-      if (el.id === "coopPickerSearch") { picker.query = el.value; clearTimeout(picker.timer); picker.timer = setTimeout(runPickerSearch, 160); return; }
-      if (el.dataset.phasePlayer) { const draft = state.aftermath.players[el.dataset.phasePlayer] ||= {}; draft[el.dataset.key] = readInput(el); save(); }
-      if (el.dataset.coopAction === "scenario-select") { state.campaign.scenario = el.value; state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: 1, size: Number(state.run.size) || DEFAULT_ENCOUNTER_SIZE }; save(); render(); }
-    };
-    root.oninput = handleField;
-    root.onchange = handleField;
-    root.onkeydown = (event) => {
-      if (event.key === "Escape" && picker) { picker = null; render(); }
-    };
-  }
-
-  function action(name, button) {
-    if (name === "add-player") { state.players.push(freshPlayer(state.players.length)); save(); render(); }
-    if (name === "remove-player" && confirm("Удалить профиль и его арсенал?")) { state.players = state.players.filter(p => p.id !== button.dataset.id); save(); render(); }
-    if (name === "add-model") {
-      picker = { kind: "model", playerId: button.dataset.id, query: "", results: [], status: "" }; render(); runPickerSearch();
-    }
-    if (name === "pick-talent") { const player = state.players.find((item) => item.id === button.dataset.player); const slot = archetypes[player?.archetype]?.talents?.find((item) => item.id === button.dataset.slot); if (!player || !slot) return; picker = { kind: "talent", playerId: player.id, slot, query: "", results: [], status: "", card: null }; render(); runPickerSearch(); }
-    if (name === "close-picker") { picker = null; render(); }
-    if (name === "select-card") selectPickerCard(button.dataset.slug);
-    if (name === "select-talent" && picker?.kind === "talent" && picker.card) { const entries = picker.slot.kind === "ability" ? picker.card.abilities || [] : (picker.card.actions || []).filter((entry) => entry.type === picker.slot.kind); const entry = entries[Number(button.dataset.entry)]; const player = state.players.find((item) => item.id === picker.playerId); if (!entry || !player) return; const selectedTrigger = picker.slot.chooseTrigger ? entry.triggers?.[Number(button.dataset.trigger)] : null; if (picker.slot.chooseTrigger && !selectedTrigger) return; const selectedEntry = { ...entry, triggers: selectedTrigger ? [selectedTrigger] : [] }; const talent = player.talents.find((item) => item.slotId === picker.slot.id && item.kind === picker.slot.kind); Object.assign(talent, { name: entry.name, source: picker.card.displayName, snapshot: { entry: selectedEntry, sourceCard: picker.card } }); picker = null; save(); render(); }
-    if (name === "remove-model") { const p = state.players.find(x => x.id === button.dataset.player); p.arsenal = p.arsenal.filter(m => m.id !== button.dataset.id); if (state.run.crews[p.id]) state.run.crews[p.id].models = (state.run.crews[p.id].models || []).filter((id) => id !== button.dataset.id); save(); render(); }
-    if (name === "start-encounter") {
-      const invalidArsenal = state.players.some(p => p.arsenal.reduce((sum, m) => sum + Number(m.cost || 0), 0) > 25 && state.history.length === 0);
-      if (invalidArsenal) return notify("Стартовый арсенал одного из игроков превышает 25 soulstones.");
-      const invalid = state.players.some(p => {
-        const max = Math.floor(Number(state.run.size) / state.players.length);
-        const crew = state.run.crews[p.id]?.models || [];
-        return leaderCost(p) + crew.reduce((sum, id) => sum + Number(p.arsenal.find(m => m.id === id)?.cost || 0), 0) > max;
-      });
-      if (invalid) return notify("Один из отрядов превышает личный лимит soulstones.");
-      state.run.status = "active"; save(); render();
-    }
-    if (name === "resolve") {
-      if (!confirm(`Зафиксировать ${button.dataset.outcome === "win" ? "победу" : "поражение"}?`)) return;
-      state.run.status = "resolved"; state.run.outcome = button.dataset.outcome;
-      state.aftermath = { step: 0, players: Object.fromEntries(state.players.map(p => [p.id, { xp: button.dataset.outcome === "loss" ? 2 : 1 }])) };
-      state.active = "aftermath"; save(); render();
-    }
-    if (name === "phase-next") {
-      const a = state.aftermath;
-      if (a.step === 2 && state.players.some(p => Number(a.players[p.id]?.spent || 0) > p.scrip + Number(a.players[p.id]?.payday || 0))) return notify("Barter не может сделать баланс отрицательным.");
-      if (a.step === 4 && state.players.some(p => Number(a.players[p.id]?.doctorCost || 0) > p.scrip + Number(a.players[p.id]?.payday || 0) - Number(a.players[p.id]?.spent || 0))) return notify("Недостаточно скрипов для Back-Alley Doctor.");
-      a.step += 1; save(); render();
-    }
-    if (name === "phase-back") { state.aftermath.step -= 1; save(); render(); }
-    if (name === "commit-aftermath") commitAftermath();
-    if (name === "export") exportBackup();
-    if (name === "import") document.querySelector("#coopImport")?.click();
-  }
-
-  function commitAftermath() {
-    if (!confirm("Атомарно сохранить весь Aftermath и перейти дальше?")) return;
-    const s = scenario(); const a = state.aftermath;
-    if (s.weekEnd) {
-      const missingHire = state.players.find(p => !p.arsenal.some(m => Number(m.addedWeek) === state.campaign.week));
-      if (missingHire) {
-        state.active = "players"; save(); render();
-        return notify(`${missingHire.name}: добавьте минимум одну модель для завершения недели.`);
-      }
-    }
-    const record = { id: crypto.randomUUID?.() || `${Date.now()}`, time: timestamp(), scenarioId: s.id, scenario: s.name, week: state.campaign.week, attempt: state.run.attempt, outcome: state.run.outcome, notes: state.run.notes, tracker: { ...state.run.tracker }, players: [] };
-    state.players.forEach(p => {
-      const d = a.players[p.id] || {}; const delta = Number(d.payday || 0) - Number(d.spent || 0) - Number(d.doctorCost || 0);
-      p.scrip = Math.max(0, p.scrip + delta); p.xp += Number(d.xp || 0);
-      record.players.push({ id: p.id, name: p.name, scripDelta: delta, xp: Number(d.xp || 0), summary: d });
-    });
-    state.history.push(record);
-    let next = s.next;
-    if (s.branches) next = s.branches.find(b => b.value === state.run.branch)?.next || s.branches[0].next;
-    if (state.run.outcome === "loss") {
-      if (state.settings.threads && state.settings.threadCount > 0) { state.settings.threadCount -= 1; if (!s.next) next = s.id; }
-      else if (state.run.attempt < 2) next = s.id;
-      else state.campaign.status = "lost";
-    }
-    if (s.weekEnd) state.campaign.week += 1;
-    if (next) state.campaign.scenario = next; else state.campaign.status = "complete";
-    state.run = { status: "setup", outcome: "", tracker: {}, crews: {}, notes: "", branch: "deal", attempt: next === s.id ? state.run.attempt + 1 : 1, size: state.run.size };
-    state.aftermath = null; state.active = "hq"; save(); render(); notify("Aftermath сохранён. Кампания продвинута.");
-  }
-
-  function exportBackup() {
-    const blob = new Blob([JSON.stringify({ kind: "m4e-cooperative-backup", exportedAt: new Date().toISOString(), data: state }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${state.campaign.name.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}-coop.json`; a.click(); URL.revokeObjectURL(a.href); notify("Резервная копия экспортирована.");
-  }
-
-  function render(nextLocale = locale) {
-    locale = nextLocale || locale;
-    const root = document.querySelector("#cooperativeApp"); if (!root) return;
-    document.body.classList.toggle("has-coop-picker", Boolean(picker));
-    root.innerHTML = shell(); bind(root);
-    if (picker) requestAnimationFrame(() => root.querySelector("#coopPickerSearch")?.focus());
-    const input = root.querySelector("#coopImport");
-    if (input) input.onchange = async () => { try { const raw = JSON.parse(await input.files[0].text()); state = normalize(raw.kind === "m4e-cooperative-backup" ? raw.data : raw); save(); render(); notify("Кооперативная кампания импортирована."); } catch { notify("Не удалось импортировать файл."); } };
-  }
-
-  window.CooperativeCampaign = { render, getState: () => state };
+  function initializeModelStates(){state.players.forEach((player)=>{state.run.modelStates[`leader:${player.id}`]||={health:archetypes[player.archetype]?.stats?.Health||14,status:"active"};(state.run.crews[player.id]?.models||[]).forEach((id)=>{const model=player.arsenal.find((item)=>item.id===id);state.run.modelStates[id]||={health:model.cardSnapshot?.health||0,status:"active"};});});}
+  function createAftermath(){const deck=state.settings.fateDeck==="digital"?rules.createDeck():[];const result={id:uid("aftermath"),step:0,rulesVersion:rules.version,deck,discard:[],operations:[],committing:false,players:{}};state.players.forEach((player)=>{const calculated=rules.formula(state.campaign.scenario,state.run.tracker,state.run.outcome);const handCards=state.settings.fateDeck==="digital"?result.deck.splice(0,calculated.hand):[];result.players[player.id]={hand:"",handCards,usedHandIds:[],duplicateOverride:false,calculated,paydayAdjustment:0,adjustmentReason:"",flips:{},purchases:[],upgrades:[],doctorAttempts:[],injuryQueue:buildInjuryQueue(player),injuryResults:[],workingPlayer:clone(player)};});return result;}
+  function startFlip(playerId,purpose){const draft=state.aftermath.players[playerId];if(Object.values(draft.flips).some((flip)=>flip&&!flip.resolved))return notify("Сначала примите текущий Flip.");const card=state.settings.fateDeck==="digital"?state.aftermath.deck.shift():null;draft.flips[purpose]={id:uid("flip"),purpose,card,input:"",cheatId:"",resolved:false};save();render();}
+  function acceptFlip(playerId,purpose){const draft=state.aftermath.players[playerId];const flip=draft.flips[purpose];const natural=state.settings.fateDeck==="digital"?flip.card:rules.parseCard(flip.input);if(!natural)return notify("Введите карту в формате 10 R, RJ или BJ.");const cheated=draft.handCards.find((card)=>card.id===flip.cheatId&&!draft.usedHandIds.includes(card.id));if(cheated)draft.usedHandIds.push(cheated.id);flip.card=natural;flip.final=rules.outcome(cheated||natural,Boolean(cheated));flip.resolved=true;state.aftermath.discard.push(natural);save();render();}
+  function buyEquipment(playerId,equipmentId){const player=state.players.find((item)=>item.id===playerId);const draft=state.aftermath.players[playerId];const item=equipmentCatalog().find((entry)=>entry.id===equipmentId);const balance=player.scrip+draft.calculated.payday+draft.paydayAdjustment-draft.purchases.reduce((sum,entry)=>sum+entry.cost,0)-draft.doctorAttempts.length;if(!item||item.cost>balance)return notify("Недостаточно скрипов.");draft.purchases.push({...item,instanceId:uid("equipment")});state.aftermath.operations.push({id:uid("op"),kind:"equipment-purchase",playerId,amount:-item.cost,summary:item.name});save();render();}
+  function applyDoctor(playerId){const player=state.players.find((item)=>item.id===playerId);const draft=state.aftermath.players[playerId];const flip=draft.flips.doctor;if(!flip?.resolved)return;const selected=document.querySelector(`[data-doctor-injury="${playerId}"]`)?.value||"";const [modelId,injuryId]=selected.split("|");const leaderTarget=modelId===`leader:${playerId}`;const model=leaderTarget?{id:modelId,name:draft.workingPlayer.leader||"Лидер",injuryList:draft.workingPlayer.leaderProfile.injuries,keywords:draft.workingPlayer.leaderProfile.characteristics,luckyMisses:draft.workingPlayer.leaderProfile.luckyMisses}:draft.workingPlayer.arsenal.find((item)=>item.id===modelId);const injury=model?.injuryList.find((item)=>item.id===injuryId);const available=player.scrip+draft.calculated.payday+draft.paydayAdjustment-draft.purchases.reduce((sum,item)=>sum+item.cost,0)-draft.doctorAttempts.length;if(!model||!injury||available<1)return notify("Выберите ранение и проверьте скрип.");let result="Лечение не изменило ранение";if(flip.final.joker!=="black"){model.injuryList=model.injuryList.filter((item)=>item.id!==injuryId);result=`Удалено: ${injury.name}`;if(flip.final.joker==="red"&&!flip.final.cheated)model.luckyMisses=(model.luckyMisses||[]).concat({id:uid("lucky"),name:"Lucky Miss",source:"Doctor"});}if(Number(flip.final.effectiveValue)===10&&!model.keywords.includes("Undead"))model.keywords.push("Undead");if(Number(flip.final.effectiveValue)===11&&!model.keywords.includes("Construct"))model.keywords.push("Construct");if(leaderTarget){draft.workingPlayer.leaderProfile.injuries=model.injuryList;draft.workingPlayer.leaderProfile.luckyMisses=model.luckyMisses;draft.workingPlayer.leaderProfile.characteristics=model.keywords;}draft.doctorAttempts.push({id:uid("doctor"),modelId,modelName:model.name,injuryId,result,cost:1,card:flip.final});state.aftermath.operations.push({id:uid("op"),kind:"doctor",playerId,amount:-1,summary:result});delete draft.flips.doctor;save();render();}
+  function applyInjury(playerId){const draft=state.aftermath.players[playerId];const player=draft.workingPlayer;const current=draft.injuryQueue.find((item)=>!item.done);const flip=draft.flips.injury;if(!current||!flip?.resolved)return;let result="Без ранения";const key=rules.injuryKey(flip.final);if(current.kind==="leader"&&(key==="Black Joker"||key==="5 R/M")){delete draft.flips.injury;save();render();return notify(`${current.name}: результат недопустим, выполните обязательный reflip.`);}if(flip.final.joker==="red"){if(!flip.final.cheated){const lucky={id:uid("lucky"),name:"Lucky Miss",source:"Natural Red Joker"};if(current.kind==="leader")player.leaderProfile.luckyMisses.push(lucky);else{const target=player.arsenal.find((item)=>item.id===current.targetId);target.luckyMisses=(target.luckyMisses||[]).concat(lucky);}result="Lucky Miss";}}else{const catalog=injuryCatalog().find((item)=>item.flip===key);if(catalog&&catalog.name!=="Just a Flesh Wound"){const injury={...clone(catalog),id:uid("injury")};const target=current.kind==="leader"?null:player.arsenal.find((item)=>item.id===current.targetId);const list=current.kind==="leader"?player.leaderProfile.injuries:target.injuryList;if(!list.some((item)=>item.name===injury.name))list.push(injury);result=injury.name;if(["Killed Off","Traitor"].includes(injury.name)||list.length>=3){if(current.kind==="leader"&&player.miraculousRecovery){player.miraculousRecovery=false;while(list.length>2)list.shift();result="Miraculous Recovery";}else if(current.kind==="leader"){player.requiresStartingAnew=true;result="Starting Anew";}else{target.status="destroyed";player.equipment=player.equipment.filter((item)=>item.assignedTo!==target.id);target.equipmentItems=[];}}}}current.done=true;draft.injuryResults.push({targetId:current.targetId,name:current.name,result,card:flip.final});state.aftermath.operations.push({id:uid("op"),kind:"injury",playerId,summary:`${current.name}: ${result}`});delete draft.flips.injury;save();render();}
+  function validatePhase(step){for(const player of state.players){const draft=state.aftermath.players[player.id];if(step===0){if(state.settings.fateDeck==="physical"){const parsed=rules.parseHand(draft.hand);if(parsed.invalid.length||parsed.cards.length!==draft.calculated.hand||(parsed.duplicates.length&&!draft.duplicateOverride))return `${player.name}: проверьте руку Aftermath.`;draft.handCards=parsed.cards;}}if(step===1&&draft.paydayAdjustment!==0&&!draft.adjustmentReason.trim())return `${player.name}: укажите причину house rule.`;if(step===2&&draft.flips.barter&&!draft.flips.barter.resolved)return `${player.name}: завершите Barter Flip.`;if(step===3){const opened=(advancement.xpThresholds||[]).filter((entry)=>entry.xp>player.xp&&entry.xp<=player.xp+draft.calculated.xp);if(opened.some((_,index)=>!draft.upgrades[index]?.name?.trim()))return `${player.name}: выберите каждое открывшееся улучшение.`;}if(step===4&&draft.flips.doctor&&!draft.flips.doctor.resolved)return `${player.name}: завершите Doctor Flip.`;if(step===5&&(draft.flips.injury&&!draft.flips.injury.resolved||draft.injuryQueue.some((item)=>!item.done)))return `${player.name}: обработайте очередь Injury.`;}return"";}
+  function nextPhase(){const error=validatePhase(state.aftermath.step);if(error)return notify(error);state.aftermath.step+=1;save();render();}
+  function commitAftermath(){const a=state.aftermath;if(!a||a.committing)return;const error=validatePhase(5);if(error)return notify(error);if(scenario().weekEnd){const missing=state.players.find((player)=>!player.arsenal.some((model)=>Number(model.addedWeek)===state.campaign.week));if(missing){state.active="players";save();render();return notify(`${missing.name}: добавьте минимум одну модель для завершения недели.`);}}if(!confirm("Атомарно сохранить весь Aftermath?"))return;a.committing=true;save();const next=clone(state);const record={id:uid("history"),time:timestamp(),scenarioId:scenario().id,scenario:scenario().name,week:next.campaign.week,attempt:next.run.attempt,outcome:next.run.outcome,notes:next.run.notes,tracker:clone(next.run.tracker),rulesVersion:a.rulesVersion,players:[]};next.players.forEach((player)=>{const draft=a.players[player.id];const spent=draft.purchases.reduce((sum,item)=>sum+item.cost,0)+draft.doctorAttempts.length;const earned=draft.calculated.payday+draft.paydayAdjustment;player.arsenal=clone(draft.workingPlayer.arsenal);player.equipment=clone(draft.workingPlayer.equipment);player.leaderProfile=clone(draft.workingPlayer.leaderProfile);player.miraculousRecovery=draft.workingPlayer.miraculousRecovery;player.requiresStartingAnew=Boolean(draft.workingPlayer.requiresStartingAnew);player.scrip=Math.max(0,player.scrip+earned-spent);player.xp+=draft.calculated.xp;draft.upgrades.filter((item)=>item?.name).forEach((item)=>player.leaderProfile.upgrades.push({id:uid("upgrade"),type:item.type||"custom",name:item.name,week:next.campaign.week}));player.advances=player.leaderProfile.upgrades.length;draft.purchases.forEach((item)=>player.equipment.push({id:item.instanceId,catalogId:item.id,name:item.name,cost:item.cost,br:item.br,status:"available",assignedTo:"",ratingExempt:false}));next.ledger.push({id:uid("op"),kind:"payday",playerId:player.id,playerName:player.name,amount:earned,summary:draft.adjustmentReason||draft.calculated.explanation.join("; "),time:timestamp(),scenario:scenario().name,week:next.campaign.week,immutable:true},{id:uid("op"),kind:"experience",playerId:player.id,playerName:player.name,amount:draft.calculated.xp,summary:`XP +${draft.calculated.xp}`,time:timestamp(),scenario:scenario().name,week:next.campaign.week,immutable:true});record.players.push({id:player.id,name:player.name,scripDelta:earned-spent,xp:draft.calculated.xp,summary:clone(draft)});});next.history.push(record);a.operations.forEach((operation)=>next.ledger.push({...operation,time:timestamp(),scenario:scenario().name,week:next.campaign.week,immutable:true,playerName:next.players.find((player)=>player.id===operation.playerId)?.name||""}));let following=scenario().next;if(scenario().branches)following=scenario().branches.find((branch)=>branch.value===next.run.branch)?.next||scenario().branches[0].next;if(next.run.outcome==="loss"){if(next.settings.threads&&next.settings.threadCount>0){next.settings.threadCount-=1;if(scenario().id==="pillars")following=scenario().id;}else if(next.run.attempt<2)following=scenario().id;else next.campaign.status="lost";}if(scenario().weekEnd)next.campaign.week+=1;if(following)next.campaign.scenario=following;else next.campaign.status="complete";next.run=freshRun(next.run.size);next.aftermath=null;next.active="hq";state=next;save();render();notify("Aftermath сохранён атомарно.");}
+  function addCorrection(){const amount=Number(document.querySelector("#coopCorrectionAmount")?.value);const reason=document.querySelector("#coopCorrectionReason")?.value.trim();const player=state.players.find((item)=>item.id===document.querySelector("#coopCorrectionPlayer")?.value);if(!Number.isFinite(amount)||!reason||!player)return notify("Укажите игрока, сумму и причину.");player.scrip=Math.max(0,player.scrip+amount);state.corrections.push({id:uid("correction"),kind:"house-rule-correction",time:timestamp(),playerId:player.id,playerName:player.name,amount,reason,immutable:true});save();render();}
+  function exportBackup(){const blob=new Blob([JSON.stringify({kind:"m4e-cooperative-backup",exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`${state.campaign.name.replace(/[^\p{L}\p{N}]+/gu,"-").toLowerCase()}-coop.json`;link.click();URL.revokeObjectURL(link.href);}
+  function render(nextLocale=locale){locale=nextLocale||locale;const root=document.querySelector("#cooperativeApp");if(!root)return;document.body.classList.toggle("has-coop-picker",Boolean(picker));root.innerHTML=shell();bind(root);if(picker)requestAnimationFrame(()=>root.querySelector("#coopPickerSearch")?.focus());const input=root.querySelector("#coopImport");if(input)input.onchange=async()=>{try{const raw=JSON.parse(await input.files[0].text());state=normalize(raw.kind==="m4e-cooperative-backup"?raw.data:raw);save();render();notify("Кампания импортирована.");}catch{notify("Не удалось импортировать файл.");}};}
+  window.CooperativeCampaign={render,getState:()=>clone(state),replaceState:(value)=>{state=normalize(value);save();render();}};
+  window.addEventListener("malifaux-builder-ready",()=>render(locale));
 })();

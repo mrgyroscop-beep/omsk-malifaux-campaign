@@ -70,6 +70,7 @@ const detail = {
     }));
   });
   const page = await context.newPage();
+  page.setDefaultTimeout(8000);
   const pageErrors = [];
   const browserDialogs = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -129,6 +130,13 @@ const detail = {
   assert.equal(state.players[0].talents[0].snapshot.entry.name, "Peacebringer");
   assert.deepEqual(state.players[0].talents[0].snapshot.entry.triggers, [], "non-Heavy-Hitter action drops triggers");
 
+  for (const slot of ["tactical-1", "ability-1"]) {
+    await page.locator(`[data-coop-action="pick-talent"][data-slot="${slot}"]`).click();
+    await page.waitForSelector('.coop-picker-result[data-slug="alpha-marshal"]');
+    await page.locator('.coop-picker-result[data-slug="alpha-marshal"]').click();
+    await page.locator('[data-coop-action="select-talent"]').first().click();
+  }
+
   await page.locator('[data-coop-tab="encounter"]').click();
   assert.equal(await page.locator('[data-run-path="size"]').inputValue(), "24");
   const modelId = added.id;
@@ -141,7 +149,7 @@ const detail = {
   }
   state = await page.evaluate(() => window.CooperativeCampaign.getState());
   assert.equal(state.run.crews["player-1"].models.filter((id) => id === modelId).length, 1, "repeated checks are idempotent");
-  assert.equal(await page.locator(".coop-crew output").textContent(), "16 / 24");
+  assert.equal(await page.locator(".coop-crew output").textContent(), "16 SS · CR 0");
   for (let index = 0; index < 10; index += 1) {
     await page.evaluate(({ modelId }) => {
       const input = document.querySelector(`[data-crew-model="${modelId}"]`);
@@ -155,7 +163,14 @@ const detail = {
 
   await page.locator('[data-coop-action="start-encounter"]').click();
   await page.locator('[data-coop-action="resolve"][data-outcome="win"]').click();
-  for (let step = 0; step < 6; step += 1) await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-hand-input="player-1"]').fill("1 R, 2 M, 3 C");
+  await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-upgrade-name="player-1"]').fill("Test advancement");
+  await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-coop-action="phase-next"]').click();
+  await page.locator('[data-coop-action="phase-next"]').click();
   await page.locator('[data-coop-action="commit-aftermath"]').click();
   state = await page.evaluate(() => window.CooperativeCampaign.getState());
   assert.equal(state.history.length, 1, "completed encounter is recorded atomically");
@@ -179,4 +194,4 @@ const detail = {
   assert.deepEqual(pageErrors, []);
   await browser.close();
   console.log("KAN161_165_COOPERATIVE_FLOW_SMOKE_OK");
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+})().catch((error) => { console.error(error); process.exit(1); });

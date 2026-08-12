@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "check": "node --check app.js && node --check account.js && node --check cloud.js && node --check cooperative.js",
+    "check": "node --check app.js && node --check account.js && node --check cloud.js && node --check cooperative-rules.js && node --check cooperative.js",
     "test:kan25": "node tests/kan25-account-sync.smoke.cjs",
     "test:kan6": "node tests/kan6-loadout.smoke.cjs",
     "test:kan7": "node tests/kan7-injuries.smoke.cjs",
@@ -23,7 +23,8 @@
     "test:kan123": "node tests/kan123-leader-action-advancements.smoke.cjs",
     "test:kan125": "node tests/kan125-feedback-fixes.smoke.cjs",
     "test:kan158-160": "node tests/kan158-160-feedback.smoke.cjs",
-    "test:kan161-165": "node tests/kan161-165-cooperative-flow.smoke.cjs"
+    "test:kan161-165": "node tests/kan161-165-cooperative-flow.smoke.cjs",
+    "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"
