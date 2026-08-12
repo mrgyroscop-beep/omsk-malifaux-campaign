@@ -1384,7 +1384,7 @@ const defaultState = {
     models: [],
     equipment: [],
     equipmentScripSpent: 0,
-    scrip: 0,
+    scrip: 3,
     scripTransactions: [],
   },
   loadout: {

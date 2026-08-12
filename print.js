@@ -127,6 +127,34 @@
     </section>`;
   }
 
+  function assignedPrintEquipment(items, loadout, targetKind, targetId = null) {
+    const equipmentById = new Map((Array.isArray(items) ? items : []).map((item) => [item.id, item]));
+    return (Array.isArray(loadout?.assignments) ? loadout.assignments : [])
+      .filter(
+        (assignment) =>
+          assignment.targetKind === targetKind &&
+          (targetKind !== "model" || assignment.targetId === targetId),
+      )
+      .map((assignment) => equipmentById.get(assignment.equipmentId))
+      .filter(Boolean);
+  }
+
+  function renderPrintEquipmentSection(items) {
+    const records = Array.isArray(items) ? items : [];
+    return `<section class="print-permanent-block${records.length ? "" : " is-empty"}" data-print-section="equipment">
+      <h3>${printText("Снаряжение", "Equipment")}</h3>
+      ${
+        records.length
+          ? `<ul class="print-equipment-list">${records
+              .map((item) => `<li><b>${escapePrintHtml(item.name || "—")}</b>${
+                item.effect ? `<p>${richPrintText(item.effect)}</p>` : ""
+              }</li>`)
+              .join("")}</ul>`
+          : `<p class="print-empty">—</p>`
+      }
+    </section>`;
+  }
+
   function richPrintText(value) {
     try {
       if (typeof cardText === "function") return cardText(value);
@@ -316,11 +344,35 @@
       </section>`;
   }
 
-  function renderModels(models, loadout) {
+  function renderModels(models, loadout, equipment) {
     if (!models.length) {
       return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
     }
     return `
+      <div class="print-model-cards">
+        ${models
+          .map((model) => {
+            const traits = [
+              model.type,
+              model.henchman ? "Henchman" : "",
+              model.versatile ? "Versatile" : "",
+              model.keywords,
+            ].filter(Boolean);
+            const assigned = assignedPrintEquipment(equipment, loadout, "model", model.id);
+            return `<article class="print-model-card" data-print-model-card="${escapePrintHtml(model.id || model.name || "")}">
+              <header>
+                <div><span class="print-kicker">${printText("Модель", "Model")}</span><h3>${escapePrintHtml(model.name || "—")}</h3></div>
+                <b class="print-model-cost">${escapePrintHtml(model.cost ?? "—")}</b>
+              </header>
+              <p class="print-model-traits">${escapePrintHtml(traits.join(" · ") || "—")}</p>
+              <div class="print-model-upgrades">
+                ${renderPrintInjurySection(model.injuries)}
+                ${renderPrintEquipmentSection(assigned)}
+              </div>
+            </article>`;
+          })
+          .join("")}
+      </div>
       <table class="print-table print-model-table">
         <thead>
           <tr>
@@ -482,6 +534,68 @@
       </section>`;
   }
 
+  function printTotemActionRecords(profile, advances) {
+    const records = [...(profile.attacks || []), ...(profile.tacticals || [])].map(
+      (source, index) => ({
+        id: `totem-profile-${index + 1}`,
+        originLabel: printText("Профиль тотема", "Totem profile"),
+        source: "",
+        page: null,
+        action: {
+          name: source.name || "",
+          type: source.type || (index < (profile.attacks || []).length ? "attack" : "tactical"),
+          typeLabel: source.type || (index < (profile.attacks || []).length ? "Attack" : "Tactical"),
+          range: source.range || "",
+          stat: source.stat ?? source.skill ?? "",
+          resistedBy: source.resistedBy || source.resist || "",
+          targetNumber: source.targetNumber || source.tn || "",
+          damage: source.damage || "",
+          description: source.description || source.text || "",
+          isSignature: Boolean(source.isSignature || source.signature),
+          stoneCost: source.stoneCost || 0,
+          triggers: Array.isArray(source.triggers) ? source.triggers : [],
+        },
+      }),
+    );
+    const advancementRecords =
+      typeof leaderActionRecords === "function"
+        ? leaderActionRecords({ talents: [], advances, recipient: "totem" })
+        : [];
+    advancementRecords.forEach((record) => {
+      if (!records.some((candidate) => candidate.action.name === record.action.name)) records.push(record);
+    });
+    (Array.isArray(advances) ? advances : [])
+      .filter(
+        (advance) =>
+          advance?.recipient === "totem" &&
+          ["attack-modification", "tactical-modification"].includes(advance?.tableId) &&
+          advance?.appliesTo,
+      )
+      .forEach((advance) => {
+        const record = records.find(
+          (candidate) => candidate.action.name.toLocaleLowerCase() === String(advance.appliesTo).toLocaleLowerCase(),
+        );
+        if (!record) return;
+        if (advance.resultType === "skill" && Number.isFinite(Number(advance.snapshot?.result?.skill))) {
+          record.action.stat = String(advance.snapshot.result.skill);
+        }
+        if (advance.resultType === "signature") record.action.isSignature = true;
+        if (advance.resultType === "trigger") {
+          const snapshot = advance.snapshot?.entry || advance.snapshot?.result || {};
+          const trigger = {
+            name: snapshot.name || advance.name || "",
+            suits: snapshot.suits || advance.suits || "",
+            description: snapshot.description || snapshot.text || advance.notes || "",
+            stoneCost: snapshot.stoneCost || 0,
+          };
+          if (trigger.name && !record.action.triggers.some((item) => item.name === trigger.name)) {
+            record.action.triggers.push(trigger);
+          }
+        }
+      });
+    return records;
+  }
+
   function renderManualUpgrades(upgrades) {
     const records = Array.isArray(upgrades) ? upgrades : [];
     if (!records.length) return "";
@@ -508,21 +622,14 @@
     if (!totem) return "";
     const profile = totem.snapshot || totem.profile || {};
     const stats = totem.stats || profile.stats || {};
-    const rules = [
-      ...(profile.attacks || []),
-      ...(profile.tacticals || []),
-    ];
+    const actionRecords = printTotemActionRecords(profile, advances);
     const totemAdvances = advances.filter(
       (advance) =>
         advance?.recipient === "totem" &&
         advance.tableId !== "ability" &&
         advance.resultType !== "ability",
     );
-    const equipmentById = new Map(equipment.map((item) => [item.id, item]));
-    const totemEquipment = (loadout.assignments || [])
-      .filter((assignment) => assignment.targetKind === "totem")
-      .map((assignment) => equipmentById.get(assignment.equipmentId))
-      .filter(Boolean);
+    const totemEquipment = assignedPrintEquipment(equipment, loadout, "totem");
     return `
       <section class="print-section print-totem">
         <div class="print-section-heading">
@@ -541,6 +648,7 @@
         <div class="print-permanent-grid">
           ${renderPrintAbilitySection(advances, "totem", profile.abilities || [])}
           ${renderPrintInjurySection(totem.injuries)}
+          ${renderPrintEquipmentSection(totemEquipment)}
         </div>
         <div class="print-stat-strip">
           ${[
@@ -556,18 +664,10 @@
             .join("")}
         </div>
         ${
-          rules.length
-            ? `<ul>${rules
-                .map(
-                  (rule) =>
-                    `<li><b>${escapePrintHtml(rule.name)}</b>${rule.text ? `<p>${richPrintText(rule.text)}</p>` : ""}</li>`,
-                )
-                .join("")}</ul>`
+          actionRecords.length
+            ? `<div class="print-talent-list print-totem-actions">${actionRecords.map(renderLeaderAction).join("")}</div>`
             : ""
         }
-        <p class="print-totem-equipment"><b>${printText("Снаряжение", "Equipment")}:</b> ${escapePrintHtml(
-          totemEquipment.map((item) => item.name).join(" · ") || "—",
-        )}</p>
         ${
           totemAdvances.length
             ? `<p><b>${printText("Продвижения", "Advancements")}:</b> ${escapePrintHtml(
@@ -595,6 +695,7 @@
     const leaderActions = typeof leaderActionRecords === "function"
       ? leaderActionRecords({ talents, advances, recipient: "leader" })
       : [];
+    const leaderEquipment = assignedPrintEquipment(equipment, loadout, "leader");
     const abilityTalents = talents
       .map((talent, index) => ({ talent, index }))
       .filter(({ talent }) => talent?.kind === "ability");
@@ -682,6 +783,7 @@
         <div class="print-permanent-grid print-leader-permanent">
           ${renderPrintAbilitySection(advances, "leader")}
           ${renderPrintInjurySection(leader.injuries)}
+          ${renderPrintEquipmentSection(leaderEquipment)}
           ${renderManualUpgrades(manualUpgrades)}
         </div>
 
@@ -727,7 +829,7 @@
             <span class="print-kicker">${printText("Состав", "Roster")}</span>
             <h2>${printText("Модели в арсенале", "Models in the arsenal")}</h2>
           </div>
-          ${renderModels(models, loadout)}
+          ${renderModels(models, loadout, equipment)}
         </section>
 
         <section class="print-section print-equipment">

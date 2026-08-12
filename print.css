@@ -566,6 +566,75 @@
     break-inside: avoid;
   }
 
+  .print-model-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3mm;
+    margin-bottom: 4mm;
+  }
+
+  .print-model-card {
+    padding: 3mm;
+    border: 0.8pt solid var(--print-line);
+    background: var(--print-paper);
+    break-inside: avoid;
+  }
+
+  .print-model-card header {
+    display: flex;
+    justify-content: space-between;
+    gap: 3mm;
+    align-items: start;
+  }
+
+  .print-model-card h3 {
+    margin: 0;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 15pt;
+  }
+
+  .print-model-cost {
+    color: var(--print-red);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 20pt;
+  }
+
+  .print-model-traits {
+    margin: 1mm 0 2mm;
+    color: var(--print-muted);
+    font-size: 7pt;
+  }
+
+  .print-model-upgrades {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2mm;
+  }
+
+  .print-equipment-list {
+    display: grid;
+    gap: 1.2mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .print-equipment-list b {
+    color: var(--print-red);
+    font-size: 7pt;
+  }
+
+  .print-equipment-list p {
+    margin: 0.4mm 0 0;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.25;
+  }
+
+  .print-totem-actions {
+    margin-top: 3mm;
+  }
+
   .print-leader-permanent {
     gap: 1.5mm;
     margin-top: 1.5mm;

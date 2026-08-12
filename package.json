@@ -21,7 +21,8 @@
     "test:kan110": "node tests/kan110-back-alley-doctor.smoke.cjs",
     "test:kan122": "node tests/kan122-leader-print-icons.smoke.cjs",
     "test:kan123": "node tests/kan123-leader-action-advancements.smoke.cjs",
-    "test:kan125": "node tests/kan125-feedback-fixes.smoke.cjs"
+    "test:kan125": "node tests/kan125-feedback-fixes.smoke.cjs",
+    "test:kan158-160": "node tests/kan158-160-feedback.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"
