@@ -25,7 +25,8 @@
     "test:kan158-160": "node tests/kan158-160-feedback.smoke.cjs",
     "test:kan161-165": "node tests/kan161-165-cooperative-flow.smoke.cjs",
     "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs",
-    "test:kan170-172": "node tests/kan170-172-cooperative-builder-ux.smoke.cjs"
+    "test:kan170-172": "node tests/kan170-172-cooperative-builder-ux.smoke.cjs",
+    "test:kan173": "node tests/kan173-crew-card-advancement.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"

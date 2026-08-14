@@ -9,7 +9,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 function normalizedTarget(url) {
   const relative = url.pathname.replace(/^\/api\/biggerhat\/v1\/?/u, "");
-  const match = relative.match(/^(characters|keywords)(?:\/([a-z0-9-]+))?$/u);
+  const match = relative.match(/^(characters|keywords|upgrades)(?:\/([a-z0-9-]+))?$/u);
   if (!match || (match[1] === "keywords" && match[2])) return null;
   if (match[2] && !SLUG_RE.test(match[2])) return null;
 
@@ -30,6 +30,10 @@ function normalizedTarget(url) {
     parameters.set("game_mode_type", "standard");
     parameters.set("page", String(page));
     parameters.set("per_page", "100");
+    if (match[1] === "upgrades") {
+      if (url.searchParams.get("domain") !== "crew") return null;
+      parameters.set("domain", "crew");
+    }
   }
 
   const path = `${match[1]}${match[2] ? `/${match[2]}` : ""}`;
@@ -37,7 +41,9 @@ function normalizedTarget(url) {
   return {
     path,
     url: `${UPSTREAM_BASE}/${path}${query ? `?${query}` : ""}`,
-    cacheKey: `biggerhat:${match[2] ? "v2" : "v1"}:${path}${query ? `?${query}` : ""}`,
+    cacheKey: `biggerhat:${
+      match[1] === "upgrades" ? "crew-v1" : match[2] ? "v2" : "v1"
+    }:${path}${query ? `?${query}` : ""}`,
     characterSlug: match[1] === "characters" ? match[2] || "" : "",
     ttl:
       match[2] ? DETAIL_TTL_MS : match[1] === "keywords" ? KEYWORD_TTL_MS : LIST_TTL_MS,

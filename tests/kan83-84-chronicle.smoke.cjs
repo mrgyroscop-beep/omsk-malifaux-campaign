@@ -54,23 +54,24 @@ const fixture = {
     await page.locator("#addAdvancementButton").click();
     await page.selectOption("#advancementXpIndex", "7");
     await page.selectOption("#advancementTable", "crew-card");
-    await page.locator("#advancementName").fill("Test Tier IV effect");
+    await page.locator('input[name="crewCardSource"][value="starting"]').check({ force: true });
+    await page.locator('[data-crew-advancement-effect="starting:heavy-blow"]').click();
     assert.equal(
       await page.locator("#advancementSubmit").isEnabled(),
       true,
-      "Typing a Tier IV effect did not enable saving.",
+      "Selecting a Tier IV Crew Card effect did not enable saving.",
     );
     await page.locator("#advancementSubmit").click();
     await page.waitForFunction(() =>
       window.MalifauxBuilder.getState().leader.advances.some(
-        (advance) => advance.tableId === "crew-card" && advance.name === "Test Tier IV effect",
+        (advance) => advance.tableId === "crew-card" && advance.name === "Heavy Blow",
       ),
     );
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => Boolean(window.MalifauxBuilder));
     assert.equal(
       (await page.evaluate(() => window.MalifauxBuilder.getState())).leader.advances.some(
-        (advance) => advance.tableId === "crew-card" && advance.name === "Test Tier IV effect",
+        (advance) => advance.tableId === "crew-card" && advance.name === "Heavy Blow",
       ),
       true,
       "Tier IV advancement was lost after reopening the chronicle.",

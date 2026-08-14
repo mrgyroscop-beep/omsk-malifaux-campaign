@@ -1403,6 +1403,14 @@ let pendingModelCard = null;
 let activeTalentSlot = null;
 let selectedTalentSource = null;
 let pendingAdvancementTalent = null;
+let pendingCrewCardEffect = null;
+let crewCardSourceMode = "keyword";
+let crewCardCatalogStatus = "idle";
+let crewCardCatalogError = "";
+let crewCardUpgradeDetails = [];
+let crewCardCatalogRequest = 0;
+let crewCardCatalogController = null;
+let crewCardCatalogKeywordKey = "";
 let returnToAdvancementAfterTalent = false;
 let activeCardView = null;
 let activeInjuryTarget = null;
@@ -4451,7 +4459,10 @@ function renderCrewActionDetails(card) {
 
 function renderCrewCards() {
   const grid = document.querySelector("#crewCardGrid");
-  grid.innerHTML = crewCards
+  const earnedEffects = (state.leader.advances || []).filter(
+    (advance) => !advance.legacy && advance.tableId === "crew-card",
+  );
+  const cardsHtml = crewCards
     .map(
       (card) => `
         <button class="crew-option ${state.leader.crewCard === card.id ? "is-selected" : ""}" type="button" data-crew-card="${escapeHtml(card.id)}" data-crew-effect="${card.effectType}" aria-pressed="${state.leader.crewCard === card.id}">
@@ -4464,6 +4475,35 @@ function renderCrewCards() {
         </button>`,
     )
     .join("");
+  grid.innerHTML = `${cardsHtml}${
+    earnedEffects.length
+      ? `<section class="crew-card-earned-effects" aria-label="${escapeHtml(
+          localized("Добавленные эффекты карты команды", "Added Crew Card effects"),
+        )}">
+          <header>
+            <div>
+              <span class="kicker">Tier IV · Crew Card</span>
+              <h3>${localized("Добавленные эффекты", "Added effects")}</h3>
+            </div>
+            <b>${earnedEffects.length}</b>
+          </header>
+          <div>${earnedEffects.map((advance) => {
+            const entry = advance.snapshot?.entry || {};
+            const parameter = safeText(advance.snapshot?.parameter, 200).trim();
+            return `<article>
+              <span>${escapeHtml(crewCardEffectTypeLabel(advance.crewCardEffectType || entry.type))}</span>
+              <h4>${escapeHtml(advance.name)}</h4>
+              <small>${escapeHtml(
+                [advance.source, parameter ? `${localized("Выбор", "Choice")}: ${parameter}` : ""]
+                  .filter(Boolean)
+                  .join(" · "),
+              )}</small>
+              ${entry.description ? `<p>${cardText(entry.description)}</p>` : ""}
+            </article>`;
+          }).join("")}</div>
+        </section>`
+      : ""
+  }`;
   grid.querySelectorAll("[data-crew-card]").forEach((button) => {
     button.addEventListener("click", () => {
       state.leader.crewCard = button.dataset.crewCard;
@@ -6788,6 +6828,7 @@ function advancementResultAlreadyUsed({
   name,
   appliesTo,
   selectedBiggerHat,
+  selectedCrewCardEffect,
 }) {
   if (tableId === "totem") return Boolean(state.leader.totem);
   if (tableId === "summoning") {
@@ -6831,11 +6872,21 @@ function advancementResultAlreadyUsed({
     });
   }
   if (tableId === "crew-card") {
+    const selectedIdentity = crewCardEffectIdentity(selectedCrewCardEffect);
     return state.leader.advances.some(
       (advance) =>
         !advance.legacy &&
         advance.tableId === "crew-card" &&
-        canonical(advance.name) === canonical(name),
+        (canonical(advance.name) === canonical(name) ||
+          (selectedIdentity &&
+            (canonical(advance.choiceId) === canonical(selectedCrewCardEffect.id) ||
+            crewCardEffectIdentity({
+              sourceKind: advance.snapshot?.sourceKind,
+              cardSlug: advance.cardSlug || advance.snapshot?.sourceCard?.slug,
+              cardId: advance.cardId || advance.snapshot?.sourceCard?.id,
+              kind: advance.snapshot?.entry?.type || advance.resultType,
+              entryId: advance.entryId || advance.snapshot?.entry?.id,
+            }) === selectedIdentity))),
     );
   }
   return false;
@@ -6851,6 +6902,7 @@ function validateAdvancementSelection({
   name,
   appliesTo = "",
   selectedBiggerHat = null,
+  selectedCrewCardEffect = null,
 }) {
   const slot = pendingAdvancementSlots().find((entry) => entry.xp === Number(xp));
   const table = availableAdvancementTables(slot).find((entry) => entry.id === tableId);
@@ -6896,11 +6948,41 @@ function validateAdvancementSelection({
   const choices = tableId === "crew-card" ? [] : advancementChoices(tableId, flip, cheated);
   const choice = choices.find((entry) => entry.id === choiceId) || null;
   const naturalJoker = choice?.value === "natural-joker";
-  const manualName = tableId === "crew-card" || naturalJoker;
-  const normalizedName = manualName
-    ? safeText(name, 200).trim()
-    : safeText(choice?.name, 200).trim();
-  if ((!manualName && !choice) || !normalizedName) {
+  const manualName = naturalJoker;
+  if (tableId === "crew-card" && !crewCardEffectStillValid(selectedCrewCardEffect)) {
+    return advancementValidationFailure(
+      "crew-card-effect",
+      "Выберите допустимый эффект Crew Card из каталога.",
+      "Choose an eligible Crew Card effect from the catalog.",
+    );
+  }
+  const parameterSpec = tableId === "crew-card"
+    ? crewCardEffectParameterSpec(selectedCrewCardEffect)
+    : null;
+  const parameter = safeText(selectedCrewCardEffect?.parameter, 200).trim();
+  if (parameterSpec && !parameter) {
+    return advancementValidationFailure(
+      "crew-card-parameter",
+      `Для эффекта «${selectedCrewCardEffect.name}» укажите: ${parameterSpec.label}.`,
+      `Choose the required ${parameterSpec.label} for “${selectedCrewCardEffect.name}”.`,
+    );
+  }
+  if (
+    parameterSpec?.options?.length &&
+    !parameterSpec.options.some((option) => canonical(option) === canonical(parameter))
+  ) {
+    return advancementValidationFailure(
+      "crew-card-parameter-option",
+      "Выберите допустимый вариант из списка Crew Cards ваших ключевых слов.",
+      "Choose an eligible option from your keywords’ Crew Cards.",
+    );
+  }
+  const normalizedName = tableId === "crew-card"
+    ? safeText(selectedCrewCardEffect?.name, 200).trim()
+    : manualName
+      ? safeText(name, 200).trim()
+      : safeText(choice?.name, 200).trim();
+  if ((tableId !== "crew-card" && !manualName && !choice) || !normalizedName) {
     return advancementValidationFailure(
       "result",
       "Выберите и назовите результат продвижения.",
@@ -6962,6 +7044,7 @@ function validateAdvancementSelection({
       name: normalizedName,
       appliesTo,
       selectedBiggerHat,
+      selectedCrewCardEffect,
     })
   ) {
     return advancementValidationFailure(
@@ -7004,6 +7087,7 @@ function validateAdvancementSelection({
     appliesTo,
     action,
     scripPaid,
+    selectedCrewCardEffect,
   };
 }
 
@@ -7068,6 +7152,405 @@ function renderTotemProfilePreview(profile) {
 
 function clearPendingAdvancementTalent() {
   pendingAdvancementTalent = null;
+}
+
+function crewCardEffectIdentity(effect) {
+  return [effect?.sourceKind, effect?.cardSlug || effect?.cardId, effect?.kind, effect?.entryId]
+    .map((value) => canonical(value))
+    .filter(Boolean)
+    .join(":");
+}
+
+function crewCardEffectParameterSpec(effect) {
+  if (effect?.sourceKind !== "campaign-starting") return null;
+  const markerNames = [...new Set(
+    crewCardUpgradeDetails.flatMap((card) => (card.markers || []).map((entry) => entry.name)),
+  )].sort((a, b) => a.localeCompare(b, "en"));
+  const tokenNames = [...new Set(
+    crewCardUpgradeDetails.flatMap((card) => (card.tokens || []).map((entry) => entry.name)),
+  )].sort((a, b) => a.localeCompare(b, "en"));
+  if (effect.cardId === "shape-landscape") {
+    return {
+      label: localized("Маркер", "Marker"),
+      hint: localized(
+        "Выберите маркер, указанный на Crew Card мастера одного из ваших ключей.",
+        "Choose a marker listed on an eligible master’s Crew Card.",
+      ),
+      options: markerNames,
+    };
+  }
+  if (["unusual-specialty", "forbidden-curse"].includes(effect.cardId)) {
+    const forbidden = effect.cardId === "unusual-specialty"
+      ? ["fast", "aetheric surge"]
+      : ["flicker", "summon"];
+    return {
+      label: localized("Токен", "Token"),
+      hint: localized(
+        `Недопустимые варианты: ${forbidden.join(", ")}.`,
+        `Ineligible choices: ${forbidden.join(", ")}.`,
+      ),
+      options: tokenNames.filter((name) => !forbidden.includes(canonical(name))),
+    };
+  }
+  if (effect.cardId === "specialized-tools") {
+    return {
+      label: localized("Тип улучшения", "Upgrade type"),
+      hint: localized(
+        "Укажите тип upgrade с мастера, его Crew Card или тотема одного из ваших ключей.",
+        "Enter an upgrade type from an eligible master, Crew Card, or Totem.",
+      ),
+      options: [],
+    };
+  }
+  return null;
+}
+
+function crewCardRestrictionReason(entry) {
+  const rule = [entry?.name, entry?.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("en")
+    .replace(/\s+/gu, " ");
+  if (/\bpower bar\b/u.test(rule)) {
+    return localized(
+      "Эффект ссылается на Power Bar и не может быть выбран.",
+      "Effects referencing a Power Bar cannot be chosen.",
+    );
+  }
+  if (/(?:swap|replace|change)[^.!?]{0,80}\bcrew card\b/u.test(rule)) {
+    return localized(
+      "Эффект заменяет Crew Card и не может быть выбран.",
+      "Effects that replace the Crew Card cannot be chosen.",
+    );
+  }
+  return "";
+}
+
+function startingCrewCardAdvancementEffects() {
+  return crewCards.map((card) => ({
+    id: `starting:${card.id}`,
+    sourceKind: "campaign-starting",
+    cardId: card.id,
+    cardSlug: card.id,
+    cardName: localized("Стартовая Campaign Crew Card", "Starting Campaign Crew Card"),
+    masterNames: [],
+    matchedKeywords: selectedCrewKeywordLabels(),
+    kind: card.effectType,
+    entryId: card.id,
+    name: card.name,
+    description: localized(card.text, card.textEn),
+    blockedReason: "",
+    snapshot: {
+      sourceKind: "campaign-starting",
+      sourceCard: clone(card),
+      entry: {
+        id: card.id,
+        slug: card.id,
+        name: card.name,
+        type: card.effectType,
+        typeLabel: card.effectType === "action" ? "Action" : "Ability",
+        description: localized(card.text, card.textEn),
+        action: card.action ? clone(card.action) : null,
+        triggers: [],
+      },
+    },
+  }));
+}
+
+function keywordCrewCardAdvancementEffects() {
+  return crewCardUpgradeDetails.flatMap((card) => {
+    const source = {
+      id: card.id,
+      slug: card.slug,
+      name: card.name,
+      faction: card.faction,
+      factionLabel: card.factionLabel,
+      limitations: card.limitations,
+      description: card.description,
+      masters: clone(card.eligibleMasters || card.masters || []),
+      keywords: clone(card.matchedKeywords || card.keywords || []),
+      frontImage: card.frontImage,
+      combinationImage: card.combinationImage,
+    };
+    const common = {
+      sourceKind: "biggerhat-crew-card",
+      cardId: card.id,
+      cardSlug: card.slug,
+      cardName: card.name,
+      masterNames: (card.eligibleMasters || card.masters || []).map(
+        (master) => master.displayName,
+      ),
+      matchedKeywords: (card.matchedKeywords || []).map((keyword) => keyword.name),
+    };
+    return [
+      ...(card.abilities || []).map((entry) => ({ kind: "ability", entry })),
+      ...(card.actions || []).map((entry) => ({ kind: "action", entry })),
+      ...(card.triggers || []).map((entry) => ({ kind: "trigger", entry })),
+    ].map(({ kind, entry }) => ({
+      ...common,
+      id: `biggerhat:${card.slug}:${kind}:${entry.id || entry.slug}`,
+      kind,
+      entryId: entry.id || entry.slug,
+      name: entry.name,
+      description: entry.description,
+      blockedReason: crewCardRestrictionReason(entry),
+      snapshot: {
+        sourceKind: "biggerhat-crew-card",
+        sourceCard: source,
+        entry: clone(entry),
+      },
+    }));
+  });
+}
+
+function crewCardAdvancementEffects() {
+  return crewCardSourceMode === "starting"
+    ? startingCrewCardAdvancementEffects()
+    : keywordCrewCardAdvancementEffects();
+}
+
+function clearPendingCrewCardEffect() {
+  pendingCrewCardEffect = null;
+  const input = document.querySelector("#advancementCrewCardParameter");
+  if (input) input.value = "";
+}
+
+function crewCardEffectTypeLabel(kind) {
+  if (kind === "ability") return localized("Способность", "Ability");
+  if (kind === "trigger") return localized("Отдельный триггер", "Individual trigger");
+  return localized("Действие + триггеры", "Action + triggers");
+}
+
+function crewCardEffectStillValid(effect) {
+  if (!effect || effect.blockedReason) return false;
+  if (effect.sourceKind === "campaign-starting") {
+    return crewCards.some((card) => card.id === effect.cardId);
+  }
+  const selected = selectedCrewKeywords();
+  return (
+    effect.sourceKind === "biggerhat-crew-card" &&
+    selected.length > 0 &&
+    (effect.matchedKeywords || []).some((keyword) => selected.includes(canonical(keyword)))
+  );
+}
+
+function renderCrewCardParameter(effect) {
+  const field = document.querySelector("#advancementCrewCardParameterField");
+  const input = document.querySelector("#advancementCrewCardParameter");
+  const label = document.querySelector("#advancementCrewCardParameterLabel");
+  const hint = document.querySelector("#advancementCrewCardParameterHint");
+  if (!field || !input || !label || !hint) return;
+  const spec = crewCardEffectParameterSpec(effect);
+  field.hidden = !spec;
+  if (!spec) return;
+  label.textContent = spec.label;
+  hint.textContent = spec.hint;
+  input.placeholder = spec.options.length
+    ? localized("Начните вводить вариант из списка", "Choose from the available list")
+    : localized("Введите точное название", "Enter the exact name");
+  input.setAttribute("list", "advancementCrewCardParameterOptions");
+  let datalist = document.querySelector("#advancementCrewCardParameterOptions");
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = "advancementCrewCardParameterOptions";
+    field.append(datalist);
+  }
+  datalist.innerHTML = spec.options
+    .map((option) => `<option value="${escapeHtml(option)}"></option>`)
+    .join("");
+  input.value = effect?.parameter || "";
+}
+
+function renderCrewCardEffectPicker() {
+  const field = document.querySelector("#advancementCrewCardField");
+  const tableId = document.querySelector("#advancementTable")?.value;
+  if (!field) return;
+  const visible = tableId === "crew-card";
+  field.hidden = !visible;
+  if (!visible) return;
+
+  field.querySelectorAll('input[name="crewCardSource"]').forEach((input) => {
+    input.checked = input.value === crewCardSourceMode;
+  });
+  const search = document.querySelector("#advancementCrewCardSearch")?.value || "";
+  const terms = String(search)
+    .toLocaleLowerCase("en")
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  const effects = crewCardAdvancementEffects().filter((effect) => {
+    const haystack = canonical([
+      effect.name,
+      effect.description,
+      effect.cardName,
+      ...(effect.masterNames || []),
+      ...(effect.matchedKeywords || []),
+    ].join(" "));
+    return terms.every((term) => haystack.includes(term));
+  });
+  const count = document.querySelector("#advancementCrewCardCount");
+  if (count) count.textContent = String(effects.filter((effect) => !effect.blockedReason).length);
+  const status = document.querySelector("#advancementCrewCardStatus");
+  if (status) {
+    status.textContent = crewCardSourceMode === "starting"
+      ? localized(
+          "Стартовые эффекты доступны офлайн. Действие сохраняется вместе со всеми триггерами.",
+          "Starting effects are available offline. Actions retain all associated triggers.",
+        )
+      : crewCardCatalogStatus === "loading"
+        ? localized("Загружаем Crew Cards ваших мастеров…", "Loading eligible master Crew Cards…")
+        : crewCardCatalogStatus === "error"
+          ? crewCardCatalogError
+          : localized(
+              "Показаны только карты мастеров с одним из двух ключевых слов.",
+              "Only cards belonging to masters with either chosen keyword are shown.",
+            );
+  }
+  const wrap = document.querySelector("#advancementCrewCardResults");
+  if (!wrap) return;
+  wrap.innerHTML = effects.length
+    ? effects.map((effect) => {
+        const selected = crewCardEffectIdentity(effect) === crewCardEffectIdentity(pendingCrewCardEffect);
+        const source = [
+          effect.cardName,
+          ...(effect.masterNames || []),
+          ...(effect.matchedKeywords || []).map((keyword) => `#${keyword}`),
+        ].filter(Boolean).join(" · ");
+        return `<button
+          type="button"
+          class="crew-advancement-effect${selected ? " is-selected" : ""}${effect.blockedReason ? " is-blocked" : ""}"
+          data-crew-advancement-effect="${escapeHtml(effect.id)}"
+          role="option"
+          aria-selected="${selected}"
+          ${effect.blockedReason ? "disabled" : ""}
+        >
+          <span class="crew-advancement-effect-type">${escapeHtml(crewCardEffectTypeLabel(effect.kind))}</span>
+          <b>${escapeHtml(effect.name)}</b>
+          <small>${escapeHtml(source)}</small>
+          <p>${cardText(effect.blockedReason || effect.description || localized("Без текста правила", "No rule text"))}</p>
+        </button>`;
+      }).join("")
+    : `<p class="crew-advancement-empty">${escapeHtml(
+        crewCardCatalogStatus === "loading"
+          ? localized("Собираем допустимые эффекты…", "Collecting eligible effects…")
+          : localized(
+              "По выбранному источнику и поиску эффектов не найдено.",
+              "No effects match this source and search.",
+            ),
+      )}</p>`;
+  wrap.querySelectorAll("[data-crew-advancement-effect]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const effect = effects.find((entry) => entry.id === button.dataset.crewAdvancementEffect);
+      if (!effect || effect.blockedReason) return;
+      pendingCrewCardEffect = clone(effect);
+      const nameInput = document.querySelector("#advancementName");
+      nameInput.value = effect.name;
+      renderAdvancementForm();
+    });
+  });
+  renderCrewCardParameter(pendingCrewCardEffect);
+}
+
+async function ensureCrewCardCatalog(force = false) {
+  const keywordKey = selectedCrewKeywords().sort().join("|");
+  if (!keywordKey) {
+    crewCardCatalogStatus = "error";
+    crewCardCatalogError = localized(
+      "Сначала подтвердите два ключевых слова команды.",
+      "Validate the crew’s two keywords first.",
+    );
+    crewCardUpgradeDetails = [];
+    renderCrewCardEffectPicker();
+    return;
+  }
+  if (!force && crewCardCatalogStatus === "ready" && crewCardCatalogKeywordKey === keywordKey) {
+    renderCrewCardEffectPicker();
+    return;
+  }
+  if (!cardCatalog?.loadCrewUpgrades || !cardCatalog?.getCrewUpgrade) {
+    crewCardCatalogStatus = "error";
+    crewCardCatalogError = localized(
+      "Каталог Crew Cards недоступен; используйте стартовые эффекты.",
+      "The Crew Card catalog is unavailable; use the starting effects.",
+    );
+    renderCrewCardEffectPicker();
+    return;
+  }
+  const request = ++crewCardCatalogRequest;
+  crewCardCatalogController?.abort();
+  crewCardCatalogController = new AbortController();
+  crewCardCatalogStatus = "loading";
+  crewCardCatalogError = "";
+  crewCardUpgradeDetails = [];
+  renderCrewCardEffectPicker();
+  try {
+    const [upgradeCatalog, characterCatalog] = await Promise.all([
+      cardCatalog.loadCrewUpgrades({ force }),
+      cardCatalog.loadCatalog({ force }),
+    ]);
+    if (request !== crewCardCatalogRequest) return;
+    const characters = new Map(
+      (characterCatalog?.items || []).map((character) => [character.slug, character]),
+    );
+    const summaries = (upgradeCatalog?.items || []).map((upgrade) => {
+      const eligibleMasters = (upgrade.masters || []).filter((master) => {
+        const character = characters.get(master.slug);
+        const keywords = characterKeywordNames(character).map(canonical);
+        return keywordKey.split("|").some((keyword) => keywords.includes(keyword));
+      });
+      return { ...upgrade, eligibleMasters };
+    }).filter((upgrade) => upgrade.eligibleMasters.length);
+    const details = new Array(summaries.length);
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(4, summaries.length) }, async () => {
+      while (cursor < summaries.length) {
+        const index = cursor;
+        cursor += 1;
+        const summary = summaries[index];
+        try {
+          const detail = await cardCatalog.getCrewUpgrade(summary.slug, {
+            force,
+            signal: crewCardCatalogController.signal,
+          });
+          const matchedKeywords = (detail.keywords || []).filter((keyword) =>
+            keywordKey.split("|").includes(canonical(keyword.name)),
+          );
+          details[index] = {
+            ...detail,
+            eligibleMasters: summary.eligibleMasters,
+            matchedKeywords: matchedKeywords.length
+              ? matchedKeywords
+              : keywordKey.split("|").map((name) => ({ name })),
+          };
+        } catch (error) {
+          if (error?.name === "AbortError") throw error;
+        }
+      }
+    });
+    await Promise.all(workers);
+    if (request !== crewCardCatalogRequest) return;
+    crewCardUpgradeDetails = details.filter(Boolean);
+    crewCardCatalogKeywordKey = keywordKey;
+    crewCardCatalogStatus = "ready";
+    crewCardCatalogError = "";
+    if (
+      pendingCrewCardEffect?.sourceKind === "biggerhat-crew-card" &&
+      !crewCardEffectStillValid(pendingCrewCardEffect)
+    ) {
+      clearPendingCrewCardEffect();
+    }
+  } catch (error) {
+    if (request !== crewCardCatalogRequest || error?.name === "AbortError") return;
+    crewCardCatalogStatus = "error";
+    crewCardCatalogError = localized(
+      "Не удалось загрузить Crew Cards. Стартовые эффекты остаются доступны.",
+      "Crew Cards could not be loaded. Starting effects remain available.",
+    );
+  }
+  renderCrewCardEffectPicker();
+  renderAdvancementForm();
 }
 
 function renderAdvancementBiggerHatPicker(naturalJoker, tableId) {
@@ -7183,6 +7666,7 @@ function renderAdvancementForm() {
             : []),
         ];
   setSelectOptions(targetSelect, recipients, oldTarget);
+  document.querySelector("#advancementTargetField").hidden = table.id === "crew-card";
 
   const flipField = document.querySelector("#advancementFlipField");
   const usesFlip = !["summoning", "crew-card"].includes(table.id);
@@ -7251,22 +7735,34 @@ function renderAdvancementForm() {
     naturalJoker && pendingAdvancementTalent?.tableId === table.id
       ? pendingAdvancementTalent
       : null;
-  const manualName = table.id === "crew-card" || naturalJoker;
-  nameInput.readOnly = !manualName || Boolean(selectedBiggerHat);
+  const crewCardAdvancement = table.id === "crew-card";
+  const manualName = naturalJoker;
+  document.querySelector("#advancementNameField").hidden = crewCardAdvancement;
+  nameInput.readOnly = crewCardAdvancement || !manualName || Boolean(selectedBiggerHat);
   nameInput.placeholder = manualName
-    ? table.id === "crew-card"
-      ? localized("Название эффекта карты команды", "Crew card effect name")
-      : localized(
-          "Действие/способность модели Cost ≤ 10 с общим ключом",
-          "Action/ability from a Cost ≤ 10 model sharing a keyword",
-        )
+    ? localized(
+        "Действие/способность модели Cost ≤ 10 с общим ключом",
+        "Action/ability from a Cost ≤ 10 model sharing a keyword",
+      )
     : "";
-  if (!manualName) nameInput.value = choice?.name || "";
-  if (manualName && nameInput.dataset.manualMode !== `${table.id}:${flipSelect.value}`) {
-    nameInput.value = "";
+  if (crewCardAdvancement) {
+    nameInput.value = pendingCrewCardEffect?.name || "";
+  } else {
+    if (!manualName) nameInput.value = choice?.name || "";
+    if (manualName && nameInput.dataset.manualMode !== `${table.id}:${flipSelect.value}`) {
+      nameInput.value = "";
+    }
+    if (selectedBiggerHat) nameInput.value = selectedBiggerHat.name;
   }
-  if (selectedBiggerHat) nameInput.value = selectedBiggerHat.name;
   nameInput.dataset.manualMode = manualName ? `${table.id}:${flipSelect.value}` : "";
+  renderCrewCardEffectPicker();
+  if (
+    crewCardAdvancement &&
+    (crewCardCatalogStatus === "idle" ||
+      crewCardCatalogKeywordKey !== selectedCrewKeywords().sort().join("|"))
+  ) {
+    void ensureCrewCardCatalog();
+  }
   renderAdvancementBiggerHatPicker(naturalJoker, table.id);
 
   const appliesField = document.querySelector("#advancementAppliesField");
@@ -7316,6 +7812,7 @@ function renderAdvancementForm() {
   existingTriggers.value = selectedAction?.triggers || 0;
   const surcharge = triggerResult && Number(existingTriggers.value) >= 2 ? 2 : 0;
   document.querySelector("#advancementScripCost").value = surcharge;
+  document.querySelector("#advancementScripField").hidden = crewCardAdvancement;
 
   const totemSetup = document.querySelector("#totemSetup");
   totemSetup.hidden = table.id !== "totem";
@@ -7370,8 +7867,8 @@ function renderAdvancementForm() {
       "Freely choose one Summoning action. This advancement is available once per campaign.",
     ),
     "crew-card": localized(
-      "Вручную запишите выбранный эффект карты команды.",
-      "Manually record the chosen crew card effect.",
+      "Выберите один эффект: способность, действие со всеми триггерами или отдельно указанный триггер. Исходные ограничения сохраняются, а ключевые слова заменяются на оба ключа команды.",
+      "Choose one effect: an ability, an action with all its triggers, or an individually listed trigger. Original limitations remain, and both crew keywords are used.",
     ),
   };
   document.querySelector("#advancementRuleHint").textContent =
@@ -7386,9 +7883,10 @@ function renderAdvancementForm() {
     flip: flipSelect.value,
     cheated: cheatedInput.checked,
     choiceId: choiceSelect.value,
-    name: selectedBiggerHat?.name || nameInput.value,
+    name: pendingCrewCardEffect?.name || selectedBiggerHat?.name || nameInput.value,
     appliesTo: appliesSelect.value,
     selectedBiggerHat,
+    selectedCrewCardEffect: pendingCrewCardEffect,
   });
   document.querySelector("#advancementSubmit").disabled = !formValidation.ok;
   document.querySelector("#advancementSubmit").title = formValidation.ok
@@ -7409,6 +7907,8 @@ function openAdvancementDialog(xp = null) {
   const pending = pendingAdvancementSlots();
   if (!pending.length) return;
   clearPendingAdvancementTalent();
+  clearPendingCrewCardEffect();
+  crewCardSourceMode = "keyword";
   const form = document.querySelector("#advancementForm");
   form.reset();
   form.dataset.totemProfile = "";
@@ -7738,9 +8238,10 @@ function submitAdvancement(form) {
     naturalJoker && pendingAdvancementTalent?.tableId === tableId
       ? pendingAdvancementTalent
       : null;
+  const selectedCrewCardEffect = tableId === "crew-card" ? pendingCrewCardEffect : null;
   const data = new FormData(form);
   const enteredName =
-    selectedBiggerHat?.name || safeText(data.get("name"), 200).trim();
+    selectedCrewCardEffect?.name || selectedBiggerHat?.name || safeText(data.get("name"), 200).trim();
   const appliesTo = safeText(data.get("appliesTo"), 200).trim();
   const validation = validateAdvancementSelection({
     xp,
@@ -7752,6 +8253,7 @@ function submitAdvancement(form) {
     name: enteredName,
     appliesTo,
     selectedBiggerHat,
+    selectedCrewCardEffect,
   });
   if (!validation.ok) {
     toast(validation.message);
@@ -7782,7 +8284,7 @@ function submitAdvancement(form) {
     tier: table.tier,
     tableId,
     recipient,
-    choiceId: choice?.id || "",
+    choiceId: selectedCrewCardEffect?.id || choice?.id || "",
     name,
     resultType,
     flip: {
@@ -7794,7 +8296,19 @@ function submitAdvancement(form) {
     },
     appliesTo: isModification ? appliesTo : "",
     notes: safeText(data.get("notes"), 4_000).trim(),
-    snapshot: selectedBiggerHat
+    snapshot: selectedCrewCardEffect
+      ? {
+          ...clone(selectedCrewCardEffect.snapshot),
+          sourceKind: selectedCrewCardEffect.sourceKind,
+          parameter: safeText(selectedCrewCardEffect.parameter, 200).trim(),
+          matchedKeywords: clone(selectedCrewCardEffect.matchedKeywords || []),
+          rules: {
+            preservesOriginalLimitations: true,
+            appliesToBothCrewKeywords: true,
+            actionIncludesTriggers: selectedCrewCardEffect.kind === "action",
+          },
+        }
+      : selectedBiggerHat
       ? clone(selectedBiggerHat.snapshot)
       : choice
         ? clone(choice)
@@ -7805,10 +8319,14 @@ function submitAdvancement(form) {
                 ? "Crew Card Advancement"
                 : "Natural Joker: shared keyword, Cost 10 or less, non-Master, non-Totem",
           },
-    cardId: selectedBiggerHat?.cardId || null,
-    cardSlug: selectedBiggerHat?.cardSlug || null,
-    entryId: selectedBiggerHat?.entryId || null,
-    source: selectedBiggerHat?.source || null,
+    cardId: selectedCrewCardEffect?.cardId || selectedBiggerHat?.cardId || null,
+    cardSlug: selectedCrewCardEffect?.cardSlug || selectedBiggerHat?.cardSlug || null,
+    entryId: selectedCrewCardEffect?.entryId || selectedBiggerHat?.entryId || null,
+    source:
+      selectedCrewCardEffect?.cardName ||
+      selectedBiggerHat?.source ||
+      null,
+    crewCardEffectType: selectedCrewCardEffect?.kind || null,
     scripPaid,
     acquiredTotemId: null,
     legacy: false,
@@ -7891,14 +8409,17 @@ function submitAdvancement(form) {
     return;
   }
   clearPendingAdvancementTalent();
+  clearPendingCrewCardEffect();
   document.querySelector("#advancementDialog").close();
   renderAll();
   toast(
     localized(
-      `Продвижение «${name}» записано для ${advancementRecipientLabel(
-        advance.recipient,
-      )}.`,
-      `“${name}” recorded for ${advancementRecipientLabel(advance.recipient)}.`,
+      tableId === "crew-card"
+        ? `Эффект «${name}» добавлен на карту команды.`
+        : `Продвижение «${name}» записано для ${advancementRecipientLabel(advance.recipient)}.`,
+      tableId === "crew-card"
+        ? `“${name}” added to the Crew Card.`
+        : `“${name}” recorded for ${advancementRecipientLabel(advance.recipient)}.`,
     ),
   );
 }
@@ -10072,6 +10593,21 @@ document.querySelector("#talentPickerMode").addEventListener("change", (event) =
     setTalentPickerMode(event.target.value);
   }
 });
+document.querySelector("#advancementCrewCardSource").addEventListener("change", (event) => {
+  if (!event.target.matches('input[name="crewCardSource"]')) return;
+  crewCardSourceMode = event.target.value === "starting" ? "starting" : "keyword";
+  clearPendingCrewCardEffect();
+  document.querySelector("#advancementName").value = "";
+  renderAdvancementForm();
+});
+document.querySelector("#advancementCrewCardSearch").addEventListener("input", () => {
+  renderCrewCardEffectPicker();
+});
+document.querySelector("#advancementCrewCardParameter").addEventListener("input", (event) => {
+  if (!pendingCrewCardEffect) return;
+  pendingCrewCardEffect.parameter = safeText(event.currentTarget.value, 200);
+  renderAdvancementForm();
+});
 document.querySelector("#injurySearch").addEventListener("input", (event) => {
   renderInjuryCatalog(event.currentTarget.value);
 });
@@ -10243,6 +10779,7 @@ document.querySelector("#addAdvancementButton").addEventListener("click", () => 
 ].forEach((id) => {
   document.querySelector(`#${id}`).addEventListener("change", () => {
     clearPendingAdvancementTalent();
+    clearPendingCrewCardEffect();
     renderAdvancementForm();
   });
 });
@@ -10556,6 +11093,7 @@ document.querySelector("#talentDialog").addEventListener("close", () => {
 });
 document.querySelector("#advancementDialog").addEventListener("close", () => {
   if (!returnToAdvancementAfterTalent) clearPendingAdvancementTalent();
+  clearPendingCrewCardEffect();
 });
 document.querySelector("#manualUpgradeDialog").addEventListener("close", () => {
   activeManualUpgradeId = null;

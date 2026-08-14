@@ -10,6 +10,8 @@
   const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
   const DETAILS_KEY = "m4e-biggerhat-details-v2";
   const KEYWORDS_KEY = "m4e-biggerhat-keywords-v1";
+  const CREW_UPGRADES_KEY = "m4e-biggerhat-crew-upgrades-v1";
+  const CREW_UPGRADE_DETAILS_KEY = "m4e-biggerhat-crew-upgrade-details-v1";
   const PAGE_SIZE = 100;
   const DETAIL_CACHE_LIMIT = 50;
   const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -20,6 +22,9 @@
   let detailMemory = null;
   let keywordsMemory = null;
   let keywordsPromise = null;
+  let crewUpgradesMemory = null;
+  let crewUpgradesPromise = null;
+  let crewUpgradeDetailMemory = null;
 
   function readStorage(key, fallback) {
     try {
@@ -202,6 +207,77 @@
     };
   }
 
+  function normalizeCrewUpgradeMaster(raw = {}) {
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      displayName: compactText(
+        raw.display_name || raw.displayName || [raw.name, raw.title].filter(Boolean).join(", "),
+      ),
+      station: compactText(raw.station).toLowerCase(),
+      faction: compactText(raw.faction).toLowerCase(),
+      factionLabel: compactText(raw.faction_label || raw.factionLabel || raw.faction),
+    };
+  }
+
+  function normalizeCrewUpgradeSummary(raw = {}) {
+    return {
+      id: raw.id ?? null,
+      slug: compactText(raw.slug),
+      gameModeType: compactText(raw.game_mode_type || raw.gameModeType || "standard").toLowerCase(),
+      name: compactText(raw.name),
+      domain: compactText(raw.domain).toLowerCase(),
+      faction: compactText(raw.faction).toLowerCase(),
+      factionLabel: compactText(raw.faction_label || raw.factionLabel || raw.faction),
+      description: String(raw.description ?? "").trim(),
+      limitations: compactText(raw.limitations_label || raw.limitations),
+      powerBarCount: nullableNumber(raw.power_bar_count ?? raw.powerBarCount),
+      frontImage: raw.front_image || raw.frontImage || null,
+      backImage: raw.back_image || raw.backImage || null,
+      combinationImage: raw.combination_image || raw.combinationImage || null,
+      keywords: normalizeKeywords(raw.keywords),
+      masters: (Array.isArray(raw.characters)
+        ? raw.characters
+        : Array.isArray(raw.masters)
+          ? raw.masters
+          : [])
+        .map(normalizeCrewUpgradeMaster)
+        .filter((character) => character.slug && character.station === "master"),
+    };
+  }
+
+  function normalizeCrewUpgradeDetail(raw = {}) {
+    return {
+      ...normalizeCrewUpgradeSummary(raw),
+      actions: Array.isArray(raw.actions) ? raw.actions.map(normalizeAction) : [],
+      abilities: Array.isArray(raw.abilities) ? raw.abilities.map(normalizeAbility) : [],
+      triggers: Array.isArray(raw.triggers) ? raw.triggers.map(normalizeTrigger) : [],
+      markers: (Array.isArray(raw.markers) ? raw.markers : [])
+        .map((marker) => ({
+          id: marker?.id ?? null,
+          slug: compactText(marker?.slug),
+          name: compactText(marker?.name),
+          description: String(marker?.description ?? "").trim(),
+        }))
+        .filter((marker) => marker.name),
+      tokens: (Array.isArray(raw.tokens) ? raw.tokens : [])
+        .map((token) => ({
+          id: token?.id ?? null,
+          slug: compactText(token?.slug),
+          name: compactText(token?.name),
+          description: String(token?.description ?? "").trim(),
+        }))
+        .filter((token) => token.name),
+      fetchedAt: new Date().toISOString(),
+      source: {
+        provider: "BiggerHat",
+        apiUrl: raw.slug
+          ? `${SOURCE_API_BASE}/upgrades/${encodeURIComponent(raw.slug)}`
+          : SOURCE_API_BASE,
+      },
+    };
+  }
+
   async function request(path, parameters = {}, options = {}) {
     const buildUrl = (base) => {
       const url = new URL(`${base}/${path.replace(/^\/+/, "")}`);
@@ -238,10 +314,12 @@
       try {
         return await fetchJson(API_BASE);
       } catch (error) {
+        const canFallbackFromLegacyProxy =
+          error.status === 404 && /^upgrades(?:\/|$)/u.test(path);
         if (
           API_BASE === SOURCE_API_BASE ||
           controller.signal.aborted ||
-          (error.status && error.status < 500)
+          (error.status && error.status < 500 && !canFallbackFromLegacyProxy)
         ) {
           throw error;
         }
@@ -499,6 +577,132 @@
     return detail;
   }
 
+  function getStoredCrewUpgrades() {
+    const stored = readStorage(CREW_UPGRADES_KEY, null);
+    if (!stored || !Array.isArray(stored.items)) return null;
+    const items = stored.items
+      .map(normalizeCrewUpgradeSummary)
+      .filter(
+        (upgrade) =>
+          upgrade.slug &&
+          upgrade.name &&
+          upgrade.domain === "crew" &&
+          upgrade.gameModeType === "standard",
+      );
+    return items.length ? { ...stored, items } : null;
+  }
+
+  async function fetchCrewUpgrades(onProgress) {
+    const first = await request("upgrades", {
+      page: 1,
+      per_page: PAGE_SIZE,
+      game_mode_type: "standard",
+      domain: "crew",
+    });
+    const lastPage = Math.max(1, Number(first?.meta?.last_page || 1));
+    const pages = [first];
+    onProgress?.(1, lastPage);
+    for (let page = 2; page <= lastPage; page += 1) {
+      pages.push(
+        await request("upgrades", {
+          page,
+          per_page: PAGE_SIZE,
+          game_mode_type: "standard",
+          domain: "crew",
+        }),
+      );
+      onProgress?.(page, lastPage);
+    }
+    const unique = new Map();
+    pages.forEach((response) => {
+      (response?.data || []).forEach((raw) => {
+        const upgrade = normalizeCrewUpgradeSummary(raw);
+        if (
+          upgrade.slug &&
+          upgrade.name &&
+          upgrade.domain === "crew" &&
+          upgrade.gameModeType === "standard"
+        ) {
+          unique.set(upgrade.slug, upgrade);
+        }
+      });
+    });
+    if (!unique.size) throw new Error("BiggerHat returned an empty Crew Card catalog");
+    const catalog = {
+      savedAt: new Date().toISOString(),
+      items: Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name, "en")),
+    };
+    crewUpgradesMemory = catalog;
+    writeStorage(CREW_UPGRADES_KEY, catalog);
+    return catalog;
+  }
+
+  async function loadCrewUpgrades(options = {}) {
+    if (
+      !options.force &&
+      crewUpgradesMemory &&
+      catalogCacheIsFresh(crewUpgradesMemory)
+    ) {
+      return crewUpgradesMemory;
+    }
+    const stored = options.force ? null : getStoredCrewUpgrades();
+    if (stored && catalogCacheIsFresh(stored)) {
+      crewUpgradesMemory = stored;
+      return stored;
+    }
+    if (crewUpgradesPromise) return crewUpgradesPromise;
+    crewUpgradesPromise = fetchCrewUpgrades(options.onProgress)
+      .catch((error) => {
+        if (!stored) throw error;
+        crewUpgradesMemory = stored;
+        return stored;
+      })
+      .finally(() => {
+        crewUpgradesPromise = null;
+      });
+    return crewUpgradesPromise;
+  }
+
+  function loadCrewUpgradeDetailMemory() {
+    if (crewUpgradeDetailMemory) return crewUpgradeDetailMemory;
+    const stored = readStorage(CREW_UPGRADE_DETAILS_KEY, {});
+    crewUpgradeDetailMemory = stored && typeof stored === "object" ? stored : {};
+    return crewUpgradeDetailMemory;
+  }
+
+  function getCachedCrewUpgrade(slug) {
+    return loadCrewUpgradeDetailMemory()[slug]?.detail || null;
+  }
+
+  function cacheCrewUpgradeDetail(detail) {
+    const cache = loadCrewUpgradeDetailMemory();
+    cache[detail.slug] = { savedAt: Date.now(), detail };
+    crewUpgradeDetailMemory = Object.fromEntries(
+      Object.entries(cache)
+        .sort(([, a], [, b]) => Number(b?.savedAt || 0) - Number(a?.savedAt || 0))
+        .slice(0, DETAIL_CACHE_LIMIT),
+    );
+    writeStorage(CREW_UPGRADE_DETAILS_KEY, crewUpgradeDetailMemory);
+  }
+
+  async function getCrewUpgrade(slug, options = {}) {
+    const cleanSlug = compactText(slug);
+    if (!cleanSlug) throw new Error("A Crew Card slug is required");
+    if (!options.force) {
+      const cached = getCachedCrewUpgrade(cleanSlug);
+      if (cached) return cached;
+    }
+    const response = await request(
+      `upgrades/${encodeURIComponent(cleanSlug)}`,
+      {},
+      { signal: options.signal },
+    );
+    const detail = normalizeCrewUpgradeDetail(response?.data || {});
+    if (!detail.slug) throw new Error("BiggerHat returned an empty Crew Card");
+    cacheCrewUpgradeDetail(detail);
+    return detail;
+  }
+
   function clearCatalogCache() {
     catalogMemory = null;
     try {
@@ -523,12 +727,17 @@
     normalizeSummary,
     normalizeDetail,
     normalizeKeyword,
+    normalizeCrewUpgradeSummary,
+    normalizeCrewUpgradeDetail,
     loadCatalog,
     searchCharacters,
     loadKeywords,
     searchKeywords,
     getCharacter,
     getCachedCharacter,
+    loadCrewUpgrades,
+    getCrewUpgrade,
+    getCachedCrewUpgrade,
     clearCatalogCache,
     clearDetailCache,
   });

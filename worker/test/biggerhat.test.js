@@ -41,6 +41,18 @@ function detailRequest(slug = "ceddra-sightless-snow") {
   });
 }
 
+function crewUpgradeRequest(query = "page=1&per_page=100&game_mode_type=standard&domain=crew") {
+  return new Request(`https://worker.example/api/biggerhat/v1/upgrades?${query}`, {
+    headers: { Origin: ORIGIN },
+  });
+}
+
+function crewUpgradeDetailRequest(slug = "grave-peril") {
+  return new Request(`https://worker.example/api/biggerhat/v1/upgrades/${slug}`, {
+    headers: { Origin: ORIGIN },
+  });
+}
+
 function firestoreString(value) {
   return { stringValue: value };
 }
@@ -121,6 +133,37 @@ test("caches BiggerHat list responses in KV", async (context) => {
     data: [{ slug: "colette" }],
     meta: { last_page: 1 },
   });
+});
+
+test("proxies and caches only Crew Card upgrade catalog requests", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return Response.json({ data: [{ slug: "grave-peril", domain: "crew" }], meta: { last_page: 1 } });
+  };
+
+  const cache = new FakeKv();
+  const list = await worker.fetch(crewUpgradeRequest(), environment(cache));
+  assert.equal(list.status, 200);
+  assert.match(calls[0], /api\/v1\/upgrades\?/u);
+  assert.match(calls[0], /domain=crew/u);
+  const cached = await worker.fetch(crewUpgradeRequest(), environment(cache));
+  assert.equal(cached.headers.get("X-BiggerHat-Cache"), "HIT");
+
+  const detail = await worker.fetch(crewUpgradeDetailRequest(), environment(cache));
+  assert.equal(detail.status, 200);
+  assert.match(calls[1], /api\/v1\/upgrades\/grave-peril$/u);
+
+  const invalid = await worker.fetch(
+    crewUpgradeRequest("page=1&per_page=100&game_mode_type=standard&domain=character"),
+    environment(cache),
+  );
+  assert.equal(invalid.status, 404);
+  assert.equal(calls.length, 2);
 });
 
 test("enriches Arcanist action markers from the Play Wyrd snapshot", async (context) => {

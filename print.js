@@ -346,7 +346,7 @@
     </section>`;
   }
 
-  function renderCrewCard(card) {
+  function renderCrewCard(card, advances = []) {
     if (!card) return "";
     const text = isEnglishPrint() ? card.textEn || card.text : card.text || card.textEn;
     const isAction = card.effectType === "action";
@@ -364,6 +364,29 @@
           }).join("")}
         </dl>`
       : `<p class="print-crew-no-actions">${printText("Действий нет", "No actions")}</p>`;
+    const earnedEffects = advances.filter(
+      (advance) => !advance?.legacy && advance?.tableId === "crew-card",
+    );
+    const earnedEffectsHtml = earnedEffects.length
+      ? `<div class="print-crew-earned">
+          <span class="print-kicker">Tier IV · ${printText("Добавленные эффекты", "Added effects")}</span>
+          ${earnedEffects
+            .map((advance) => {
+              const entry = advance.snapshot?.entry || {};
+              const parameter = String(advance.snapshot?.parameter || "").trim();
+              return `<article>
+                <b>${escapePrintHtml(advance.name || entry.name || "—")}</b>
+                <small>${escapePrintHtml(
+                  [advance.source, parameter ? `${printText("Выбор", "Choice")}: ${parameter}` : ""]
+                    .filter(Boolean)
+                    .join(" · "),
+                )}</small>
+                ${entry.description ? `<p>${richPrintText(entry.description)}</p>` : ""}
+              </article>`;
+            })
+            .join("")}
+        </div>`
+      : "";
     return `
       <section class="print-crew-card">
         <div>
@@ -380,6 +403,7 @@
           ${actionDetails}
         </div>
         <p>${richPrintText(text)}</p>
+        ${earnedEffectsHtml}
       </section>`;
   }
 
@@ -838,7 +862,7 @@
           </div>
         </section>
 
-        ${renderCrewCard(crewCard)}
+        ${renderCrewCard(crewCard, advances)}
         <footer class="print-footer">
           <span>${printText("Лист лидера", "Leader sheet")}</span>
           <b>01</b>

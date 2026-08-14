@@ -23,15 +23,15 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.08.12" />
+    <meta name="app-version" content="2026.08.14" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=13" />
+    <link rel="stylesheet" href="styles.css?v=14" />
     <link rel="stylesheet" href="dossier-theme.css?v=17" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=4" />
-    <link rel="stylesheet" href="print.css?v=7" media="print" />
+    <link rel="stylesheet" href="print.css?v=8" media="print" />
   </head>
   <body class="theme-dossier">
     <div class="noise" aria-hidden="true"></div>
@@ -1750,7 +1750,7 @@
             <span>Ячейка опыта</span>
             <select name="xpIndex" id="advancementXpIndex"></select>
           </label>
-          <label class="field">
+          <label class="field" id="advancementTargetField">
             <span>Кто получает</span>
             <select name="target" id="advancementTarget"></select>
           </label>
@@ -1782,6 +1782,38 @@
           <span>Результат таблицы</span>
           <select name="choice" id="advancementChoice"></select>
         </label>
+        <section class="crew-advancement-picker" id="advancementCrewCardField" hidden aria-labelledby="advancementCrewCardTitle">
+          <header>
+            <div>
+              <span class="kicker">Tier IV · Crew Card</span>
+              <h3 id="advancementCrewCardTitle">Выберите один эффект</h3>
+            </div>
+            <span class="crew-advancement-count" id="advancementCrewCardCount" aria-live="polite">0</span>
+          </header>
+          <fieldset class="crew-advancement-source" id="advancementCrewCardSource">
+            <legend class="sr-only">Источник эффекта</legend>
+            <label>
+              <input type="radio" name="crewCardSource" value="keyword" checked />
+              <span><b>Карты мастеров</b><small>По двум ключевым словам команды</small></span>
+            </label>
+            <label>
+              <input type="radio" name="crewCardSource" value="starting" />
+              <span><b>Стартовые эффекты</b><small>12 вариантов Campaign Crew Card</small></span>
+            </label>
+          </fieldset>
+          <label class="crew-advancement-search">
+            <span class="sr-only">Поиск эффекта</span>
+            <input id="advancementCrewCardSearch" type="search" autocomplete="off" placeholder="Название, правило, карта или мастер" />
+            <span aria-hidden="true">⌕</span>
+          </label>
+          <p class="crew-advancement-status" id="advancementCrewCardStatus" role="status"></p>
+          <div class="crew-advancement-results" id="advancementCrewCardResults" role="listbox" aria-label="Доступные эффекты"></div>
+          <label class="field crew-advancement-parameter" id="advancementCrewCardParameterField" hidden>
+            <span id="advancementCrewCardParameterLabel">Обязательный выбор</span>
+            <input id="advancementCrewCardParameter" type="text" autocomplete="off" />
+            <small id="advancementCrewCardParameterHint"></small>
+          </label>
+        </section>
         <section class="advancement-biggerhat" id="advancementBiggerHatField" hidden data-dynamic-i18n>
           <div class="advancement-biggerhat-heading">
             <div>
@@ -1794,7 +1826,7 @@
           </div>
           <div id="advancementBiggerHatPreview"></div>
         </section>
-        <label class="field">
+        <label class="field" id="advancementNameField">
           <span>Название продвижения</span>
           <input name="name" id="advancementName" required />
         </label>
@@ -1810,7 +1842,7 @@
           <span>Описание или заметка</span>
           <textarea name="notes" rows="4" placeholder="Точный эффект, триггер или важное ограничение"></textarea>
         </label>
-        <label class="field">
+        <label class="field" id="advancementScripField">
           <span>Доплата скрип</span>
           <input name="scripCost" id="advancementScripCost" type="number" min="0" max="20" value="0" readonly />
         </label>
@@ -1866,15 +1898,15 @@
       async
       defer
     ></script>
-    <script src="biggerhat.js?v=4"></script>
+    <script src="biggerhat.js?v=5"></script>
     <script src="campaign-rules.js?v=1"></script>
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=36"></script>
+    <script src="app.js?v=37"></script>
     <script src="account.js?v=2"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
-    <script src="print.js?v=9"></script>
+    <script src="print.js?v=10"></script>
   </body>
 </html>
