@@ -3873,13 +3873,13 @@ function updateCooperativeModeButton(route = activeRoute()) {
   button.classList.toggle("is-active", cooperativeMode);
   button.setAttribute("aria-pressed", String(cooperativeMode));
   label.textContent = cooperativeMode
-    ? localized("Обычный", "Standard")
+    ? localized("Кампейн", "Campaign")
     : localized("Кооп", "Co-op");
-  sigil.textContent = cooperativeMode ? "↩" : "CO";
+  sigil.textContent = cooperativeMode ? "CM" : "CO";
   button.setAttribute(
     "aria-label",
     cooperativeMode
-      ? localized("Вернуться в обычный режим", "Return to standard mode")
+      ? localized("Вернуться в режим кампейна", "Return to campaign mode")
       : localized("Перейти в кооперативный режим", "Switch to cooperative mode"),
   );
   button.title = button.getAttribute("aria-label");
