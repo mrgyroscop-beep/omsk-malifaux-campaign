@@ -12,7 +12,9 @@
     "CLOUDFLARE_ACCOUNT_ID": "d714d517dea4f66b938faaf76b7bf38b",
     "AI_GATEWAY_ID": "default",
     "DEEPSEEK_MODEL": "deepseek-v4-flash",
-    "DEEPSEEK_DIRECT_FALLBACK": "true"
+    "DEEPSEEK_DIRECT_FALLBACK": "true",
+    "BREVO_FROM_NAME": "Malifaux Campaign Notebook",
+    "PASSWORD_RESET_BASE_URL": "https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
   },
   "ai": {
     "binding": "AI"

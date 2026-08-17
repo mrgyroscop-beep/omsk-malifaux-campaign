@@ -27,7 +27,8 @@
     "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs",
     "test:kan170-172": "node tests/kan170-172-cooperative-builder-ux.smoke.cjs",
     "test:kan173": "node tests/kan173-crew-card-advancement.smoke.cjs",
-    "test:kan174": "node tests/kan174-stable-mode-header.smoke.cjs"
+    "test:kan174": "node tests/kan174-stable-mode-header.smoke.cjs",
+    "test:kan197": "node tests/kan197-password-reset.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"

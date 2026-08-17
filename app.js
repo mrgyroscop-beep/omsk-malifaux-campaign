@@ -4146,6 +4146,9 @@ function returnFromRules() {
 
 function routeFromLocation() {
   const raw = decodeURIComponent(location.hash.slice(1));
+  if (/^reset\/[A-Za-z0-9_-]{43}$/u.test(raw)) {
+    return { route: "dossier", page: null, preserveHash: true };
+  }
   const rulesMatch = raw.match(/^rules(?:\/(\d+))?$/);
   if (rulesMatch) {
     return { route: "rules", page: normalizeRulesPage(rulesMatch[1] || RULES_MIN_PAGE) };
@@ -4209,15 +4212,13 @@ function initializeRouting() {
     return;
   }
   activateRoute(locationRoute.route);
-  history.replaceState(
-    {
-      ...(history.state || {}),
-      route: locationRoute.route,
-      referenceTab: currentReferenceTab,
-    },
-    "",
-    `#${locationRoute.route}`,
-  );
+  const nextState = {
+    ...(history.state || {}),
+    route: locationRoute.route,
+    referenceTab: currentReferenceTab,
+  };
+  if (locationRoute.preserveHash) history.replaceState(nextState, "");
+  else history.replaceState(nextState, "", `#${locationRoute.route}`);
 }
 
 function bindFields() {

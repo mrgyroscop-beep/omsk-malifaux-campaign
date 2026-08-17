@@ -1,5 +1,11 @@
 import { randomToken, sha256Hex } from "./auth.js";
 import { readBoundedJson } from "./bounded-json.js";
+import {
+  EmailConfigurationError,
+  passwordResetEmailConfigured,
+  passwordResetUrl,
+  sendPasswordResetEmail,
+} from "./transactional-email.js";
 
 const PASSWORD_ALGORITHM = "PBKDF2-SHA-256";
 const PASSWORD_VERSION = 1;
@@ -9,6 +15,7 @@ const PASSWORD_ITERATIONS = 100_000;
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 const AUTH_WINDOW_SECONDS = 15 * 60;
 const AUTH_ATTEMPT_LIMIT = 8;
+const PASSWORD_RESET_TTL_SECONDS = 15 * 60;
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/u;
 const DUMMY_SALT = "uw8olVyk2fPj4sK1q7Jd_A";
 const encoder = new TextEncoder();
@@ -362,14 +369,140 @@ async function logout(request, env) {
   return json({ ok: true });
 }
 
+function passwordResetAccepted() {
+  return json({ ok: true }, 202);
+}
+
+async function requestPasswordReset(request, env, sendEmail, waitUntil) {
+  if (!passwordResetEmailConfigured(env)) {
+    throw new EmailConfigurationError();
+  }
+  const body = await readJson(request);
+  let email;
+  try {
+    email = normalizeEmail(body.email);
+  } catch {
+    return passwordResetAccepted();
+  }
+
+  await recordAuthAttempt(request, env, "password-reset-request", email);
+  const user = await env.DB.prepare(
+    "SELECT id, email_normalized, display_name FROM users WHERE email_normalized = ?",
+  )
+    .bind(email)
+    .first();
+  if (!user) return passwordResetAccepted();
+
+  const token = randomToken(32);
+  const now = new Date();
+  const createdAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + PASSWORD_RESET_TTL_SECONDS * 1000).toISOString();
+  const resetId = crypto.randomUUID();
+  await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE password_reset_tokens SET consumed_at = ?
+       WHERE user_id = ? AND consumed_at IS NULL`,
+    ).bind(createdAt, user.id),
+    env.DB.prepare(
+      `INSERT INTO password_reset_tokens
+        (id, user_id, token_hash, created_at, expires_at, consumed_at)
+       VALUES (?, ?, ?, ?, ?, NULL)`,
+    ).bind(resetId, user.id, await sha256Hex(token), createdAt, expiresAt),
+  ]);
+
+  const delivery = sendEmail(env, {
+    email: user.email_normalized,
+    displayName: user.display_name,
+    resetUrl: passwordResetUrl(env, token),
+  }).catch(async (error) => {
+    try {
+      await env.DB.prepare("DELETE FROM password_reset_tokens WHERE id = ?")
+        .bind(resetId)
+        .run();
+    } catch (cleanupError) {
+      console.error(JSON.stringify({
+        event: "password_reset_token_cleanup_failed",
+        message: String(cleanupError?.message || "unknown").slice(0, 120),
+      }));
+    }
+    console.error(JSON.stringify({
+      event: "password_reset_email_failed",
+      status: Number.isFinite(error?.status) ? error.status : 0,
+      code: String(error?.code || "unknown").slice(0, 80),
+    }));
+  });
+  if (typeof waitUntil === "function") waitUntil(delivery);
+  else await delivery;
+  return passwordResetAccepted();
+}
+
+async function confirmPasswordReset(request, env) {
+  const body = await readJson(request);
+  const token = String(body.token ?? "").trim();
+  if (!TOKEN_RE.test(token) || !validPassword(body.password)) {
+    throw new AccountHttpError(400, "reset_invalid_or_expired");
+  }
+  const tokenHash = await sha256Hex(token);
+  const attemptKey = await recordAuthAttempt(
+    request,
+    env,
+    "password-reset-confirm",
+    tokenHash,
+  );
+  const now = new Date().toISOString();
+  const candidate = await env.DB.prepare(
+    `SELECT id FROM password_reset_tokens
+     WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?`,
+  )
+    .bind(tokenHash, now)
+    .first();
+  if (!candidate) throw new AccountHttpError(400, "reset_invalid_or_expired");
+
+  const data = await passwordHash(body.password);
+  const consumed = await env.DB.prepare(
+    `UPDATE password_reset_tokens SET consumed_at = ?
+     WHERE id = ? AND consumed_at IS NULL AND expires_at > ?
+     RETURNING user_id`,
+  )
+    .bind(now, candidate.id, now)
+    .first();
+  if (!consumed) throw new AccountHttpError(400, "reset_invalid_or_expired");
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE users SET password_algorithm = ?, password_version = ?,
+        password_iterations = ?, password_salt = ?, password_hash = ?, updated_at = ?
+       WHERE id = ?`,
+    ).bind(
+      data.algorithm,
+      data.version,
+      data.iterations,
+      data.salt,
+      data.hash,
+      now,
+      consumed.user_id,
+    ),
+    env.DB.prepare(
+      "UPDATE account_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+    ).bind(now, consumed.user_id),
+    env.DB.prepare(
+      `UPDATE password_reset_tokens SET consumed_at = ?
+       WHERE user_id = ? AND consumed_at IS NULL`,
+    ).bind(now, consumed.user_id),
+  ]);
+  await clearAuthAttempt(env, attemptKey);
+  return json({ ok: true });
+}
+
 async function me(request, env) {
   const user = await currentAccountUser(request, env);
   return json({ user: user ? publicUser(user) : null });
 }
 
-export async function handleAccountAuthRequest(request, env) {
+export async function handleAccountAuthRequest(request, env, dependencies = {}) {
   if (!env.DB) return json({ error: "database_not_configured" }, 503);
   const path = new URL(request.url).pathname;
+  const sendResetEmail = dependencies.sendPasswordResetEmail || sendPasswordResetEmail;
   try {
     if (path === "/api/auth/register" && request.method === "POST") {
       return await register(request, env);
@@ -380,16 +513,39 @@ export async function handleAccountAuthRequest(request, env) {
     if (path === "/api/auth/logout" && request.method === "POST") {
       return await logout(request, env);
     }
+    if (path === "/api/auth/password-reset/request" && request.method === "POST") {
+      return await requestPasswordReset(
+        request,
+        env,
+        sendResetEmail,
+        dependencies.waitUntil,
+      );
+    }
+    if (path === "/api/auth/password-reset/confirm" && request.method === "POST") {
+      return await confirmPasswordReset(request, env);
+    }
     if (path === "/api/auth/me" && request.method === "GET") {
       return await me(request, env);
     }
     return json({ error: "not_found" }, 404);
   } catch (error) {
+    if (error instanceof EmailConfigurationError) {
+      return json({ error: "password_reset_unavailable" }, 503);
+    }
     if (error instanceof AccountHttpError) {
       return json({ error: error.code }, error.status);
     }
     throw error;
   }
+}
+
+export async function cleanupPasswordResetTokens(env, now = new Date()) {
+  if (!env.DB) return;
+  await env.DB.prepare(
+    "DELETE FROM password_reset_tokens WHERE expires_at <= ?",
+  )
+    .bind(now.toISOString())
+    .run();
 }
 
 export const accountAuthConfig = Object.freeze({
@@ -398,4 +554,5 @@ export const accountAuthConfig = Object.freeze({
   iterations: PASSWORD_ITERATIONS,
   sessionTtlSeconds: SESSION_TTL_SECONDS,
   attemptLimit: AUTH_ATTEMPT_LIMIT,
+  passwordResetTtlSeconds: PASSWORD_RESET_TTL_SECONDS,
 });

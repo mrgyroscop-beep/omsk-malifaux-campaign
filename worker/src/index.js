@@ -1,5 +1,8 @@
 import { issueSession, validateTurnstile, verifySession } from "./auth.js";
-import { handleAccountAuthRequest } from "./account-auth.js";
+import {
+  cleanupPasswordResetTokens,
+  handleAccountAuthRequest,
+} from "./account-auth.js";
 import { handleAccountCampaignRequest } from "./account-campaigns.js";
 import { handleBiggerHat, refreshBiggerHatCache } from "./biggerhat-cache.js";
 import { handleCampaignRequest } from "./campaigns.js";
@@ -428,7 +431,13 @@ async function dispatch(request, env, context, origin) {
     if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "auth")))) {
       return jsonResponse({ error: "rate_limited" }, 429);
     }
-    return handleAccountAuthRequest(request, env);
+    return handleAccountAuthRequest(
+      request,
+      env,
+      typeof context.waitUntil === "function"
+        ? { waitUntil: (promise) => context.waitUntil(promise) }
+        : {},
+    );
   }
 
   if (url.pathname.startsWith("/api/account/")) {
@@ -538,14 +547,24 @@ export default {
 
   async scheduled(_event, env, context) {
     context.waitUntil(
-      refreshBiggerHatCache(env).catch((error) => {
-        console.error(
-          JSON.stringify({
-            event: "biggerhat_refresh_failed",
-            message: String(error?.message || "unknown").slice(0, 160),
-          }),
-        );
-      }),
+      Promise.all([
+        refreshBiggerHatCache(env).catch((error) => {
+          console.error(
+            JSON.stringify({
+              event: "biggerhat_refresh_failed",
+              message: String(error?.message || "unknown").slice(0, 160),
+            }),
+          );
+        }),
+        cleanupPasswordResetTokens(env).catch((error) => {
+          console.error(
+            JSON.stringify({
+              event: "password_reset_cleanup_failed",
+              message: String(error?.message || "unknown").slice(0, 160),
+            }),
+          );
+        }),
+      ]),
     );
   },
 };

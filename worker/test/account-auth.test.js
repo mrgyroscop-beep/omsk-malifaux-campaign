@@ -13,12 +13,23 @@ function env() {
   return { DB: new FakeD1() };
 }
 
+function resetEnv() {
+  return {
+    DB: new FakeD1(),
+    BREVO_API_KEY: "test-brevo-key",
+    BREVO_FROM_EMAIL: "archive@example.com",
+    BREVO_FROM_NAME: "Malifaux Archive",
+    PASSWORD_RESET_BASE_URL: "https://campaign.example/",
+  };
+}
+
 test("replays all migrations on an empty D1 database", () => {
   const database = new DatabaseSync(":memory:");
   for (const name of [
     "0001_cloud_campaigns.sql",
     "0002_feedback.sql",
     "0003_accounts.sql",
+    "0004_password_resets.sql",
   ]) {
     database.exec(readFileSync(new URL(`../migrations/${name}`, import.meta.url), "utf8"));
   }
@@ -29,6 +40,7 @@ test("replays all migrations on an empty D1 database", () => {
   assert.ok(tables.includes("users"));
   assert.ok(tables.includes("account_sessions"));
   assert.ok(tables.includes("auth_attempts"));
+  assert.ok(tables.includes("password_reset_tokens"));
   assert.equal(
     database.prepare("PRAGMA table_info(campaigns)").all().some((row) => row.name === "owner_user_id"),
     true,
@@ -231,4 +243,152 @@ test("expires sessions server-side", async () => {
   );
   assert.deepEqual(await response.json(), { user: null });
   assert.ok(environment.DB.database.prepare("SELECT revoked_at FROM account_sessions").get().revoked_at);
+});
+
+test("requests password reset without exposing whether an account exists", async () => {
+  const environment = resetEnv();
+  await registerUser(environment);
+  const delivered = [];
+  const dependencies = {
+    sendPasswordResetEmail: async (_env, message) => delivered.push(message),
+  };
+
+  const existing = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "Captain@Example.com",
+    }),
+    environment,
+    dependencies,
+  );
+  const missing = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "missing@example.com",
+    }),
+    environment,
+    dependencies,
+  );
+
+  assert.equal(existing.status, 202);
+  assert.equal(missing.status, 202);
+  assert.deepEqual(await existing.json(), { ok: true });
+  assert.deepEqual(await missing.json(), { ok: true });
+  assert.equal(delivered.length, 1);
+  assert.equal(delivered[0].email, "captain@example.com");
+  const resetToken = new URL(delivered[0].resetUrl).hash.replace(/^#reset\//u, "");
+  assert.match(resetToken, /^[A-Za-z0-9_-]{43}$/u);
+  const stored = environment.DB.database.prepare("SELECT token_hash FROM password_reset_tokens").get();
+  assert.equal(stored.token_hash.length, 64);
+  assert.notEqual(stored.token_hash, resetToken);
+});
+
+test("defers Brevo delivery without delaying the neutral reset response", async () => {
+  const environment = resetEnv();
+  await registerUser(environment);
+  let finishDelivery;
+  let background;
+  const delivery = new Promise((resolve) => { finishDelivery = resolve; });
+  const response = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "captain@example.com",
+    }),
+    environment,
+    {
+      sendPasswordResetEmail: async () => delivery,
+      waitUntil: (promise) => { background = promise; },
+    },
+  );
+  assert.equal(response.status, 202);
+  assert.ok(background instanceof Promise);
+  finishDelivery();
+  await background;
+});
+
+test("resets a password once and revokes all existing account sessions", async () => {
+  const environment = resetEnv();
+  const registered = await registerUser(environment);
+  let resetUrl = "";
+  await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "captain@example.com",
+    }),
+    environment,
+    { sendPasswordResetEmail: async (_env, message) => { resetUrl = message.resetUrl; } },
+  );
+  const resetToken = new URL(resetUrl).hash.replace(/^#reset\//u, "");
+  const confirmed = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/confirm", "POST", {
+      token: resetToken,
+      password: "new correct horse battery staple",
+    }),
+    environment,
+  );
+  assert.equal(confirmed.status, 200);
+  assert.deepEqual(await confirmed.json(), { ok: true });
+
+  const oldSession = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/me", "GET", undefined, registered.token),
+    environment,
+  );
+  assert.deepEqual(await oldSession.json(), { user: null });
+  const oldPassword = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/login", "POST", {
+      email: "captain@example.com",
+      password: "correct horse battery staple",
+    }),
+    environment,
+  );
+  assert.equal(oldPassword.status, 401);
+  const newPassword = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/login", "POST", {
+      email: "captain@example.com",
+      password: "new correct horse battery staple",
+    }),
+    environment,
+  );
+  assert.equal(newPassword.status, 200);
+  assert.ok(environment.DB.database.prepare("SELECT consumed_at FROM password_reset_tokens").get().consumed_at);
+
+  const replay = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/confirm", "POST", {
+      token: resetToken,
+      password: "another secure password",
+    }),
+    environment,
+  );
+  assert.equal(replay.status, 400);
+  assert.deepEqual(await replay.json(), { error: "reset_invalid_or_expired" });
+});
+
+test("rejects expired password reset tokens and requires email configuration", async () => {
+  const unavailable = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "captain@example.com",
+    }),
+    env(),
+  );
+  assert.equal(unavailable.status, 503);
+  assert.deepEqual(await unavailable.json(), { error: "password_reset_unavailable" });
+
+  const environment = resetEnv();
+  await registerUser(environment);
+  let resetUrl = "";
+  await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/request", "POST", {
+      email: "captain@example.com",
+    }),
+    environment,
+    { sendPasswordResetEmail: async (_env, message) => { resetUrl = message.resetUrl; } },
+  );
+  environment.DB.database
+    .prepare("UPDATE password_reset_tokens SET expires_at = ?")
+    .run("2000-01-01T00:00:00.000Z");
+  const expired = await handleAccountAuthRequest(
+    jsonRequest("https://worker.example/api/auth/password-reset/confirm", "POST", {
+      token: new URL(resetUrl).hash.replace(/^#reset\//u, ""),
+      password: "new correct horse battery staple",
+    }),
+    environment,
+  );
+  assert.equal(expired.status, 400);
+  assert.deepEqual(await expired.json(), { error: "reset_invalid_or_expired" });
 });

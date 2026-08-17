@@ -32,6 +32,7 @@ export class FakeD1 {
     const migrations = ["0001_cloud_campaigns.sql"];
     if (includeFeedback) migrations.push("0002_feedback.sql");
     migrations.push("0003_accounts.sql");
+    migrations.push("0004_password_resets.sql");
     for (const name of migrations) {
       this.database.exec(
         readFileSync(new URL(`../migrations/${name}`, import.meta.url), "utf8"),
@@ -41,6 +42,19 @@ export class FakeD1 {
 
   prepare(sql) {
     return new D1Statement(this.database.prepare(sql));
+  }
+
+  async batch(statements) {
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      this.database.exec("COMMIT");
+      return results;
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
   }
 }
 

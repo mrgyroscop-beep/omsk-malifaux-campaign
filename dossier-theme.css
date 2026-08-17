@@ -291,6 +291,12 @@ body.theme-dossier {
   letter-spacing: 0.13em;
 }
 
+.theme-dossier .account-auth-form[data-account-form-mode="forgot"]::before,
+.theme-dossier .account-auth-form[data-account-form-mode="reset"]::before {
+  content: "RECOVERY / 15 MIN";
+  color: rgba(139, 48, 42, 0.48);
+}
+
 .theme-dossier .account-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -314,6 +320,12 @@ body.theme-dossier {
 .theme-dossier .account-tabs button.is-active {
   color: var(--dossier-ink);
   border-bottom-color: var(--dossier-red);
+}
+
+.theme-dossier .account-tabs button:focus-visible,
+.theme-dossier .account-auth-link:focus-visible {
+  outline: 2px solid var(--dossier-brass-dark);
+  outline-offset: 3px;
 }
 
 .theme-dossier .account-auth-form label {
@@ -353,6 +365,40 @@ body.theme-dossier {
   background: rgba(159, 48, 40, 0.08);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.theme-dossier .account-notice {
+  margin: 0;
+  padding: 11px 12px;
+  color: #334536;
+  border-left: 3px solid #65744e;
+  background: rgba(101, 116, 78, 0.11);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.theme-dossier .account-auth-link {
+  width: fit-content;
+  margin: -5px 0 0 auto;
+  padding: 2px 0;
+  color: #632d28;
+  border: 0;
+  border-bottom: 1px solid rgba(99, 45, 40, 0.38);
+  background: transparent;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.theme-dossier .account-auth-link:hover {
+  color: var(--dossier-red);
+  border-bottom-color: currentColor;
+}
+
+.theme-dossier .account-auth-link.is-back {
+  margin: 0;
 }
 
 .theme-dossier .account-current {

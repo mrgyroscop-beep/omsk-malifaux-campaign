@@ -6,7 +6,7 @@ GitHub Pages; this Worker provides:
 - DeepSeek access through Cloudflare AI Gateway with exact-request caching,
   metadata-only logs, automatic retries, and a direct emergency fallback;
 - Turnstile-verified anonymous API sessions;
-- password accounts with revocable D1 sessions and automatic private dossier sync;
+- password accounts with revocable D1 sessions, Brevo password recovery, and automatic private dossier sync;
 - a KV read-through cache and Cron prewarming for BiggerHat;
 - D1 cloud dossiers, a shared player table, and a shared chronicle;
 - origin-bound feedback intake and a private leased automation queue.
@@ -36,6 +36,8 @@ npx wrangler secret put AI_GATEWAY_TOKEN
 npx wrangler secret put SESSION_SIGNING_KEY
 npx wrangler secret put TURNSTILE_SECRET
 npx wrangler secret put FEEDBACK_AUTOMATION_TOKEN
+npx wrangler secret put BREVO_API_KEY
+npx wrangler secret put BREVO_FROM_EMAIL
 ```
 
 `AI_GATEWAY_TOKEN` is a Cloudflare API token with `AI Gateway: Run` permission.
@@ -44,6 +46,10 @@ It is sent in `cf-aig-authorization` when Authenticated Gateway is enabled.
 `SESSION_SIGNING_KEY` should be a long random value. For local development,
 place values in the ignored `worker/.dev.vars` file.
 `FEEDBACK_AUTOMATION_TOKEN` must contain at least 32 characters.
+`BREVO_API_KEY` is a Brevo transactional-email API key. `BREVO_FROM_EMAIL` must
+be a sender verified in Brevo. The public reset destination is configured as
+`PASSWORD_RESET_BASE_URL` in `wrangler.jsonc`; reset links keep the raw token in
+the URL fragment so it is not sent to GitHub Pages in the HTTP request.
 
 ## Deploy
 
@@ -106,10 +112,16 @@ POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/me
 POST /api/auth/logout
+POST /api/auth/password-reset/request
+POST /api/auth/password-reset/confirm
 GET  /api/account/campaign
 PUT  /api/account/campaign
 POST /api/account/campaign/claim
 ```
+
+Password-reset requests always return the same accepted response for existing
+and unknown addresses. D1 stores only SHA-256 token hashes; links expire after
+15 minutes and are single-use. A successful reset revokes every account session.
 
 New account dossiers are private and every query is scoped by `owner_user_id`.
 An existing public campaign can be claimed only with its organizer key; the same

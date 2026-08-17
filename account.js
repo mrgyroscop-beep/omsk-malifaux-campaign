@@ -16,12 +16,15 @@
   const closeButton = document.querySelector("#accountDialogClose");
   const chipLabel = document.querySelector("#accountChipLabel");
 
+  let resetToken = resetTokenFromLocation();
   let session = loadSession();
+  if (resetToken) saveSession(null);
   let user = null;
-  let loading = Boolean(session);
+  let loading = Boolean(session) && !resetToken;
   let busy = false;
-  let mode = "login";
+  let mode = resetToken ? "reset" : "login";
   let error = "";
+  let notice = "";
   let syncStatus = "guest";
   let conflict = null;
   let syncTimer = null;
@@ -47,6 +50,22 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function resetTokenFromLocation() {
+    try {
+      const raw = decodeURIComponent(location.hash.slice(1));
+      const match = raw.match(/^reset\/([A-Za-z0-9_-]{43})$/u);
+      if (!match) return "";
+      history.replaceState(
+        { ...(history.state || {}), route: "dossier" },
+        "",
+        "#dossier",
+      );
+      return match[1];
+    } catch {
+      return "";
+    }
   }
 
   function loadSession() {
@@ -153,6 +172,18 @@
       account_campaign_exists: text(
         "К аккаунту уже привязано другое досье. Сначала разрешите текущий конфликт синхронизации.",
         "Another dossier is already linked to this account. Resolve its synchronization first.",
+      ),
+      password_reset_unavailable: text(
+        "Отправка писем восстановления пока не настроена.",
+        "Password reset email is not configured yet.",
+      ),
+      reset_invalid_or_expired: text(
+        "Ссылка недействительна или уже истекла. Запросите новую.",
+        "This link is invalid or expired. Request a new one.",
+      ),
+      password_mismatch: text(
+        "Пароли не совпадают.",
+        "The passwords do not match.",
       ),
     };
     return messages[code] || text(
@@ -500,27 +531,60 @@
 
   function authHtml() {
     const registering = mode === "register";
+    const requestingReset = mode === "forgot";
+    const resetting = mode === "reset";
+    const recovery = requestingReset || resetting;
+    const introTitle = requestingReset
+      ? text("Вернуть доступ к досье", "Recover dossier access")
+      : resetting
+        ? text("Новый пароль для архивного дела", "A new password for the archive")
+        : text("Одно досье на всех ваших устройствах", "One dossier across your devices");
+    const introCopy = requestingReset
+      ? text(
+        "Укажите email аккаунта. Если запись существует, архив отправит одноразовую ссылку, действующую 15 минут.",
+        "Enter the account email. If it exists, the archive will send a one-time link valid for 15 minutes.",
+      )
+      : resetting
+        ? text(
+          "Придумайте новый пароль. После подтверждения все прежние сеансы будут завершены.",
+          "Choose a new password. All previous sessions will be signed out after confirmation.",
+        )
+        : text(
+          "Без аккаунта билдер по-прежнему работает локально. После входа текущее непустое досье будет безопасно сверено с облаком — спорные версии не перезаписываются без выбора.",
+          "The builder still works locally without an account. After sign-in, a non-empty dossier is safely reconciled with the cloud—conflicting versions are never overwritten without a choice.",
+        );
+    const submitLabel = requestingReset
+      ? text("Отправить ссылку", "Send recovery link")
+      : resetting
+        ? text("Сохранить новый пароль", "Save new password")
+        : registering
+          ? text("Создать аккаунт", "Create account")
+          : text("Войти и сверить досье", "Sign in and reconcile");
     return `
       <section class="account-auth">
         <div class="account-auth-intro">
-          <span class="account-stamp">ADMIRALTY ID</span>
-          <h3>${text("Одно досье на всех ваших устройствах", "One dossier across your devices")}</h3>
-          <p>${text(
-            "Без аккаунта билдер по-прежнему работает локально. После входа текущее непустое досье будет безопасно сверено с облаком — спорные версии не перезаписываются без выбора.",
-            "The builder still works locally without an account. After sign-in, a non-empty dossier is safely reconciled with the cloud—conflicting versions are never overwritten without a choice.",
-          )}</p>
-          <ul><li>${text("Автосохранение между устройствами", "Automatic cross-device saves")}</li><li>${text("Гостевой режим остаётся доступен", "Guest mode remains available")}</li></ul>
+          <span class="account-stamp">${recovery ? "ACCESS RECOVERY" : "ADMIRALTY ID"}</span>
+          <h3>${introTitle}</h3>
+          <p>${introCopy}</p>
+          <ul>${recovery
+            ? `<li>${text("Одноразовая ссылка", "One-time link")}</li><li>${text("Срок действия — 15 минут", "Expires after 15 minutes")}</li>`
+            : `<li>${text("Автосохранение между устройствами", "Automatic cross-device saves")}</li><li>${text("Гостевой режим остаётся доступен", "Guest mode remains available")}</li>`}</ul>
         </div>
-        <form id="accountAuthForm" class="account-auth-form">
-          <div class="account-tabs" role="group" aria-label="${text("Режим аккаунта", "Account mode")}">
+        <form id="accountAuthForm" class="account-auth-form" data-account-form-mode="${mode}">
+          ${recovery ? "" : `<div class="account-tabs" role="group" aria-label="${text("Режим аккаунта", "Account mode")}">
             <button type="button" aria-pressed="${String(!registering)}" class="${!registering ? "is-active" : ""}" data-account-mode="login">${text("Вход", "Sign in")}</button>
             <button type="button" aria-pressed="${String(registering)}" class="${registering ? "is-active" : ""}" data-account-mode="register">${text("Регистрация", "Register")}</button>
-          </div>
-          ${registering ? `<label><span>${text("Имя", "Name")}</span><input name="displayName" autocomplete="name" minlength="1" maxlength="60" required /></label>` : ""}
-          <label><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="254" required /></label>
-          <label><span>${text("Пароль", "Password")}</span><input name="password" type="password" autocomplete="${registering ? "new-password" : "current-password"}" minlength="8" maxlength="128" required /></label>
+          </div>`}
+          ${notice ? `<p class="account-notice" role="status">${escapeHtml(notice)}</p>` : ""}
+          ${requestingReset
+            ? `<label><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="254" required autofocus /></label>`
+            : resetting
+              ? `<label><span>${text("Новый пароль", "New password")}</span><input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required autofocus /></label><label><span>${text("Повторите пароль", "Repeat password")}</span><input name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></label>`
+              : `${registering ? `<label><span>${text("Имя", "Name")}</span><input name="displayName" autocomplete="name" minlength="1" maxlength="60" required /></label>` : ""}<label><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="254" required /></label><label><span>${text("Пароль", "Password")}</span><input name="password" type="password" autocomplete="${registering ? "new-password" : "current-password"}" minlength="8" maxlength="128" required /></label>`}
+          ${mode === "login" ? `<button class="account-auth-link" type="button" data-account-mode="forgot">${text("Забыли пароль?", "Forgot password?")}</button>` : ""}
           ${error ? `<p class="account-error" role="alert">${escapeHtml(error)}</p>` : ""}
-          <button class="button button-red" type="submit" ${busy ? "disabled" : ""}>${busy ? text("Проверяю…", "Checking…") : registering ? text("Создать аккаунт", "Create account") : text("Войти и сверить досье", "Sign in and reconcile")}</button>
+          <button class="button button-red" type="submit" ${busy ? "disabled" : ""}>${busy ? text("Проверяю…", "Checking…") : submitLabel}</button>
+          ${recovery ? `<button class="account-auth-link is-back" type="button" data-account-mode="login">${text("← Вернуться ко входу", "← Back to sign in")}</button>` : ""}
         </form>
       </section>`;
   }
@@ -540,6 +604,7 @@
     const data = new FormData(form);
     busy = true;
     error = "";
+    notice = "";
     render();
     try {
       const payload = await api(`/api/auth/${mode}`, {
@@ -555,6 +620,66 @@
       user = payload.user;
       syncStatus = "syncing";
       await reconcile();
+    } catch (reason) {
+      error = errorText(reason.code);
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function requestPasswordReset(form) {
+    const data = new FormData(form);
+    busy = true;
+    error = "";
+    notice = "";
+    render();
+    try {
+      await api("/api/auth/password-reset/request", {
+        method: "POST",
+        auth: false,
+        body: { email: data.get("email") },
+      });
+      mode = "login";
+      notice = text(
+        "Если такой аккаунт существует, ссылка уже отправлена. Проверьте также папку «Спам».",
+        "If that account exists, the link has been sent. Check the spam folder too.",
+      );
+    } catch (reason) {
+      error = errorText(reason.code);
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function confirmPasswordReset(form) {
+    const data = new FormData(form);
+    if (data.get("password") !== data.get("passwordConfirmation")) {
+      error = errorText("password_mismatch");
+      render();
+      return;
+    }
+    busy = true;
+    error = "";
+    notice = "";
+    render();
+    try {
+      await api("/api/auth/password-reset/confirm", {
+        method: "POST",
+        auth: false,
+        body: {
+          token: resetToken,
+          password: data.get("password"),
+        },
+      });
+      clearAccount();
+      resetToken = "";
+      mode = "login";
+      notice = text(
+        "Пароль обновлён. Теперь войдите с новым паролем.",
+        "Password updated. Sign in with the new password.",
+      );
     } catch (reason) {
       error = errorText(reason.code);
     } finally {
@@ -641,6 +766,11 @@
   }
 
   async function restore() {
+    if (resetToken) {
+      loading = false;
+      render();
+      return;
+    }
     if (!session) {
       loading = false;
       render();
@@ -662,14 +792,21 @@
   content.addEventListener("submit", (event) => {
     if (event.target.id !== "accountAuthForm") return;
     event.preventDefault();
-    if (!busy) void authenticate(event.target);
+    if (busy) return;
+    if (mode === "forgot") void requestPasswordReset(event.target);
+    else if (mode === "reset") void confirmPasswordReset(event.target);
+    else void authenticate(event.target);
   });
 
   content.addEventListener("click", (event) => {
     const modeButton = event.target.closest("[data-account-mode]");
     if (modeButton && !busy) {
+      if (mode === "reset" && modeButton.dataset.accountMode !== "reset") {
+        resetToken = "";
+      }
       mode = modeButton.dataset.accountMode;
       error = "";
+      notice = "";
       render();
       return;
     }
@@ -701,6 +838,18 @@
   window.addEventListener("focus", scheduleLifecycleSync);
   window.addEventListener("pageshow", scheduleLifecycleSync);
   window.addEventListener("online", () => scheduleSync(0));
+  window.addEventListener("hashchange", () => {
+    const token = resetTokenFromLocation();
+    if (!token) return;
+    clearAccount();
+    resetToken = token;
+    loading = false;
+    mode = "reset";
+    error = "";
+    notice = "";
+    render();
+    if (!dialog.open) dialog.showModal();
+  });
   document.addEventListener("visibilitychange", scheduleLifecycleSync);
 
   window.MalifauxAccount = Object.freeze({
@@ -709,5 +858,6 @@
   });
 
   render();
+  if (resetToken && !dialog.open) dialog.showModal();
   void restore();
 })();
