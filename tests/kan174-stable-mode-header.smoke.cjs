@@ -4,6 +4,7 @@ const { pathToFileURL } = require("node:url");
 const { chromium } = require("playwright");
 
 const appPath = path.resolve(__dirname, "..", "index.html");
+const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
 const stableSelectors = [
   ".topbar",
   "#cooperativeModeButton",
@@ -33,12 +34,13 @@ function assertStable(before, after) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ channel: browserChannel, headless: true });
   const context = await browser.newContext({ viewport: { width: 1700, height: 700 } });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${pathToFileURL(appPath).href}#leader`, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-locale="ru"]').click();
 
   assert.equal(await page.locator("#cooperativeModeLabel").textContent(), "Кооп");
   const campaignGeometry = await geometry(page);
