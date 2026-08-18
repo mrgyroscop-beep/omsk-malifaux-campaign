@@ -4,6 +4,7 @@ const { pathToFileURL } = require("node:url");
 const { chromium } = require("playwright");
 
 const appPath = path.resolve(__dirname, "..", "index.html");
+const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
 const summary = (slug, name, faction, keywords, extras = {}) => ({ id: slug, slug, game_mode_type: "standard", name, display_name: name, faction: faction.toLowerCase(), faction_label: faction, station: "minion", station_label: "Minion", cost: 6, keywords: keywords.map((keyword, id) => ({ id, name: keyword, slug: keyword.toLowerCase().replaceAll(" ", "-") })), characteristics: ["Minion"], ...extras });
 const marshal = summary("alpha-marshal", "Alpha Marshal", "Guild", ["Marshal"]);
 const wrong = summary("bayou-raider", "Bayou Raider", "Bayou", ["Bandit"]);
@@ -11,7 +12,7 @@ const master = summary("guild-master", "Guild Master", "Guild", ["Marshal"], { s
 const detail = { ...marshal, actions: [{ id: 11, name: "Peacebringer", type: "attack", typeLabel: "Attack", stat: "6", description: "Deal campaign damage.", triggers: [{ id: 12, name: "Pin Down", suits: "R", description: "Target cannot move." }] }, { id: 13, name: "Marshal Order", type: "tactical", typeLabel: "Tactical", description: "Move an ally.", triggers: [] }], abilities: [{ id: 14, name: "Steady", description: "Ignore the first push." }] };
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ channel: browserChannel, headless: true });
   const context = await browser.newContext({ viewport: { width: 1024, height: 600 } });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);

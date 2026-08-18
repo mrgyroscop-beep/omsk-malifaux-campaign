@@ -9951,15 +9951,21 @@ function renderFateHistory(scrollToLatest = false) {
 function renderFateFlip(animate = false) {
   if (!fateDeck.length && !currentFateCard) resetFateDeck();
   fateFlipButtonLabel.textContent = localized("Флип", "Flip");
-  fateFlipButton.setAttribute(
-    "aria-label",
-    localized("Флипнуть карту Fate Deck", "Flip a Fate Deck card"),
-  );
   fateDrawAgainButton.setAttribute(
     "aria-label",
-    localized("Флипнуть следующую карту Fate Deck", "Flip the next Fate Deck card"),
+    currentFateCard
+      ? localized("Флипнуть следующую карту Fate Deck", "Flip the next Fate Deck card")
+      : localized("Флипнуть карту Fate Deck", "Flip a Fate Deck card"),
   );
-  fateDrawAgainButtonLabel.textContent = localized("Флипнуть ещё", "Flip again");
+  fateDrawAgainButtonLabel.textContent = currentFateCard
+    ? localized("Флипнуть ещё", "Flip again")
+    : localized("Флипнуть карту", "Flip a card");
+  const fateDeckToggleLabel = localized(
+    fateFlipPopover.hidden ? "Открыть Fate Deck" : "Закрыть Fate Deck",
+    fateFlipPopover.hidden ? "Open the Fate Deck" : "Close the Fate Deck",
+  );
+  fateFlipButton.setAttribute("aria-label", fateDeckToggleLabel);
+  fateFlipButton.title = fateDeckToggleLabel;
   fateShuffleButton.setAttribute(
     "aria-label",
     localized(
@@ -9993,6 +9999,12 @@ function renderFateFlip(animate = false) {
 function setFateFlipOpen(open) {
   fateFlipPopover.hidden = !open;
   fateFlipButton.setAttribute("aria-expanded", String(open));
+  const toggleLabel = localized(
+    open ? "Закрыть Fate Deck" : "Открыть Fate Deck",
+    open ? "Close the Fate Deck" : "Open the Fate Deck",
+  );
+  fateFlipButton.setAttribute("aria-label", toggleLabel);
+  fateFlipButton.title = toggleLabel;
   fateFlipRoot.classList.toggle("is-fate-open", open);
 }
 
@@ -10007,7 +10019,7 @@ function drawFateCard() {
 
 fateFlipButton.addEventListener("click", (event) => {
   event.stopPropagation();
-  drawFateCard();
+  setFateFlipOpen(fateFlipPopover.hidden);
 });
 
 fateDrawAgainButton.addEventListener("click", (event) => {
