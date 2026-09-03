@@ -7496,6 +7496,9 @@ async function ensureCrewCardCatalog(force = false) {
   const request = ++crewCardCatalogRequest;
   crewCardCatalogController?.abort();
   crewCardCatalogController = new AbortController();
+  // Remember the attempted keywords before loading: renders during a request or
+  // after a failure must not start the same request again.
+  crewCardCatalogKeywordKey = keywordKey;
   crewCardCatalogStatus = "loading";
   crewCardCatalogError = "";
   crewCardUpgradeDetails = [];
@@ -7773,6 +7776,7 @@ function renderAdvancementForm() {
   renderCrewCardEffectPicker();
   if (
     crewCardAdvancement &&
+    crewCardSourceMode === "keyword" &&
     (crewCardCatalogStatus === "idle" ||
       crewCardCatalogKeywordKey !== selectedCrewKeywords().sort().join("|"))
   ) {
@@ -7924,6 +7928,7 @@ function openAdvancementDialog(xp = null) {
   clearPendingAdvancementTalent();
   clearPendingCrewCardEffect();
   crewCardSourceMode = "keyword";
+  if (crewCardCatalogStatus === "error") crewCardCatalogStatus = "idle";
   const form = document.querySelector("#advancementForm");
   form.reset();
   form.dataset.totemProfile = "";

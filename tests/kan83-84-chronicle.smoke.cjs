@@ -44,6 +44,11 @@ const fixture = {
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  let crewCatalogRequests = 0;
+  await page.route("**/api/v1/upgrades?**", (route) => {
+    crewCatalogRequests += 1;
+    return route.fulfill({ status: 503, json: { error: "catalog_unavailable" } });
+  });
 
   try {
     await page.goto(pathToFileURL(appPath).href, { waitUntil: "domcontentloaded" });
@@ -54,6 +59,9 @@ const fixture = {
     await page.locator("#addAdvancementButton").click();
     await page.selectOption("#advancementXpIndex", "7");
     await page.selectOption("#advancementTable", "crew-card");
+    await page.waitForFunction(() =>
+      document.querySelector("#advancementCrewCardStatus").textContent.includes("Не удалось загрузить"),
+    );
     await page.locator('input[name="crewCardSource"][value="starting"]').check({ force: true });
     await page.locator('[data-crew-advancement-effect="starting:heavy-blow"]').click();
     assert.equal(
@@ -62,6 +70,7 @@ const fixture = {
       "Selecting a Tier IV Crew Card effect did not enable saving.",
     );
     await page.locator("#advancementSubmit").click();
+    assert.equal(crewCatalogRequests, 1, "Unavailable catalog must not retry on each form render.");
     await page.waitForFunction(() =>
       window.MalifauxBuilder.getState().leader.advances.some(
         (advance) => advance.tableId === "crew-card" && advance.name === "Heavy Blow",
