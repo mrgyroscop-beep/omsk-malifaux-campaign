@@ -3,6 +3,9 @@ const STORAGE_META_KEY = "m4e-untold-campaign-meta-v1";
 const advancementData = window.MalifauxAdvancementData || null;
 
 const STATIC_TEXT_EN = {
+  "Мой арсенал": "My arsenal",
+  "Кампании": "Campaigns",
+  "Рабочая область": "Workspace",
   "Неписаный реестр": "The Unwritten Index",
   "Новое досье": "New dossier",
   "Неделя 1": "Week 1",
@@ -750,6 +753,7 @@ let currentLocale =
   storedLocale || (navigator.language?.toLowerCase().startsWith("en") ? "en" : "ru");
 
 const ROUTE_META = {
+  organizer: { index: "ORG", ru: "Кампании", en: "Campaigns" },
   dossier: { index: "01", ru: "Досье", en: "Dossier" },
   leader: { index: "02", ru: "Лидер", en: "Leader" },
   arsenal: { index: "03", ru: "Арсенал", en: "Arsenal" },
@@ -3887,7 +3891,8 @@ function updateCooperativeModeButton(route = activeRoute()) {
 
 function activateRoute(route) {
   const target = ROUTE_META[route] ? route : "dossier";
-  if (target !== "cooperative") lastStandardRoute = target;
+  if (target !== "cooperative" && target !== "organizer") lastStandardRoute = target;
+  document.body.classList.toggle("is-organizer-mode", target === "organizer");
   updateCooperativeModeButton(target);
   document.querySelectorAll(".route").forEach((section) => {
     section.classList.toggle("is-active", section.id === `route-${target}`);
@@ -3902,6 +3907,10 @@ function activateRoute(route) {
     }
   });
   const railIndex = document.querySelector("#railIndex");
+  document.querySelectorAll("[data-workspace]").forEach((button) => {
+    const active = (target === "organizer") === (button.dataset.workspace === "organizer");
+    button.setAttribute("aria-pressed", String(active));
+  });
   if (railIndex) railIndex.textContent = `INDEX / ${ROUTE_META[target].index}`;
   if (target === "cooperative") {
     const cooperativeState = window.CooperativeCampaign?.getState();
@@ -3909,6 +3918,9 @@ function activateRoute(route) {
       document.querySelector("#headerCampaign").textContent = cooperativeState.campaign.name;
       document.querySelector("#headerWeek").textContent = message("week", { n: cooperativeState.campaign.week });
     }
+  } else if (target === "organizer") {
+    document.querySelector("#headerCampaign").textContent = localized("Кампании организатора", "Organizer campaigns");
+    document.querySelector("#headerWeek").textContent = localized("Участники и хроника", "Participants & chronicle");
   } else {
     renderChrome();
   }
@@ -4089,6 +4101,7 @@ function routeTo(route) {
     );
   }
   window.scrollTo({ top: 0, behavior: "instant" });
+  window.dispatchEvent(new CustomEvent("malifaux-route-change"));
 }
 
 function openRulesFromReference(trigger) {
@@ -4246,8 +4259,9 @@ function bindFields() {
 }
 
 function renderChrome() {
-  document.querySelector("#headerCampaign").textContent = state.crew.name || message("newDossier");
-  document.querySelector("#headerWeek").textContent = message("week", { n: state.campaign.week });
+  const organizer = activeRoute() === "organizer";
+  document.querySelector("#headerCampaign").textContent = organizer ? localized("Кампании организатора", "Organizer campaigns") : state.crew.name || message("newDossier");
+  document.querySelector("#headerWeek").textContent = organizer ? localized("Участники и хроника", "Participants & chronicle") : message("week", { n: state.campaign.week });
   document.querySelector("#campaignLengthOutput").textContent =
     message("weeks", { n: state.campaign.length, word: countWord(state.campaign.length, "week") });
 }
@@ -11129,6 +11143,7 @@ initializeRouting();
 validateAllKeywords();
 
 window.MalifauxBuilder = Object.freeze({
+  normalizeDossier: (value) => mergeDefaults(value),
   getState: () => clone(state),
   getStateMeta: () => ({ ...stateMeta }),
   getLocale: () => currentLocale,

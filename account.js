@@ -591,6 +591,7 @@
 
   function render() {
     if (!content) return;
+    window.dispatchEvent(new CustomEvent("malifaux-account-change", { detail: { user: user ? { ...user } : null, loading } }));
     openButton.classList.toggle("is-authenticated", Boolean(user));
     chipLabel.textContent = user ? user.displayName : text("Аккаунт", "Account");
     if (loading) {
@@ -855,6 +856,8 @@
   window.MalifauxAccount = Object.freeze({
     getUser: () => (user ? { ...user } : null),
     sync: () => reconcile(),
+    request: (path, options) => api(path, options),
+    getSyncStatus: () => syncStatus,
   });
 
   render();

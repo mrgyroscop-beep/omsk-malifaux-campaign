@@ -33,6 +33,7 @@ export class FakeD1 {
     if (includeFeedback) migrations.push("0002_feedback.sql");
     migrations.push("0003_accounts.sql");
     migrations.push("0004_password_resets.sql");
+    migrations.push("0005_organizer_campaigns.sql");
     for (const name of migrations) {
       this.database.exec(
         readFileSync(new URL(`../migrations/${name}`, import.meta.url), "utf8"),

@@ -6,6 +6,7 @@ import {
 import { handleAccountCampaignRequest } from "./account-campaigns.js";
 import { handleBiggerHat, refreshBiggerHatCache } from "./biggerhat-cache.js";
 import { handleCampaignRequest } from "./campaigns.js";
+import { handleOrganizerCampaignRequest } from "./organizer-campaigns.js";
 import {
   handleFeedbackAutomationRequest,
   handleFeedbackRequest,
@@ -427,6 +428,13 @@ function isCampaignMutation(request, url) {
 async function dispatch(request, env, context, origin) {
   const url = new URL(request.url);
 
+  if (url.pathname === "/api/organizer-campaigns" || url.pathname.startsWith("/api/organizer-campaigns/")) {
+    if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "organizer")))) {
+      return jsonResponse({ error: "rate_limited" }, 429);
+    }
+    return handleOrganizerCampaignRequest(request, env);
+  }
+
   if (url.pathname.startsWith("/api/auth/")) {
     if (!(await rateLimit(env.API_RATE_LIMITER, clientKey(request, "auth")))) {
       return jsonResponse({ error: "rate_limited" }, 429);
@@ -491,6 +499,7 @@ async function dispatch(request, env, context, origin) {
 }
 
 function routeLabel(pathname) {
+  if (pathname.startsWith("/api/organizer-campaigns")) return "organizer_campaigns";
   if (pathname.startsWith("/api/auth/")) return "account_auth";
   if (pathname.startsWith("/api/account/")) return "account_campaign";
   if (pathname === "/api/chat") return "chat";

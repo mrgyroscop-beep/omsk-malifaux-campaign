@@ -741,8 +741,7 @@
       </section>`;
   }
 
-  function renderPrintDossier() {
-    const data = currentPrintState();
+  function buildDossier(data) {
     const crew = data.crew || {};
     const campaign = data.campaign || {};
     const leader = data.leader || {};
@@ -781,9 +780,6 @@
         : archetype.label
       : leader.archetype || "—";
     const crewCard = printCrewCard(leader.crewCard);
-    const existing = document.querySelector("#printDossier");
-    if (existing) existing.remove();
-
     const dossier = document.createElement("main");
     dossier.id = "printDossier";
     dossier.className = "print-dossier";
@@ -908,8 +904,35 @@
           <b>02</b>
         </footer>
       </section>`;
-    document.body.append(dossier);
+    return dossier;
   }
+
+  function renderPrintDossier() {
+    document.querySelector("#printDossier")?.remove();
+    document.body.append(buildDossier(currentPrintState()));
+  }
+
+  window.createReadOnlyDossier = (value) => {
+    const data = window.MalifauxBuilder.normalizeDossier(value);
+    const element = buildDossier(data);
+    const models = new Map(data.arsenal.models.map((model) => [model.id || model.name, model]));
+    element.querySelectorAll("[data-print-model-card]").forEach((card) => {
+      const model = models.get(card.dataset.printModelCard);
+      if (!model?.cardSnapshot) return;
+      const details = document.createElement("details");
+      details.className = "org-model-card";
+      const summary = document.createElement("summary");
+      summary.textContent = printText("Карточка модели", "Model card");
+      const body = document.createElement("div");
+      body.innerHTML = modelCardHtml(model.cardSnapshot);
+      details.append(summary, body);
+      card.append(details);
+    });
+    element.removeAttribute("id");
+    element.removeAttribute("aria-hidden");
+    element.hidden = false;
+    return element;
+  };
 
   window.renderPrintDossier = renderPrintDossier;
   window.addEventListener("beforeprint", renderPrintDossier);

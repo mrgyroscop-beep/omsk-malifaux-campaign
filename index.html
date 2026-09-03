@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="dossier-theme.css?v=18" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=5" />
+    <link rel="stylesheet" href="organizer.css?v=1" />
     <link rel="stylesheet" href="print.css?v=8" media="print" />
   </head>
   <body class="theme-dossier">
@@ -196,6 +197,10 @@
       </header>
 
       <aside class="rail" aria-label="Разделы билдера">
+        <nav class="workspace-switch" aria-label="Рабочая область">
+          <button type="button" data-workspace="arsenal" data-route="dossier" aria-pressed="true">Мой арсенал</button>
+          <button type="button" data-workspace="organizer" data-route="organizer" aria-pressed="false">Кампании</button>
+        </nav>
         <div class="rail-index" id="railIndex">INDEX / 01</div>
         <nav class="primary-nav">
           <button class="nav-item is-active" type="button" data-route="dossier">
@@ -243,6 +248,9 @@
       </aside>
 
       <main class="workspace">
+        <section class="route organizer-route" id="route-organizer" aria-label="Кампании организатора" data-dynamic-i18n>
+          <div id="organizerContent"></div>
+        </section>
         <span class="binder-punches" aria-hidden="true"></span>
         <span class="coffee-stain" aria-hidden="true"></span>
         <section class="route is-active" id="route-dossier" aria-labelledby="dossierTitle">
@@ -1903,10 +1911,11 @@
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=39"></script>
-    <script src="account.js?v=3"></script>
+    <script src="app.js?v=40"></script>
+    <script src="account.js?v=4"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
-    <script src="print.js?v=10"></script>
+    <script src="print.js?v=11"></script>
+    <script src="organizer.js?v=1"></script>
   </body>
 </html>
