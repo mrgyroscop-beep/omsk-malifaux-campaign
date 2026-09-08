@@ -37,7 +37,7 @@ async function startServer() {
 
 (async () => {
   const source = await readFile(path.join(root, "index.html"), "utf8");
-  assert.match(source, /<script src="app\.js\?v=40"><\/script>/u);
+  assert.match(source, /<script src="app\.js\?v=41"><\/script>/u);
   assert.match(source, /<script src="account\.js\?v=4"><\/script>/u);
   const server = await startServer();
   const port = server.address().port;

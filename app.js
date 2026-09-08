@@ -4371,8 +4371,12 @@ function renderTalents() {
       const saved = state.leader.talents[index] || normalizeStoredTalent({}, talent, index);
       const selectedDescription = selectedTalentDescription(saved);
       const selectedEntry = saved.snapshot?.entry;
-      const selectedMeta = selectedEntry && talent.kind !== "ability"
-        ? actionMetaHtml(selectedEntry)
+      const selectedMeta = selectedEntry
+        ? talent.kind === "ability"
+          ? abilityMeta(selectedEntry)
+            ? `<span class="action-meta">${cardText(abilityMeta(selectedEntry))}</span>`
+            : ""
+          : actionMetaHtml(selectedEntry)
         : "";
       return `
         <div class="talent-row">
@@ -6246,6 +6250,9 @@ function abilityRecordFromAdvancement(advance) {
       snapshot.effect ||
       advance.notes ||
       "",
+    suits: safeText(snapshot.suits, 80),
+    defensiveAbilityType: safeText(snapshot.defensiveAbilityType, 100),
+    stoneCost: safeNumber(snapshot.stoneCost, 0, 0, 20),
     source: advance.source || snapshot.source || "",
     tableId: advance.tableId,
     flip: clone(advance.flip || {}),
@@ -6454,6 +6461,9 @@ function leaderAbilityRecords({
       ability: {
         name,
         effect: snapshot.description || snapshot.text || snapshot.effect || "",
+        suits: safeText(snapshot.suits, 80),
+        defensiveAbilityType: safeText(snapshot.defensiveAbilityType, 100),
+        stoneCost: safeNumber(snapshot.stoneCost, 0, 0, 20),
       },
       removable: false,
     });
@@ -6541,6 +6551,9 @@ function leaderAbilityPreviewCard(record) {
           name: ability.name,
           description: ability.effect || "",
           typeLabel: localized("Способность", "Ability"),
+          suits: ability.suits || "",
+          defensiveAbilityType: ability.defensiveAbilityType || "",
+          stoneCost: ability.stoneCost || 0,
         },
         "ability",
       )}
@@ -9629,6 +9642,7 @@ function storeInitialTalentEntry(sourceCard, entry, selectedTrigger = null) {
   }
   document.querySelector("#talentDialog").close();
   renderTalents();
+  renderLeaderActionPreview();
   requestAnimationFrame(() => {
     document.querySelector(`[data-pick-talent="${index}"]`)?.focus();
   });

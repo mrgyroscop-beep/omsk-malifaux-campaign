@@ -89,6 +89,7 @@ const details = {
         id: 101,
         slug: "steady-hands",
         name: "Steady Hands",
+        suits: "⚡",
         description: "Special ability rule.",
       },
     ],
@@ -324,7 +325,17 @@ const fixture = {
     await page.locator("#talentCardSearch").fill("special ability");
     await page.waitForTimeout(320);
     assert.match(await page.locator(".talent-direct-choice").textContent(), /Steady Hands/);
-    await page.locator('[data-close-dialog="talentDialog"]').click();
+    await page.locator('.talent-direct-choice [data-select-direct-talent]').click();
+    state = await page.evaluate(() => window.MalifauxBuilder.getState());
+    assert.equal(state.leader.talents[2].snapshot.entry.suits, "⚡");
+    assert.match(await page.locator('[data-talent-name="2"] + button').locator('xpath=ancestor::div[contains(@class, "talent-row")]').textContent(), /⚡/);
+    const borrowedAbility = page.locator('[data-leader-ability-name="Steady Hands"]');
+    assert.match(await borrowedAbility.textContent(), /⚡/);
+    await page.evaluate(() => window.renderPrintDossier());
+    assert.match(
+      await page.locator('[data-print-leader-ability="Steady Hands"]').textContent(),
+      /⚡/,
+    );
     await page.locator('[data-locale="ru"]').click();
 
     // Heavy Hitter keeps exactly one available selected trigger; triggerless actions stay disabled.

@@ -309,6 +309,19 @@
 
   function renderLeaderAbility(record) {
     const ability = record?.ability || {};
+    const meta = (() => {
+      const defensiveType = String(ability.defensiveAbilityType || "")
+        .replaceAll("_", " ")
+        .replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+      const stoneCost = Number(ability.stoneCost || 0);
+      return [
+        defensiveType,
+        ability.suits,
+        stoneCost ? (stoneCost > 1 ? `◆ ${stoneCost}` : "◆") : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    })();
     const source = [
       record?.originLabel,
       record?.source ? `${printText("Источник", "Source")}: ${record.source}` : "",
@@ -324,6 +337,7 @@
           ${source ? `<small>${escapePrintHtml(source)}</small>` : ""}
         </div>
       </div>
+      ${meta ? `<p class="print-action-meta">${richPrintText(meta)}</p>` : ""}
       ${ability.effect ? `<p class="print-rule-text">${richPrintText(ability.effect)}</p>` : ""}
     </article>`;
   }
