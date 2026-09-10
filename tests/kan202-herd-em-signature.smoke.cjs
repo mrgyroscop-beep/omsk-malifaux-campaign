@@ -69,6 +69,16 @@ const fixture = {
   try {
     await page.goto(pathToFileURL(appPath).href, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => Boolean(window.MalifauxBuilder));
+    const catalog = await page.evaluate(() => ({
+      models: Object.keys(globalThis.PlayWyrdSignatureActions.byModel).length,
+      markers: Object.values(globalThis.PlayWyrdSignatureActions.byModel).flat().length,
+      herdEm: globalThis.PlayWyrdSignatureActions.byModel.HogWhisperer,
+      unyieldingResolve: globalThis.PlayWyrdSignatureActions.byModel.Ototo,
+    }));
+    assert.equal(catalog.models, 706);
+    assert.equal(catalog.markers, 811);
+    assert.ok(catalog.herdEm.includes("herdem"));
+    assert.ok(catalog.unyieldingResolve.includes("unyieldingresolve"));
     await page.evaluate((state) => window.MalifauxBuilder.replaceState(state), fixture);
     await page.locator('.nav-item[data-route="leader"]').click();
 

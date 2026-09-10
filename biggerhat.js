@@ -8,7 +8,7 @@
   const API_BASE =
     location.protocol === "file:" || !PROXY_API_BASE ? SOURCE_API_BASE : PROXY_API_BASE;
   const CATALOG_KEY = "m4e-biggerhat-catalog-v1";
-  const DETAILS_KEY = "m4e-biggerhat-details-v2";
+  const DETAILS_KEY = "m4e-biggerhat-details-v3";
   const KEYWORDS_KEY = "m4e-biggerhat-keywords-v1";
   const CREW_UPGRADES_KEY = "m4e-biggerhat-crew-upgrades-v1";
   const CREW_UPGRADE_DETAILS_KEY = "m4e-biggerhat-crew-upgrade-details-v1";
@@ -140,6 +140,7 @@
       generatesStone: Boolean(raw.generates_stone),
       keywords,
       characteristics,
+      markerModelId: compactText(raw.marker_metadata?.modelId),
       miniature: preferredMiniature(raw.miniatures),
     };
   }

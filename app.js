@@ -1539,15 +1539,33 @@ function normalizeStoredTrigger(trigger, index = 0) {
   };
 }
 
-function actionHasSignature(action) {
-  const source = action && typeof action === "object" ? action : {};
-  // BiggerHat currently marks Herd 'Em as non-signature even though the Hog
-  // Whisperer card prints it with the signature lightning marker.
-  const knownSignature = String(source.id) === "400" || source.slug === "400-herd-em";
-  return Boolean(source.isSignature ?? source.signature) || knownSignature;
+function signatureCardIdentity(card) {
+  const source = card && typeof card === "object" ? card : {};
+  return safeText(`${source.name || ""} ${source.title || ""}`, 500)
+    .normalize("NFKD")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .filter((part) => part && part !== "the")
+    .join("");
 }
 
-function normalizeStoredAction(action, index = 0) {
+function actionHasSignature(action, sourceCard = null) {
+  const source = action && typeof action === "object" ? action : {};
+  if (Boolean(source.isSignature ?? source.signature)) return true;
+
+  const catalog = globalThis.PlayWyrdSignatureActions;
+  const actionIdentity = canonical(source.name);
+  if (!catalog || !actionIdentity) return false;
+  const modelId = safeText(
+    sourceCard?.markerModelId || sourceCard?.marker_metadata?.modelId,
+    120,
+  );
+  const knownActions =
+    catalog.byModel?.[modelId] || catalog.byCard?.[signatureCardIdentity(sourceCard)] || [];
+  return knownActions.includes(actionIdentity);
+}
+
+function normalizeStoredAction(action, index = 0, sourceCard = null) {
   const source = action && typeof action === "object" ? action : {};
   return {
     id: safeExternalId(source.id, `action-${index + 1}`),
@@ -1555,7 +1573,7 @@ function normalizeStoredAction(action, index = 0) {
     name: safeText(source.name, 200),
     type: safeText(source.type, 60).toLowerCase(),
     typeLabel: safeText(source.typeLabel, 100),
-    isSignature: actionHasSignature(source),
+    isSignature: actionHasSignature(source, sourceCard),
     stoneCost: safeNumber(source.stoneCost, 0, 0, 20),
     range: safeText(source.range, 80),
     rangeType: safeText(source.rangeType, 60).toLowerCase(),
@@ -1596,7 +1614,7 @@ function normalizeStoredCardSnapshot(snapshot) {
   const fetchedAt = Number.isFinite(Date.parse(snapshot.fetchedAt))
     ? new Date(snapshot.fetchedAt).toISOString()
     : "";
-  return {
+  const normalized = {
     id: safeExternalId(snapshot.id, "card"),
     slug,
     gameModeType: safeText(snapshot.gameModeType, 40).toLowerCase(),
@@ -1628,12 +1646,12 @@ function normalizeStoredCardSnapshot(snapshot) {
       ? snapshot.keywords.slice(0, 100).map(normalizeStoredKeyword)
       : [],
     characteristics: safeTextList(snapshot.characteristics, 100, 200),
+    markerModelId: safeText(
+      snapshot.markerModelId || snapshot.marker_metadata?.modelId,
+      120,
+    ),
     miniature: null,
-    actions: Array.isArray(snapshot.actions)
-      ? snapshot.actions
-          .slice(0, 100)
-          .map((action, index) => normalizeStoredAction(action, index))
-      : [],
+    actions: [],
     abilities: Array.isArray(snapshot.abilities)
       ? snapshot.abilities
           .slice(0, 100)
@@ -1647,6 +1665,12 @@ function normalizeStoredCardSnapshot(snapshot) {
         : "https://biggerhat.net/api/v1",
     },
   };
+  normalized.actions = Array.isArray(snapshot.actions)
+    ? snapshot.actions
+        .slice(0, 100)
+        .map((action, index) => normalizeStoredAction(action, index, normalized))
+    : [];
+  return normalized;
 }
 
 function normalizeStoredInjuries(value, ownerId = "model") {
@@ -1852,7 +1876,7 @@ function normalizeStoredTalent(talent, slot, index) {
   const entry =
     slot?.kind === "ability"
       ? normalizeStoredAbility(rawSnapshot?.entry, index)
-      : normalizeStoredAction(rawSnapshot?.entry, index);
+      : normalizeStoredAction(rawSnapshot?.entry, index, sourceCard);
   const selectedTrigger = rawSnapshot?.selectedTrigger
     ? normalizeStoredTrigger(rawSnapshot.selectedTrigger, index)
     : null;
@@ -9625,7 +9649,7 @@ function storeInitialTalentEntry(sourceCard, entry, selectedTrigger = null) {
   }
   const entrySnapshot = clone(entry);
   if (slot.kind !== "ability") {
-    entrySnapshot.isSignature = actionHasSignature(entrySnapshot);
+    entrySnapshot.isSignature = actionHasSignature(entrySnapshot, sourceCard);
     entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
   }
   const talentsBefore = clone(state.leader.talents);
@@ -9696,7 +9720,7 @@ function chooseTalentEntry(entryId) {
 
   const entrySnapshot = clone(entry);
   if (slot.kind !== "ability") {
-    entrySnapshot.isSignature = actionHasSignature(entrySnapshot);
+    entrySnapshot.isSignature = actionHasSignature(entrySnapshot, selectedTalentSource);
     entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
   }
   if (activeTalentSlot.mode === "advancement") {

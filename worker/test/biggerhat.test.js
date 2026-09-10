@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import worker from "../src/index.js";
-import { enrichCharacterMarkers } from "../src/playwyrd-markers.js";
+import { enrichCharacterMarkers, signatureForModel } from "../src/playwyrd-markers.js";
 
 const ORIGIN = "https://mrgyroscop-beep.github.io";
 
@@ -96,7 +96,7 @@ function playWyrdModelsFixture(models) {
                     id: firestoreString(model.id),
                     name: firestoreString(model.name),
                     title: firestoreString(model.title || ""),
-                    text: firestoreString('f Marked Action 6" 0 - 7 - Test.'),
+                    text: firestoreString(model.text || 'f Marked Action 6" 0 - 7 - Test.'),
                   },
                 },
               },
@@ -313,6 +313,44 @@ test("loads and matches Play Wyrd snapshots for every faction", async (context) 
 
   assert.deepEqual(new Set(requestedDocuments), new Set(cases.map((item) => item.document)));
   assert.equal(requestedDocuments.length, 8);
+});
+
+test("uses the audited official card catalog when the Play Wyrd text omits a marker", async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = async () =>
+    Response.json(
+      playWyrdModelsFixture([
+        {
+          id: "HogWhisperer",
+          name: "Hog Whisperer",
+          text: "Herd 'Em Ally only. Move the target up to its Sp.",
+        },
+      ]),
+    );
+
+  const enriched = await enrichCharacterMarkers(
+    {
+      faction: "bayou",
+      slug: "hog-whisperer",
+      name: "Hog Whisperer",
+      actions: [{ name: "Herd ’Em", is_signature: false, stone_cost: 0 }],
+    },
+    environment(new FakeKv()),
+  );
+
+  assert.equal(signatureForModel("HogWhisperer", "Herd ’Em"), true);
+  assert.equal(signatureForModel("Piglet", "Herd ’Em"), false);
+  assert.equal(enriched.actions[0].is_signature, true);
+  assert.equal(enriched.actions[0].marker_source, "playwyrd-card");
+  assert.equal(enriched.marker_metadata.modelId, "HogWhisperer");
+  assert.equal(Object.keys(globalThis.PlayWyrdSignatureActions.byModel).length, 706);
+  assert.equal(
+    Object.values(globalThis.PlayWyrdSignatureActions.byModel).flat().length,
+    811,
+  );
 });
 test("rejects query variants that could bypass the cache", async (context) => {
   const originalFetch = globalThis.fetch;

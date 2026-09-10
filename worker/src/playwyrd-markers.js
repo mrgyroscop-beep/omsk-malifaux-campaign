@@ -1,3 +1,5 @@
+import "../../playwyrd-signatures.js";
+
 const FIRESTORE_BASE =
   "https://firestore.googleapis.com/v1/projects/playwyrd/databases/(default)/documents/metadata/card_data/factions";
 const SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
@@ -205,6 +207,11 @@ export function markersForAction(cardText, actionName) {
   };
 }
 
+export function signatureForModel(modelId, actionName) {
+  const knownActions = globalThis.PlayWyrdSignatureActions?.byModel?.[compactText(modelId)] || [];
+  return knownActions.includes(identity(actionName));
+}
+
 export async function enrichCharacterMarkers(character, env) {
   const faction = compactText(character?.faction || character?.faction_label).toLowerCase();
   if (!FACTION_DOCUMENTS[faction] || !Array.isArray(character?.actions)) return character;
@@ -229,7 +236,8 @@ export async function enrichCharacterMarkers(character, env) {
   let enrichedActions = 0;
   const actions = character.actions.map((action) => {
     const markers = markersForAction(model.text, action?.name);
-    const isSignature = Boolean(action?.is_signature) || markers.isSignature;
+    const catalogSignature = signatureForModel(model.id, action?.name);
+    const isSignature = Boolean(action?.is_signature) || markers.isSignature || catalogSignature;
     const stoneCost = Math.max(Number(action?.stone_cost) || 0, markers.stoneCost);
     if (
       isSignature === Boolean(action?.is_signature) &&
@@ -242,7 +250,8 @@ export async function enrichCharacterMarkers(character, env) {
       ...action,
       is_signature: isSignature,
       stone_cost: stoneCost,
-      marker_source: "playwyrd",
+      marker_source:
+        markers.isSignature || markers.stoneCost ? "playwyrd" : "playwyrd-card",
     };
   });
 

@@ -42,7 +42,7 @@ function normalizedTarget(url) {
     path,
     url: `${UPSTREAM_BASE}/${path}${query ? `?${query}` : ""}`,
     cacheKey: `biggerhat:${
-      match[1] === "upgrades" ? "crew-v1" : match[2] ? "v2" : "v1"
+      match[1] === "upgrades" ? "crew-v1" : match[2] ? "v3" : "v1"
     }:${path}${query ? `?${query}` : ""}`,
     characterSlug: match[1] === "characters" ? match[2] || "" : "",
     ttl:
