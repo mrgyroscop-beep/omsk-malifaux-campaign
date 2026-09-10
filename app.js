@@ -1539,6 +1539,14 @@ function normalizeStoredTrigger(trigger, index = 0) {
   };
 }
 
+function actionHasSignature(action) {
+  const source = action && typeof action === "object" ? action : {};
+  // BiggerHat currently marks Herd 'Em as non-signature even though the Hog
+  // Whisperer card prints it with the signature lightning marker.
+  const knownSignature = String(source.id) === "400" || source.slug === "400-herd-em";
+  return Boolean(source.isSignature ?? source.signature) || knownSignature;
+}
+
 function normalizeStoredAction(action, index = 0) {
   const source = action && typeof action === "object" ? action : {};
   return {
@@ -1547,7 +1555,7 @@ function normalizeStoredAction(action, index = 0) {
     name: safeText(source.name, 200),
     type: safeText(source.type, 60).toLowerCase(),
     typeLabel: safeText(source.typeLabel, 100),
-    isSignature: Boolean(source.isSignature),
+    isSignature: actionHasSignature(source),
     stoneCost: safeNumber(source.stoneCost, 0, 0, 20),
     range: safeText(source.range, 80),
     rangeType: safeText(source.rangeType, 60).toLowerCase(),
@@ -3471,7 +3479,7 @@ function abilityMeta(ability) {
 
 function actionMeta(action) {
   const pieces = [action.typeLabel || action.type].filter(Boolean);
-  if (action.isSignature) pieces.push("Signature");
+  if (actionHasSignature(action)) pieces.push("Signature");
   if (action.range) {
     pieces.push(`${action.rangeTypeLabel || action.rangeType || "Rg"} ${action.range}″`);
   }
@@ -3516,7 +3524,7 @@ function actionMarkerHtml(kind, value = 1) {
 function crewActionMarkersHtml(action) {
   if (!action) return "";
   return [
-    action.isSignature ? actionMarkerHtml("signature") : "",
+    actionHasSignature(action) ? actionMarkerHtml("signature") : "",
     action.stoneCost ? actionMarkerHtml("stone", action.stoneCost) : "",
   ]
     .filter(Boolean)
@@ -3528,7 +3536,7 @@ function actionMetaHtml(action) {
   const pieces = [action.typeLabel || action.type]
     .filter(Boolean)
     .map((value) => escapeHtml(value));
-  if (action.isSignature) pieces.push(actionMarkerHtml("signature"));
+  if (actionHasSignature(action)) pieces.push(actionMarkerHtml("signature"));
   if (action.range) {
     pieces.push(
       `${escapeHtml(action.rangeTypeLabel || action.rangeType || "Rg")} ${escapeHtml(action.range)}″`,
@@ -8977,7 +8985,7 @@ function talentEntryBehavior(entry, kind) {
     name: entry.name,
     type: entry.type,
     typeLabel: entry.typeLabel,
-    isSignature: Boolean(entry.isSignature),
+    isSignature: actionHasSignature(entry),
     stoneCost: Number(entry.stoneCost || 0),
     range: entry.range,
     rangeType: entry.rangeType,
@@ -9617,6 +9625,7 @@ function storeInitialTalentEntry(sourceCard, entry, selectedTrigger = null) {
   }
   const entrySnapshot = clone(entry);
   if (slot.kind !== "ability") {
+    entrySnapshot.isSignature = actionHasSignature(entrySnapshot);
     entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
   }
   const talentsBefore = clone(state.leader.talents);
@@ -9687,6 +9696,7 @@ function chooseTalentEntry(entryId) {
 
   const entrySnapshot = clone(entry);
   if (slot.kind !== "ability") {
+    entrySnapshot.isSignature = actionHasSignature(entrySnapshot);
     entrySnapshot.triggers = selectedTrigger ? [clone(selectedTrigger)] : [];
   }
   if (activeTalentSlot.mode === "advancement") {
