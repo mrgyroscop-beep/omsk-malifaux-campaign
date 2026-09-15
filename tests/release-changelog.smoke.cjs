@@ -9,6 +9,7 @@ const artifacts = path.join(root, ".artifacts", "changelog");
 const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
 const expectedVersion = "2026.09.15.2";
 const seenKey = "m4e-release-notes-seen-v1";
+const localeKey = "m4e-untold-locale";
 
 function contentType(file) {
   if (file.endsWith(".html")) return "text/html; charset=utf-8";
@@ -44,7 +45,13 @@ async function openCleanPage(browser, baseUrl, options = {}) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-  await page.evaluate((key) => localStorage.removeItem(key), seenKey);
+  await page.evaluate(
+    ({ releaseKey, languageKey }) => {
+      localStorage.removeItem(releaseKey);
+      localStorage.setItem(languageKey, "ru");
+    },
+    { releaseKey: seenKey, languageKey: localeKey },
+  );
   await page.reload({ waitUntil: "domcontentloaded" });
   return { context, page, errors };
 }
