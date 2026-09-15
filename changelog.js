@@ -174,6 +174,7 @@
   function hideBanner() {
     if (!banner) return;
     banner.classList.remove("is-visible");
+    if (banner.open) banner.close();
     banner.hidden = true;
   }
 
@@ -199,12 +200,19 @@
   }
 
   function showBannerIfNeeded() {
-    if (!banner || !currentRelease || storedSeenVersion() === appVersion) {
+    const releaseNotesTestEnabled = window.__MALIFAUX_TEST_RELEASE_NOTES__ === true;
+    if (
+      !banner ||
+      !currentRelease ||
+      storedSeenVersion() === appVersion ||
+      (navigator.webdriver && !releaseNotesTestEnabled)
+    ) {
       hideBanner();
       return;
     }
     renderBanner();
     banner.hidden = false;
+    if (!banner.open) banner.showModal();
     requestAnimationFrame(() => banner.classList.add("is-visible"));
   }
 
@@ -243,6 +251,10 @@
 
   bannerDismissButton?.addEventListener("click", markCurrentReleaseSeen);
   bannerChangelogButton?.addEventListener("click", openChangelog);
+  banner?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    markCurrentReleaseSeen();
+  });
   accountChangelogButton?.addEventListener("click", openChangelog);
   dialogCloseButton?.addEventListener("click", () => dialog.close());
   window.addEventListener("malifaux-locale-change", () => {

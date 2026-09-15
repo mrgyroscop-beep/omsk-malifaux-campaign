@@ -3693,14 +3693,14 @@ body.theme-dossier {
 }
 
 .theme-dossier .release-banner {
-  position: relative;
-  z-index: 2;
   box-sizing: border-box;
-  width: min(980px, 100%);
+  width: min(760px, calc(100vw - 40px));
+  max-height: min(84dvh, 720px);
   display: grid;
   grid-template-columns: 7px minmax(0, 1fr);
-  margin: 0 auto clamp(18px, 2vw, 28px);
-  overflow: hidden;
+  margin: auto;
+  padding: 0;
+  overflow: hidden auto;
   color: var(--dossier-ink);
   border: 1px solid rgba(185, 154, 89, 0.72);
   background:
@@ -3713,6 +3713,13 @@ body.theme-dossier {
   transform: translateY(18px);
   transition: opacity 180ms ease, transform 180ms ease;
   scrollbar-color: var(--dossier-brass-dark) transparent;
+}
+
+.theme-dossier .release-banner::backdrop {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(185, 154, 89, 0.1), transparent 34%),
+    rgba(6, 7, 6, 0.82);
+  backdrop-filter: blur(3px);
 }
 
 .theme-dossier .release-banner[hidden] {
@@ -4581,8 +4588,8 @@ body.theme-dossier {
   }
 
   .theme-dossier .release-banner {
-    width: 100%;
-    margin-bottom: 12px;
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)));
   }
 
   .theme-dossier .release-banner-copy {

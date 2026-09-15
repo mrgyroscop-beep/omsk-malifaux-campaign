@@ -44,6 +44,9 @@ async function openCleanPage(browser, baseUrl, options = {}) {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    window.__MALIFAUX_TEST_RELEASE_NOTES__ = true;
+  });
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.evaluate(
     ({ releaseKey, languageKey }) => {
@@ -69,6 +72,7 @@ async function openCleanPage(browser, baseUrl, options = {}) {
     });
     const banner = desktop.page.locator("#releaseBanner");
     await assert.doesNotReject(() => banner.waitFor({ state: "visible" }));
+    assert.notEqual(await banner.getAttribute("open"), null, "release notes must open as a modal popup");
     assert.equal(
       await desktop.page.locator('meta[name="app-version"]').getAttribute("content"),
       expectedVersion,
