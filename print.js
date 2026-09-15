@@ -167,6 +167,15 @@
       .replace(/\{\{\{?([^{}]+)\}\}\}?/g, "$1");
   }
 
+  function plainPrintText(value) {
+    try {
+      if (typeof plainCardText === "function") return escapePrintHtml(plainCardText(value));
+    } catch {
+      // Fall through to a plain, escaped token label.
+    }
+    return escapePrintHtml(value).replace(/\{\{\{?([^{}]+)\}\}\}?/g, "$1");
+  }
+
   function printArchetype(key) {
     try {
       return archetypes[key] || null;
@@ -199,10 +208,12 @@
     if (!action) return "";
     const pieces = [];
     if (action.isSignature) {
-      pieces.push(
+      const marker =
         typeof actionMarkerHtml === "function"
           ? actionMarkerHtml("signature")
-          : '<span class="action-marker action-marker-signature"><span class="action-marker-glyph action-marker-glyph-signature"></span></span>',
+          : '<span class="action-marker action-marker-signature" aria-hidden="true"><span class="action-marker-glyph action-marker-glyph-signature"></span></span>';
+      pieces.push(
+        `<span class="print-signature-label" data-print-signature-label>${marker}<span>${printText("Сигнатурное", "Signature")}</span></span>`,
       );
     }
     if (action.range) {
@@ -429,11 +440,15 @@
       <div class="print-model-cards">
         ${models
           .map((model) => {
+            const profile = model.cardSnapshot || null;
             const traits = [
-              model.type,
+              profile?.stationLabel || model.type,
               model.henchman ? "Henchman" : "",
               model.versatile ? "Versatile" : "",
-              model.keywords,
+              model.keywords || profile?.keywords?.map((keyword) => keyword.name).filter(Boolean).join(", "),
+              ...(model.characteristics?.length
+                ? model.characteristics
+                : profile?.characteristics || []),
             ].filter(Boolean);
             const assigned = assignedPrintEquipment(equipment, loadout, "model", model.id);
             return `<article class="print-model-card" data-print-model-card="${escapePrintHtml(model.id || model.name || "")}">
@@ -442,6 +457,7 @@
                 <b class="print-model-cost">${escapePrintHtml(model.cost ?? "—")}</b>
               </header>
               <p class="print-model-traits">${escapePrintHtml(traits.join(" · ") || "—")}</p>
+              ${profile ? renderModelProfile(profile) : `<p class="print-model-profile-missing">${printText("Полный профиль не сохранён для этой модели.", "A full profile is not saved for this model.")}</p>`}
               <div class="print-model-upgrades">
                 ${renderPrintInjurySection(model.injuries)}
                 ${renderPrintEquipmentSection(assigned)}
@@ -449,39 +465,82 @@
             </article>`;
           })
           .join("")}
+      </div>`;
+  }
+
+  function renderModelProfile(profile) {
+    const actions = Array.isArray(profile.actions) ? profile.actions : [];
+    const abilities = Array.isArray(profile.abilities) ? profile.abilities : [];
+    const stats = [
+      ["Df", profile.defense, profile.defenseSuit],
+      ["Wp", profile.willpower, profile.willpowerSuit],
+      ["Sp", profile.speed],
+      ["Health", profile.health],
+      ["Sz", profile.size],
+      ["Base", profile.baseLabel || (profile.base ? `${profile.base}mm` : null)],
+    ];
+    const renderRuleGroup = (label, records, kind) => `
+      <section class="print-model-rule-group" data-print-model-${kind === "action" ? "actions" : "abilities"}>
+        <h4>${label}</h4>
+        <div class="print-talent-list">
+          ${
+            records.length
+              ? records
+                  .map((entry) =>
+                    kind === "action"
+                      ? renderModelAction(entry)
+                      : renderModelAbility(entry),
+                  )
+                  .join("")
+              : `<p class="print-empty">—</p>`
+          }
+        </div>
+      </section>`;
+    return `<section class="print-model-profile" data-print-model-profile>
+      <div class="print-stat-strip">
+        ${stats
+          .map(
+            ([label, value, suit]) =>
+              `<span><small>${label}</small><b>${plainPrintText([value ?? "—", suit].filter(Boolean).join(" "))}</b></span>`,
+          )
+          .join("")}
       </div>
-      <table class="print-table print-model-table">
-        <thead>
-          <tr>
-            <th>${printText("Стоимость", "Cost")}</th>
-            <th>${printText("Модель", "Model")}</th>
-            <th>${printText("Станция и характеристики", "Station & characteristics")}</th>
-            <th>${printText("Ключи", "Keywords")}</th>
-            <th>${printText("Травмы", "Injuries")}</th>
-            <th>${printText("Состав", "Crew")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${models
-            .map((model) => {
-              const traits = [
-                model.type,
-                model.henchman ? "Henchman" : "",
-                model.versatile ? "Versatile" : "",
-              ].filter(Boolean);
-              return `
-                <tr>
-                  <td class="print-cost">${escapePrintHtml(model.cost ?? "—")}</td>
-                  <td><b>${escapePrintHtml(model.name || "—")}</b></td>
-                  <td>${escapePrintHtml(traits.join(" · ") || "—")}</td>
-                  <td>${escapePrintHtml(model.keywords || "—")}</td>
-                  <td>${renderPrintInjuries(model.injuries)}</td>
-                  <td>${(loadout?.hiredModelIds || []).includes(model.id) ? "✓" : "—"}</td>
-                </tr>`;
-            })
-            .join("")}
-        </tbody>
-      </table>`;
+      <div class="print-model-rule-groups">
+        ${renderRuleGroup(printText("Действия", "Actions"), actions, "action")}
+        ${renderRuleGroup(printText("Способности", "Abilities"), abilities, "ability")}
+      </div>
+    </section>`;
+  }
+
+  function renderModelAction(action) {
+    const triggers = Array.isArray(action.triggers) ? action.triggers : [];
+    return `<article class="print-talent print-model-action${triggers.length ? " has-triggers" : ""}" data-print-model-action="${escapePrintHtml(action.name || "")}">
+      <div class="print-talent-heading">
+        <span class="print-kicker">${escapePrintHtml(action.typeLabel || action.type || printText("Действие", "Action"))}</span>
+        <div><h3>${escapePrintHtml(action.name || printText("Действие", "Action"))}</h3></div>
+      </div>
+      ${printActionMeta(action) ? `<p class="print-action-meta">${printActionMeta(action)}</p>` : ""}
+      ${action.description ? `<p class="print-rule-text">${richPrintText(action.description)}</p>` : ""}
+      ${triggers
+        .map(
+          (trigger) => `<div class="print-trigger" data-print-model-trigger="${escapePrintHtml(trigger.name || "")}">
+            <b>${printText("Триггер", "Trigger")}: ${richPrintText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}${trigger.stoneCost ? ` · ${escapePrintHtml(trigger.stoneCost)} SS` : ""}</b>
+            ${trigger.description ? `<p>${richPrintText(trigger.description)}</p>` : ""}
+          </div>`,
+        )
+        .join("")}
+    </article>`;
+  }
+
+  function renderModelAbility(ability) {
+    return `<article class="print-talent print-talent-ability" data-print-model-ability="${escapePrintHtml(ability.name || "")}">
+      <div class="print-talent-heading">
+        <span class="print-kicker">${printText("Способность", "Ability")}</span>
+        <div><h3>${escapePrintHtml(ability.name || printText("Способность", "Ability"))}</h3></div>
+      </div>
+      ${ability.suits || ability.defensiveAbilityType ? `<p class="print-action-meta">${richPrintText([ability.defensiveAbilityType, ability.suits].filter(Boolean).join(" · "))}</p>` : ""}
+      ${ability.description ? `<p class="print-rule-text">${richPrintText(ability.description)}</p>` : ""}
+    </article>`;
   }
 
   function renderEquipment(items, data) {
@@ -794,6 +853,7 @@
         : archetype.label
       : leader.archetype || "—";
     const crewCard = printCrewCard(leader.crewCard);
+    const printComment = String(crew.printComment || "").trim();
     const dossier = document.createElement("main");
     dossier.id = "printDossier";
     dossier.className = "print-dossier";
@@ -893,6 +953,15 @@
             <span><small>${printText("Травмы", "Injuries")}</small><b>${totalInjuries}</b></span>
           </div>
         </header>
+
+        ${
+          printComment
+            ? `<aside class="print-roster-comment" data-print-roster-comment>
+                <span class="print-kicker">${printText("Комментарий к ростеру", "Roster comment")}</span>
+                <p>${escapePrintHtml(printComment)}</p>
+              </aside>`
+            : ""
+        }
 
         <section class="print-section">
           <div class="print-section-heading">

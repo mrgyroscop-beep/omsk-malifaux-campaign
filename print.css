@@ -370,6 +370,14 @@
     font-size: 6.2pt;
   }
 
+  .print-signature-label {
+    display: inline-flex;
+    gap: 1mm;
+    align-items: center;
+    color: var(--print-ink);
+    font-weight: 800;
+  }
+
   .print-rule-text {
     margin: 1.4mm 0 0 21mm;
   }
@@ -635,7 +643,7 @@
 
   .print-model-cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 3mm;
     margin-bottom: 4mm;
   }
@@ -647,6 +655,44 @@
     break-inside: avoid;
   }
 
+  .print-model-profile {
+    display: grid;
+    gap: 2mm;
+    margin-top: 2mm;
+  }
+
+  .print-model-rule-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2mm;
+    align-items: start;
+  }
+
+  .print-model-rule-group h4 {
+    margin: 0 0 1.2mm;
+    padding-bottom: 0.8mm;
+    color: var(--print-red);
+    border-bottom: 0.7pt solid var(--print-line);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 11pt;
+  }
+
+  .print-model-rule-group .print-talent-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.2mm;
+  }
+
+  .print-model-rule-group .print-talent {
+    padding: 1.5mm 1.8mm;
+  }
+
+  .print-model-profile-missing {
+    margin: 2mm 0;
+    color: var(--print-muted);
+    font-size: 7pt;
+    font-style: italic;
+  }
+
   .print-model-card header {
     display: flex;
     justify-content: space-between;
@@ -654,7 +700,7 @@
     align-items: start;
   }
 
-  .print-model-card h3 {
+  .print-model-card > header h3 {
     margin: 0;
     font-family: "Cormorant Garamond", Georgia, serif;
     font-size: 15pt;
@@ -676,6 +722,23 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2mm;
+  }
+
+  .print-roster-comment {
+    margin: 0 0 4mm;
+    padding: 2.5mm 3mm;
+    border: 0.8pt solid var(--print-line);
+    border-left: 2.2pt solid var(--print-brass);
+    background: var(--print-paper);
+    break-inside: avoid;
+  }
+
+  .print-roster-comment p {
+    margin: 1mm 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 8pt;
+    line-height: 1.35;
   }
 
   .print-equipment-list {

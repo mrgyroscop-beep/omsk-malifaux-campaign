@@ -561,6 +561,7 @@ h1 {
 
 .field input,
 .field select,
+.field textarea,
 .rating-equation input {
   width: 100%;
   min-height: 44px;
@@ -579,8 +580,22 @@ h1 {
   cursor: pointer;
 }
 
+.field textarea {
+  min-height: 112px;
+  padding-block: 12px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.field-hint {
+  color: #6e695d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .field input:focus,
 .field select:focus,
+.field textarea:focus,
 .rating-equation input:focus {
   border-color: var(--red);
   box-shadow: 0 2px 0 rgba(156, 40, 36, 0.12);

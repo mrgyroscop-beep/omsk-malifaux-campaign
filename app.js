@@ -47,6 +47,11 @@ const STATIC_TEXT_EN = {
   "стр. 15": "p. 15",
   "Название команды": "Crew name",
   "Игрок": "Player",
+  "Комментарий к печатному ростеру": "Printed roster comment",
+  "Необязательно; этот текст будет сохранён и выведен в печатный лист.":
+    "Optional; this text is saved and included on the printed roster.",
+  "Тактика, напоминания, договорённости или заметки к составу":
+    "Tactics, reminders, agreements, or roster notes",
   "Фракция": "Faction",
   "Выберите фракцию": "Choose a faction",
   "Первый ключ": "First keyword",
@@ -1362,6 +1367,7 @@ const defaultState = {
   crew: {
     name: "",
     player: "",
+    printComment: "",
     faction: "",
     keywords: ["", ""],
   },
@@ -2839,6 +2845,7 @@ function mergeDefaults(saved) {
     crew: {
       name: safeText(savedCrew.name, 200),
       player: safeText(savedCrew.player, 200),
+      printComment: safeText(savedCrew.printComment, 4_000),
       faction: safeText(savedCrew.faction, 80),
       keywords: [0, 1].map((index) => safeText(savedKeywords[index], 200)),
     },
