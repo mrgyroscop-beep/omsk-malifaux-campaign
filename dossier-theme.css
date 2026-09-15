@@ -211,6 +211,32 @@ body.theme-dossier {
   margin-bottom: 24px;
 }
 
+.theme-dossier .account-heading-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-dossier .account-changelog-button {
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(91, 75, 48, 0.32);
+  background: rgba(255, 255, 255, 0.1);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .account-changelog-button:hover {
+  color: var(--dossier-red);
+  border-color: var(--dossier-red);
+  background: rgba(159, 48, 40, 0.06);
+}
+
 .theme-dossier .account-auth {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
@@ -3542,6 +3568,247 @@ body.theme-dossier {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Release notes: a filed update slip and the permanent archive behind it */
+
+.theme-dossier .modal.changelog-dialog {
+  width: min(850px, calc(100% - 34px));
+  overflow: hidden;
+}
+
+.theme-dossier .changelog-panel {
+  box-sizing: border-box;
+  max-height: calc(min(88dvh, 940px) - 14px);
+  overflow: hidden auto;
+  background:
+    linear-gradient(90deg, transparent 0 54px, rgba(151, 54, 45, 0.11) 55px 56px, transparent 57px),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 75, 48, 0.055) 32px 33px),
+    var(--dossier-paper);
+  scrollbar-color: var(--dossier-brass-dark) transparent;
+}
+
+.theme-dossier .changelog-heading {
+  position: sticky;
+  top: -30px;
+  z-index: 3;
+  align-items: center;
+  background: var(--dossier-paper);
+}
+
+.theme-dossier .changelog-list {
+  display: grid;
+  gap: 18px;
+}
+
+.theme-dossier .changelog-entry {
+  position: relative;
+  padding: 20px 22px 20px 26px;
+  border: 1px solid rgba(91, 75, 48, 0.28);
+  background: rgba(240, 231, 210, 0.72);
+  box-shadow: 5px 6px 0 rgba(89, 69, 37, 0.07);
+}
+
+.theme-dossier .changelog-entry::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 5px;
+  background: var(--dossier-brass-dark);
+}
+
+.theme-dossier .changelog-entry.is-current::before {
+  background: var(--dossier-red);
+}
+
+.theme-dossier .changelog-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  align-items: center;
+  color: var(--dossier-muted);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .changelog-version {
+  color: var(--dossier-red);
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-dossier .changelog-entry-meta b {
+  padding: 4px 7px 3px;
+  color: var(--dossier-red);
+  border: 1px solid currentColor;
+  font-size: 8px;
+  transform: rotate(-1deg);
+}
+
+.theme-dossier .changelog-entry h3 {
+  margin: 11px 0 7px;
+  font-family: var(--display);
+  font-size: clamp(21px, 3vw, 29px);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.theme-dossier .changelog-entry p {
+  max-width: 68ch;
+  margin: 0;
+  color: #514b40;
+  font-family: var(--display);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.theme-dossier .changelog-entry ul,
+.theme-dossier .release-banner ul {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.theme-dossier .changelog-entry li,
+.theme-dossier .release-banner li {
+  position: relative;
+  padding-left: 17px;
+  color: #514b40;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.theme-dossier .changelog-entry li::before,
+.theme-dossier .release-banner li::before {
+  content: "";
+  position: absolute;
+  top: 0.58em;
+  left: 1px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--dossier-red);
+  transform: rotate(45deg);
+}
+
+.theme-dossier .release-banner {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr);
+  margin: 0 auto clamp(18px, 2vw, 28px);
+  overflow: hidden;
+  color: var(--dossier-ink);
+  border: 1px solid rgba(185, 154, 89, 0.72);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(91, 75, 48, 0.06) 32px 33px),
+    var(--dossier-paper);
+  box-shadow:
+    0 26px 64px rgba(0, 0, 0, 0.56),
+    inset 0 0 0 6px rgba(255, 255, 255, 0.18);
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  scrollbar-color: var(--dossier-brass-dark) transparent;
+}
+
+.theme-dossier .release-banner[hidden] {
+  display: none;
+}
+
+.theme-dossier .release-banner.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.theme-dossier .release-banner-record {
+  grid-row: 1 / span 2;
+  background: var(--dossier-red);
+}
+
+.theme-dossier .release-banner-copy {
+  min-width: 0;
+  padding: 22px 24px 14px;
+}
+
+.theme-dossier .release-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--dossier-red);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.theme-dossier .release-banner-meta b {
+  padding: 4px 7px 3px;
+  border: 1px solid currentColor;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  transform: rotate(-1deg);
+}
+
+.theme-dossier .release-banner h2 {
+  margin: 11px 0 7px;
+  font-family: var(--display);
+  font-size: clamp(23px, 3vw, 31px);
+  font-weight: 600;
+  line-height: 1.08;
+}
+
+.theme-dossier .release-banner p {
+  margin: 0;
+  color: #514b40;
+  font-family: var(--display);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.theme-dossier .release-banner-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 0 24px 22px;
+}
+
+.theme-dossier .release-banner-link,
+.theme-dossier .release-banner-dismiss {
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid rgba(91, 75, 48, 0.36);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.theme-dossier .release-banner-link {
+  color: var(--dossier-ink);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.theme-dossier .release-banner-dismiss {
+  color: var(--dossier-paper-light);
+  border-color: var(--dossier-red);
+  background: var(--dossier-red);
+}
+
+.theme-dossier .release-banner-link:hover,
+.theme-dossier .release-banner-dismiss:hover {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22);
+}
+
 .theme-dossier .modal.archivist-dialog {
   width: min(820px, calc(100% - 34px));
   overflow: hidden;
@@ -3860,6 +4127,14 @@ body.theme-dossier {
 .theme-dossier .crew-option:focus-visible,
 .theme-dossier .archetype-card:focus-visible {
   outline: 2px solid var(--dossier-brass);
+  outline-offset: 3px;
+}
+
+.theme-dossier .account-changelog-button:focus-visible,
+.theme-dossier .modal-close:focus-visible,
+.theme-dossier .release-banner-link:focus-visible,
+.theme-dossier .release-banner-dismiss:focus-visible {
+  outline: 3px solid var(--dossier-red);
   outline-offset: 3px;
 }
 
@@ -4267,6 +4542,65 @@ body.theme-dossier {
     box-shadow: none;
   }
 
+  .theme-dossier .account-heading,
+  .theme-dossier .changelog-heading {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .theme-dossier .account-heading-actions {
+    gap: 6px;
+  }
+
+  .theme-dossier .account-changelog-button {
+    width: 44px;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .theme-dossier .account-changelog-button::before {
+    content: "CL";
+    color: var(--dossier-red);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  .theme-dossier .changelog-panel {
+    max-height: none;
+  }
+
+  .theme-dossier .changelog-entry {
+    padding: 18px 16px 18px 20px;
+  }
+
+  .theme-dossier .changelog-entry p,
+  .theme-dossier .release-banner p {
+    font-size: 16px;
+  }
+
+  .theme-dossier .release-banner {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .theme-dossier .release-banner-copy {
+    padding: 18px 16px 12px;
+  }
+
+  .theme-dossier .release-banner-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 16px 18px;
+  }
+
+  .theme-dossier .release-banner-link,
+  .theme-dossier .release-banner-dismiss {
+    min-height: 48px;
+    padding-inline: 8px;
+  }
+
   .theme-dossier .workspace::before {
     inset: 8px;
   }
@@ -4590,6 +4924,7 @@ body.theme-dossier {
   }
 
   .theme-dossier .route.is-active,
+  .theme-dossier .release-banner,
   .theme-dossier .toast,
   .theme-dossier .top-actions.is-open .utility-menu-panel {
     animation: none;

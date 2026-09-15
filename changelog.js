@@ -1,0 +1,265 @@
+(() => {
+  "use strict";
+
+  const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
+  const RELEASES = Object.freeze([
+    {
+      version: "2026.09.15.2",
+      date: "2026-09-15",
+      title: {
+        ru: "Печатное досье стало полнее благодаря вашей обратной связи",
+        en: "Printed dossiers are now more complete thanks to your feedback",
+      },
+      summary: {
+        ru: "Карточки ростера теперь переносят на печать больше важных деталей, а история изменений доступна прямо в приложении.",
+        en: "Roster cards now carry more important details into print, and the update history is available inside the app.",
+      },
+      items: [
+        {
+          ru: "Лидерские способности и триггеры печатаются с мастями и маркерами.",
+          en: "Leader abilities and triggers print with suits and markers.",
+        },
+        {
+          ru: "Добавлены полные карточки моделей, комментарий к ростеру и подписи игроков.",
+          en: "Full model cards, roster notes, and player signature lines were added.",
+        },
+        {
+          ru: "Появились одноразовый баннер релиза и полный чейнджлог в аккаунте.",
+          en: "A one-time release banner and full account changelog are now available.",
+        },
+      ],
+    },
+    {
+      version: "2026.09.10.1",
+      date: "2026-09-10",
+      title: {
+        ru: "Точные маркеры фирменных действий",
+        en: "Accurate signature action markers",
+      },
+      summary: {
+        ru: "Исправлены маркеры фирменных действий по официальному каталогу карт.",
+        en: "Signature action markers were corrected against the official card catalog.",
+      },
+      items: [
+        {
+          ru: "Восстановлен фирменный маркер Herd ’Em.",
+          en: "The Herd ’Em signature marker was restored.",
+        },
+        {
+          ru: "Уточнены маркеры у затронутых лидеров и действий.",
+          en: "Markers were corrected for affected leaders and actions.",
+        },
+      ],
+    },
+    {
+      version: "2026.09.08.1",
+      date: "2026-09-08",
+      title: {
+        ru: "Масти лидерских способностей",
+        en: "Leader ability suits",
+      },
+      summary: {
+        ru: "Досье сохраняет и печатает больше характеристик лидерских способностей.",
+        en: "Dossiers preserve and print more leader ability details.",
+      },
+      items: [
+        {
+          ru: "Сохраняются масти, защита и данные о камнях душ.",
+          en: "Suits, defense, and Soulstone details are preserved.",
+        },
+      ],
+    },
+    {
+      version: "2026.09.03.1",
+      date: "2026-09-03",
+      title: {
+        ru: "Надёжнее кампании и каталоги",
+        en: "More reliable campaigns and catalogs",
+      },
+      summary: {
+        ru: "Улучшена работа организаторских кампаний и загрузка каталогов ростера.",
+        en: "Organizer campaigns and roster catalog loading are more reliable.",
+      },
+      items: [
+        {
+          ru: "Кампании организатора отделены от арсеналов игроков.",
+          en: "Organizer campaigns are separated from player arsenals.",
+        },
+        {
+          ru: "Приложение больше не повторяет без конца запрос недоступного каталога.",
+          en: "The app no longer retries an unavailable catalog indefinitely.",
+        },
+      ],
+    },
+    {
+      version: "2026.08.18.1",
+      date: "2026-08-18",
+      title: {
+        ru: "Колода Судьбы под рукой",
+        en: "Fate Deck at hand",
+      },
+      summary: {
+        ru: "Колоду Судьбы теперь можно открыть без автоматического вытягивания карты.",
+        en: "The Fate Deck can now be opened without automatically drawing a card.",
+      },
+      items: [
+        {
+          ru: "Добавлена отдельная панель колоды для осознанного первого флипа.",
+          en: "A dedicated deck panel lets you choose when to make the first flip.",
+        },
+      ],
+    },
+  ]);
+
+  const appVersion = document.querySelector('meta[name="app-version"]')?.content.trim() || "";
+  const currentRelease = RELEASES.find((release) => release.version === appVersion);
+  const banner = document.querySelector("#releaseBanner");
+  const bannerContent = document.querySelector("#releaseBannerContent");
+  const bannerChangelogButton = document.querySelector("#releaseBannerChangelog");
+  const bannerDismissButton = document.querySelector("#releaseBannerDismiss");
+  const accountDialog = document.querySelector("#accountDialog");
+  const accountChangelogButton = document.querySelector("#accountChangelogButton");
+  const dialog = document.querySelector("#changelogDialog");
+  const dialogContent = document.querySelector("#changelogDialogContent");
+  const dialogCloseButton = document.querySelector("#changelogDialogClose");
+  const dialogKicker = document.querySelector("#changelogDialogKicker");
+  const dialogTitle = document.querySelector("#changelogDialogTitle");
+  let sessionSeenVersion = "";
+
+  function locale() {
+    return window.MalifauxBuilder?.getLocale?.() === "en" ? "en" : "ru";
+  }
+
+  function copy(value) {
+    return value?.[locale()] || value?.ru || "";
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function localizedDate(date) {
+    const parsed = new Date(`${date}T12:00:00`);
+    return new Intl.DateTimeFormat(locale() === "en" ? "en-GB" : "ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(parsed);
+  }
+
+  function storedSeenVersion() {
+    try {
+      return localStorage.getItem(SEEN_VERSION_KEY) || sessionSeenVersion;
+    } catch {
+      return sessionSeenVersion;
+    }
+  }
+
+  function markCurrentReleaseSeen() {
+    if (!appVersion) return;
+    sessionSeenVersion = appVersion;
+    try {
+      localStorage.setItem(SEEN_VERSION_KEY, appVersion);
+    } catch {
+      // Session memory still prevents repeated banners if storage is unavailable.
+    }
+    hideBanner();
+  }
+
+  function hideBanner() {
+    if (!banner) return;
+    banner.classList.remove("is-visible");
+    banner.hidden = true;
+  }
+
+  function renderBanner() {
+    if (!banner || !bannerContent || !currentRelease) return;
+    const isEnglish = locale() === "en";
+    bannerContent.innerHTML = `
+      <div class="release-banner-meta">
+        <span>${isEnglish ? "New release" : "Новая версия"}</span>
+        <b>v${escapeHtml(currentRelease.version)}</b>
+      </div>
+      <h2 id="releaseBannerTitle">${escapeHtml(copy(currentRelease.title))}</h2>
+      <p>${escapeHtml(copy(currentRelease.summary))}</p>
+      <ul>
+        ${currentRelease.items
+          .slice(0, 3)
+          .map((item) => `<li>${escapeHtml(copy(item))}</li>`)
+          .join("")}
+      </ul>
+    `;
+    bannerChangelogButton.textContent = isEnglish ? "Full changelog" : "Весь чейнджлог";
+    bannerDismissButton.textContent = isEnglish ? "Got it" : "Понятно";
+  }
+
+  function showBannerIfNeeded() {
+    if (!banner || !currentRelease || storedSeenVersion() === appVersion) {
+      hideBanner();
+      return;
+    }
+    renderBanner();
+    banner.hidden = false;
+    requestAnimationFrame(() => banner.classList.add("is-visible"));
+  }
+
+  function renderDialog() {
+    if (!dialogContent) return;
+    const isEnglish = locale() === "en";
+    dialogKicker.textContent = isEnglish ? "Update archive" : "Архив обновлений";
+    dialogTitle.textContent = isEnglish ? "Changelog" : "Чейнджлог";
+    dialogCloseButton.setAttribute("aria-label", isEnglish ? "Close" : "Закрыть");
+    accountChangelogButton.textContent = isEnglish ? "Changelog" : "Чейнджлог";
+    dialogContent.innerHTML = RELEASES.map(
+      (release, index) => `
+        <article class="changelog-entry${index === 0 ? " is-current" : ""}">
+          <div class="changelog-entry-meta">
+            <span class="changelog-version">v${escapeHtml(release.version)}</span>
+            <time datetime="${escapeHtml(release.date)}">${escapeHtml(localizedDate(release.date))}</time>
+            ${index === 0 ? `<b>${isEnglish ? "Current" : "Текущая"}</b>` : ""}
+          </div>
+          <h3>${escapeHtml(copy(release.title))}</h3>
+          <p>${escapeHtml(copy(release.summary))}</p>
+          <ul>
+            ${release.items.map((item) => `<li>${escapeHtml(copy(item))}</li>`).join("")}
+          </ul>
+        </article>
+      `,
+    ).join("");
+  }
+
+  function openChangelog() {
+    if (!dialog) return;
+    markCurrentReleaseSeen();
+    renderDialog();
+    if (accountDialog?.open) accountDialog.close();
+    if (!dialog.open) dialog.showModal();
+  }
+
+  bannerDismissButton?.addEventListener("click", markCurrentReleaseSeen);
+  bannerChangelogButton?.addEventListener("click", openChangelog);
+  accountChangelogButton?.addEventListener("click", openChangelog);
+  dialogCloseButton?.addEventListener("click", () => dialog.close());
+  window.addEventListener("malifaux-locale-change", () => {
+    renderBanner();
+    renderDialog();
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === SEEN_VERSION_KEY && event.newValue === appVersion) hideBanner();
+  });
+
+  renderDialog();
+  showBannerIfNeeded();
+
+  window.MalifauxChangelog = Object.freeze({
+    currentVersion: appVersion,
+    open: openChangelog,
+    releases: RELEASES,
+    seenStorageKey: SEEN_VERSION_KEY,
+  });
+})();

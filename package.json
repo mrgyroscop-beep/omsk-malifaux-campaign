@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "check": "node --check app.js && node --check account.js && node --check cloud.js && node --check organizer.js && node --check print.js && node --check cooperative-rules.js && node --check cooperative.js",
+    "check": "node --check app.js && node --check account.js && node --check changelog.js && node --check cloud.js && node --check organizer.js && node --check print.js && node --check cooperative-rules.js && node --check cooperative.js",
     "test:organizer": "node tests/organizer-campaigns.smoke.cjs",
     "test:kan25": "node tests/kan25-account-sync.smoke.cjs",
     "test:kan6": "node tests/kan6-loadout.smoke.cjs",
@@ -32,7 +32,8 @@
     "test:kan175": "node tests/kan175-fate-deck-popover.smoke.cjs",
     "test:kan197": "node tests/kan197-password-reset.smoke.cjs",
     "test:kan202": "node tests/kan202-herd-em-signature.smoke.cjs",
-    "test:kan202-205-print": "node tests/kan202-205-print-roster-feedback.smoke.cjs"
+    "test:kan202-205-print": "node tests/kan202-205-print-roster-feedback.smoke.cjs",
+    "test:changelog": "node tests/release-changelog.smoke.cjs"
   },
   "devDependencies": {
     "playwright": "1.61.1"
