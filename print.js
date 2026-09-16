@@ -512,6 +512,49 @@
     </section>`;
   }
 
+  function renderCompactLeaderAction(record) {
+    const action = record?.action || {};
+    const source = [record?.originLabel, record?.source ? `${printText("Источник", "Source")}: ${record.source}` : "", record?.page ? `${printText("стр.", "p.")} ${record.page}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+    const triggers = Array.isArray(action.triggers) ? action.triggers : [];
+    return `<article class="print-talent print-leader-action print-talent-compact${triggers.length ? " has-triggers" : ""}">
+      <div class="print-talent-heading">
+        <span class="print-kicker">${escapePrintHtml(action.typeLabel || action.type || printText("Действие", "Action"))}</span>
+        <div><h3>${escapePrintHtml(action.name || printText("Действие", "Action"))}</h3>${source ? `<small>${escapePrintHtml(source)}</small>` : ""}</div>
+      </div>
+      ${printActionMeta(action) ? `<p class="print-action-meta">${printActionMeta(action)}</p>` : ""}
+      ${triggers.map((trigger) => `<div class="print-trigger print-trigger-compact"><b>${printText("Триггер", "Trigger")}: ${richPrintText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}</b></div>`).join("")}
+      <span class="print-rule-ref">${printText("Полный текст · стр. 2", "Full text · p. 2")}</span>
+    </article>`;
+  }
+
+  function renderCompactLeaderAbility(record) {
+    const ability = record?.ability || {};
+    const source = [record?.originLabel, record?.source ? `${printText("Источник", "Source")}: ${record.source}` : "", ability.flip?.card || ""]
+      .filter(Boolean)
+      .join(" · ");
+    return `<article class="print-talent print-talent-ability print-talent-compact">
+      <div class="print-talent-heading">
+        <span class="print-kicker">${printText("Способность", "Ability")}</span>
+        <div><h3>${escapePrintHtml(ability.name || printText("Способность", "Ability"))}</h3>${source ? `<small>${escapePrintHtml(source)}</small>` : ""}</div>
+      </div>
+      <span class="print-rule-ref">${printText("Полный текст · стр. 2", "Full text · p. 2")}</span>
+    </article>`;
+  }
+
+  function renderCompactLeaderPresentationGroup(group) {
+    return `<section class="print-leader-action-group" data-print-leader-action-group="${escapePrintHtml(group.id)}">
+      <header class="print-leader-action-group-heading"><h3>${escapePrintHtml(group.label)}</h3><b>${group.records.length}</b></header>
+      <div class="print-talent-list">${group.records.map((record) => group.id === "ability" ? renderCompactLeaderAbility(record) : renderCompactLeaderAction(record)).join("")}</div>
+    </section>`;
+  }
+
+  function renderCompactCrewCard(card) {
+    if (!card) return "";
+    return `<section class="print-crew-card print-crew-card-compact"><div><span class="print-kicker">${printText("Карта команды", "Crew card")}</span><h3>${escapePrintHtml(card.name)}</h3></div><p>${printText("Полный текст на стр. 2", "Full text on p. 2")}</p></section>`;
+  }
+
   function renderModelAction(action) {
     const triggers = Array.isArray(action.triggers) ? action.triggers : [];
     return `<article class="print-talent print-model-action${triggers.length ? " has-triggers" : ""}" data-print-model-action="${escapePrintHtml(action.name || "")}">
@@ -928,15 +971,39 @@
             <h2>${printText("Действия и способности", "Actions & abilities")}</h2>
           </div>
           <div class="print-leader-action-groups">
-            ${presentationGroups.map(renderLeaderPresentationGroup).join("")}
+            ${presentationGroups.map(renderCompactLeaderPresentationGroup).join("")}
           </div>
         </section>
 
-        ${renderCrewCard(crewCard, advances)}
+        ${renderCompactCrewCard(crewCard)}
         <footer class="print-footer">
           <span>${printText("Лист лидера", "Leader sheet")}</span>
           <b>01</b>
         </footer>
+      </section>
+
+      <section class="print-page print-rules-page">
+        <header class="print-page-heading">
+          <div>
+            <span class="print-overline">M4E · ${printText("Кампанийное досье", "Campaign dossier")}</span>
+            <h1>${printText("Справочник правил", "Rules reference")}</h1>
+            <p>${escapePrintHtml(crew.name || "—")} · ${escapePrintHtml(leader.name || "—")}</p>
+          </div>
+          <div class="print-reference-stamp"><span>${printText("Только приобретённое", "Acquired only")}</span><b>02</b></div>
+        </header>
+
+        <section class="print-section print-acquired-rules">
+          <div class="print-section-heading"><span class="print-kicker">${printText("Лидер", "Leader")}</span><h2>${printText("Полные тексты действий и способностей", "Full actions & abilities")}</h2></div>
+          <div class="print-leader-action-groups">${presentationGroups.map(renderLeaderPresentationGroup).join("")}</div>
+        </section>
+
+        ${renderCrewCard(crewCard, advances)}
+        <section class="print-section print-acquired-equipment">
+          <div class="print-section-heading"><span class="print-kicker">${printText("Предметы", "Equipment")}</span><h2>${printText("Снаряжение лидера", "Leader equipment")}</h2></div>
+          ${renderPrintEquipmentSection(leaderEquipment)}
+        </section>
+
+        <footer class="print-footer"><span>${printText("Справочник приобретённых правил", "Acquired rules reference")}</span><b>02</b></footer>
       </section>
 
       <section class="print-page print-arsenal-page">
@@ -984,7 +1051,7 @@
         ${renderGames(games)}
         <footer class="print-footer">
           <span>${printText("Арсенал и хроника", "Arsenal & chronicle")}</span>
-          <b>02</b>
+          <b>03</b>
         </footer>
       </section>`;
     return dossier;

@@ -146,6 +146,31 @@
     line-height: 0.9;
   }
 
+  .print-reference-stamp {
+    display: grid;
+    gap: 1mm;
+    min-width: 27mm;
+    padding: 2.5mm 3mm;
+    border: 1.2pt solid var(--print-brass);
+    color: var(--print-muted);
+    text-align: center;
+    transform: rotate(1deg);
+  }
+
+  .print-reference-stamp span {
+    font-size: 6.5pt;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .print-reference-stamp b {
+    color: var(--print-red);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 20pt;
+    line-height: 0.9;
+  }
+
   .print-leader {
     margin-bottom: 5mm;
     padding: 4mm;
@@ -457,6 +482,18 @@
     margin: 0;
   }
 
+  .print-crew-card-compact p {
+    color: #d5b777;
+    font-size: 7.5pt;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .print-rules-page .print-crew-card {
+    margin-top: 4mm;
+  }
+
   .print-crew-earned {
     grid-column: 1 / -1;
     display: grid;
@@ -653,6 +690,24 @@
     border: 0.8pt solid var(--print-line);
     background: var(--print-paper);
     break-inside: avoid;
+  }
+
+  .print-talent-compact {
+    padding-bottom: 2.4mm;
+  }
+
+  .print-talent-compact .print-rule-ref {
+    display: block;
+    margin: 1.7mm 0 0 30mm;
+    color: var(--print-muted);
+    font-size: 6.8pt;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .print-trigger-compact {
+    margin-bottom: 0;
   }
 
   .print-model-profile {
