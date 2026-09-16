@@ -50,7 +50,7 @@
         en: "Enemy attack actions that target this model cannot cheat their duel.",
       },
       "Hag’s Kiss": {
-        ru: "Атака Wp на 2″; урон 2. Цель получает Stunned и Slow.",
+        ru: "Атака Wp 5 на 2″; урон 2. Цель получает Stunned и Slow.",
         en: "Rg 2\"; Skl 5; Rst Wp; TN -; Dmg 2. The target gains Stunned and Slow tokens.",
       },
     };
