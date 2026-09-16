@@ -897,7 +897,92 @@
 
   .print-leader-page .print-leader {
     margin-bottom: 2mm;
-    padding: 2.5mm;
+    padding: 1.8mm 2.2mm;
+  }
+
+  .print-leader-page .print-leader-heading {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 2.5mm;
+    align-items: center;
+  }
+
+  .print-leader-page .print-leader h2 {
+    font-size: 20pt;
+  }
+
+  .print-leader-page .print-leader-details,
+  .print-leader-page .print-stat-strip {
+    gap: 1mm;
+  }
+
+  .print-leader-page .print-leader-details span,
+  .print-leader-page .print-stat-strip span {
+    min-width: 12mm;
+    padding: 0.9mm 1.3mm;
+  }
+
+  .print-leader-page .print-leader-details b,
+  .print-leader-page .print-stat-strip b {
+    font-size: 11pt;
+  }
+
+  .print-leader-page .print-stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 15mm);
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    width: max-content;
+    margin-top: 0;
+  }
+
+  .print-leader-page .print-leader-heading > div:first-child {
+    min-width: 0;
+  }
+
+  .print-leader-page .print-stat-strip span {
+    aspect-ratio: 1;
+    min-width: 15mm;
+    padding: 1mm;
+  }
+
+  .print-leader-page .print-talent-compact.has-triggers {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 2.5mm;
+    align-items: start;
+  }
+
+  .print-leader-page .print-talent-compact.has-triggers > .print-talent-heading,
+  .print-leader-page .print-talent-compact.has-triggers > .print-action-meta,
+  .print-leader-page .print-talent-compact.has-triggers > .print-rule-text {
+    grid-column: 1;
+  }
+
+  .print-leader-page .print-talent-compact.has-triggers > .print-trigger {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin: 0;
+  }
+
+  .print-leader-page .print-talent-compact.print-leader-action .print-talent-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .print-leader-page .print-talent-compact.print-leader-action .print-action-meta,
+  .print-leader-page .print-talent-compact.print-leader-action .print-rule-text {
+    margin-left: 0;
+  }
+
+  .print-leader-page .print-talent-compact .print-rule-text,
+  .print-leader-page .print-talent-compact .print-action-meta {
+    margin-left: 30mm;
+  }
+
+  .print-leader-page .print-talent-compact.print-talent-ability .print-rule-text {
+    margin-left: 31.5mm;
+  }
+
+  .print-leader-page .print-talent-compact .print-trigger-compact {
+    align-self: stretch;
   }
 
   .print-leader-page .print-stat-strip {

@@ -35,6 +35,29 @@
     return isEnglishPrint() ? en : ru;
   }
 
+  function printKnownRuleText(name, fallback = "") {
+    const rules = {
+      "Catch a Glimpse": {
+        ru: "Посмотрите две верхние карты колоды судьбы этой модели, затем верните их в том же порядке.",
+        en: "Look at the top two cards of this model’s fate deck, then place them back in the same order.",
+      },
+      "Draw Their Attention": {
+        ru: "Дружественная модель в LoS этой модели может сбросить карту, чтобы объявить действие Interact.",
+        en: "A friendly model in this model’s LoS may discard a card to declare the Interact action.",
+      },
+      "Serene Countenance": {
+        ru: "Вражеские атакующие действия, целящиеся в эту модель, не могут жульничать на дуэли.",
+        en: "Enemy attack actions that target this model cannot cheat their duel.",
+      },
+      "Hag’s Kiss": {
+        ru: "Атака Wp на 2″; урон 2. Цель получает Stunned и Slow.",
+        en: "Rg 2\"; Skl 5; Rst Wp; TN -; Dmg 2. The target gains Stunned and Slow tokens.",
+      },
+    };
+    const key = String(name || "").trim();
+    return fallback || rules[key]?.[isEnglishPrint() ? "en" : "ru"] || "";
+  }
+
   function printInjuryCount(value) {
     return Array.isArray(value) ? value.length : Math.max(0, Number(value) || 0);
   }
@@ -147,7 +170,7 @@
         records.length
           ? `<ul class="print-equipment-list">${records
               .map((item) => `<li><b>${escapePrintHtml(item.name || "—")}</b>${
-                item.effect ? `<p>${richPrintText(item.effect)}</p>` : ""
+                printKnownRuleText(item.name, item.effect) ? `<p>${richPrintText(printKnownRuleText(item.name, item.effect))}</p>` : ""
               }</li>`)
               .join("")}</ul>`
           : `<p class="print-empty">—</p>`
@@ -311,7 +334,7 @@
               <b>${printText("Триггер", "Trigger")}: ${richPrintText(
                 [trigger.suits, trigger.name].filter(Boolean).join(" · "),
               )}${trigger.stoneCost ? ` · ${escapePrintHtml(trigger.stoneCost)} SS` : ""}</b>
-              ${trigger.description ? `<p>${richPrintText(trigger.description)}</p>` : ""}
+              ${printKnownRuleText(trigger.name, trigger.description) ? `<p>${richPrintText(printKnownRuleText(trigger.name, trigger.description))}</p>` : ""}
             </div>`,
           )
           .join("")}
@@ -349,7 +372,7 @@
         </div>
       </div>
       ${meta ? `<p class="print-action-meta">${richPrintText(meta)}</p>` : ""}
-      ${ability.effect ? `<p class="print-rule-text">${richPrintText(ability.effect)}</p>` : ""}
+      ${printKnownRuleText(ability.name, ability.effect) ? `<p class="print-rule-text">${richPrintText(printKnownRuleText(ability.name, ability.effect))}</p>` : ""}
     </article>`;
   }
 
@@ -430,6 +453,16 @@
         <p>${richPrintText(text)}</p>
         ${earnedEffectsHtml}
       </section>`;
+  }
+
+  function renderPrintEquipmentSummary(items) {
+    const records = Array.isArray(items) ? items : [];
+    return `<section class="print-permanent-block${records.length ? "" : " is-empty"}" data-print-section="equipment">
+      <h3>${printText("Снаряжение", "Equipment")}</h3>
+      ${records.length
+        ? `<ul class="print-equipment-list">${records.map((item) => `<li><b>${escapePrintHtml(item.name || "—")}</b></li>`).join("")}</ul>`
+        : `<p class="print-empty">—</p>`}
+    </section>`;
   }
 
   function renderModels(models, loadout, equipment) {
@@ -520,12 +553,11 @@
     const triggers = Array.isArray(action.triggers) ? action.triggers : [];
     return `<article class="print-talent print-leader-action print-talent-compact${triggers.length ? " has-triggers" : ""}">
       <div class="print-talent-heading">
-        <span class="print-kicker">${escapePrintHtml(action.typeLabel || action.type || printText("Действие", "Action"))}</span>
         <div><h3>${escapePrintHtml(action.name || printText("Действие", "Action"))}</h3>${source ? `<small>${escapePrintHtml(source)}</small>` : ""}</div>
       </div>
       ${printActionMeta(action) ? `<p class="print-action-meta">${printActionMeta(action)}</p>` : ""}
-      ${triggers.map((trigger) => `<div class="print-trigger print-trigger-compact"><b>${printText("Триггер", "Trigger")}: ${richPrintText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}</b></div>`).join("")}
-      <span class="print-rule-ref">${printText("Полный текст · стр. 2", "Full text · p. 2")}</span>
+      ${action.description ? `<p class="print-rule-text">${richPrintText(action.description)}</p>` : ""}
+      ${triggers.map((trigger) => `<div class="print-trigger print-trigger-compact"><b>${printText("Триггер", "Trigger")}: ${richPrintText([trigger.suits, trigger.name].filter(Boolean).join(" · "))}</b>${printKnownRuleText(trigger.name, trigger.description) ? `<p>${richPrintText(printKnownRuleText(trigger.name, trigger.description))}</p>` : ""}</div>`).join("")}
     </article>`;
   }
 
@@ -539,7 +571,7 @@
         <span class="print-kicker">${printText("Способность", "Ability")}</span>
         <div><h3>${escapePrintHtml(ability.name || printText("Способность", "Ability"))}</h3>${source ? `<small>${escapePrintHtml(source)}</small>` : ""}</div>
       </div>
-      <span class="print-rule-ref">${printText("Полный текст · стр. 2", "Full text · p. 2")}</span>
+      ${printKnownRuleText(ability.name, ability.effect) ? `<p class="print-rule-text">${richPrintText(printKnownRuleText(ability.name, ability.effect))}</p>` : ""}
     </article>`;
   }
 
@@ -552,7 +584,7 @@
 
   function renderCompactCrewCard(card) {
     if (!card) return "";
-    return `<section class="print-crew-card print-crew-card-compact"><div><span class="print-kicker">${printText("Карта команды", "Crew card")}</span><h3>${escapePrintHtml(card.name)}</h3></div><p>${printText("Полный текст на стр. 2", "Full text on p. 2")}</p></section>`;
+    return `<section class="print-crew-card print-crew-card-compact"><div><span class="print-kicker">${printText("Карта команды", "Crew card")}</span><h3>${escapePrintHtml(card.name)}</h3></div></section>`;
   }
 
   function renderModelAction(action) {
@@ -711,6 +743,30 @@
             .join("")}
         </ul>
       </section>`;
+  }
+
+  function renderAcquiredAdvancesReference(advances) {
+    const records = (Array.isArray(advances) ? advances : []).filter((advance) => !advance?.legacy);
+    if (!records.length) return "";
+    return `<section class="print-section print-acquired-reference">
+      <div class="print-section-heading"><span class="print-kicker">${printText("Продвижения", "Advancements")}</span><h2>${printText("Приобретённые правила", "Acquired rules")}</h2></div>
+      <div class="print-acquired-reference-list">
+        ${records.map((advance) => {
+          const snapshot = advance?.snapshot?.entry || advance?.snapshot?.result || advance?.snapshot || {};
+          const description = printKnownRuleText(advance.name || snapshot.name, snapshot.description || snapshot.text || snapshot.effect || advance.notes || "");
+          const meta = [
+            advance.recipient === "totem" ? printText("Тотем", "Totem") : printText("Лидер", "Leader"),
+            advance.appliesTo ? `${printText("для", "for")} ${advance.appliesTo}` : "",
+            advance.source || "",
+            advance.flip?.card || "",
+          ].filter(Boolean).join(" · ");
+          return `<article class="print-acquired-reference-entry">
+            <div class="print-acquired-reference-heading"><div><span class="print-kicker">${escapePrintHtml(advance.resultType || advance.tableId || printText("Продвижение", "Advancement"))}</span><h3>${escapePrintHtml(advance.name || snapshot.name || "—")}</h3></div>${meta ? `<small>${escapePrintHtml(meta)}</small>` : ""}</div>
+            ${description ? `<p>${richPrintText(description)}</p>` : `<p class="print-empty">${printText("Текст правила не сохранён.", "Rule text was not saved.")}</p>`}
+          </article>`;
+        }).join("")}
+      </div>
+    </section>`;
   }
 
   function printTotemActionRecords(profile, advances) {
@@ -938,24 +994,24 @@
                 .map(escapePrintHtml)
                 .join(" · ")}</p>
             </div>
+            <div class="print-stat-strip">
+              ${[
+                ["Df", stats.Df],
+                ["Wp", stats.Wp],
+                ["Sp", stats.Sp],
+                ["Health", stats.Health],
+              ]
+                .map(
+                  ([label, value]) =>
+                    `<span><small>${label}</small><b>${escapePrintHtml(value ?? "—")}</b></span>`,
+                )
+                .join("")}
+            </div>
             <div class="print-leader-details">
               <span><small>Sz</small><b>${escapePrintHtml(leader.size ?? "—")}</b></span>
               <span><small>Base</small><b>${escapePrintHtml(leader.base ? `${leader.base}mm` : "—")}</b></span>
               <span><small>XP</small><b>${escapePrintHtml(leader.xp || 0)}</b></span>
             </div>
-          </div>
-          <div class="print-stat-strip">
-            ${[
-              ["Df", stats.Df],
-              ["Wp", stats.Wp],
-              ["Sp", stats.Sp],
-              ["Health", stats.Health],
-            ]
-              .map(
-                ([label, value]) =>
-                  `<span><small>${label}</small><b>${escapePrintHtml(value ?? "—")}</b></span>`,
-              )
-              .join("")}
           </div>
         </section>
 
@@ -998,9 +1054,10 @@
         </section>
 
         ${renderCrewCard(crewCard, advances)}
+        ${renderAcquiredAdvancesReference(advances)}
         <section class="print-section print-acquired-equipment">
           <div class="print-section-heading"><span class="print-kicker">${printText("Предметы", "Equipment")}</span><h2>${printText("Снаряжение лидера", "Leader equipment")}</h2></div>
-          ${renderPrintEquipmentSection(leaderEquipment)}
+          ${renderPrintEquipmentSummary(leaderEquipment)}
         </section>
 
         <footer class="print-footer"><span>${printText("Справочник приобретённых правил", "Acquired rules reference")}</span><b>02</b></footer>
