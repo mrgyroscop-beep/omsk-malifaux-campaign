@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.16.1",
+      date: "2026-09-16",
+      title: {
+        ru: "Печатный лист теперь ведёт к правилам",
+        en: "Printed sheets now include a rules reference",
+      },
+      summary: {
+        ru: "Первая страница стала компактнее, а все приобретённые правила лидера вынесены в отдельный справочник.",
+        en: "The first page is now more compact, while all acquired leader rules are collected in a separate reference page.",
+      },
+      items: [
+        {
+          ru: "Полные тексты действий, способностей и триггеров находятся на странице 2.",
+          en: "Full actions, abilities, and trigger text now appear on page 2.",
+        },
+        {
+          ru: "На первой странице остаются только быстрые параметры и ссылки на справочник.",
+          en: "The first page keeps only quick stats and references to the rules page.",
+        },
+        {
+          ru: "В справочник также попадают карта команды и снаряжение лидера.",
+          en: "The reference also includes the crew card and the leader’s equipment.",
+        },
+      ],
+    },
+    {
       version: "2026.09.15.2",
       date: "2026-09-15",
       title: {
