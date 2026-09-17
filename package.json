@@ -23,6 +23,7 @@
     "test:kan122": "node tests/kan122-leader-print-icons.smoke.cjs",
     "test:kan123": "node tests/kan123-leader-action-advancements.smoke.cjs",
     "test:kan125": "node tests/kan125-feedback-fixes.smoke.cjs",
+    "test:kan148": "node tests/kan148-action-groups.smoke.cjs",
     "test:kan158-160": "node tests/kan158-160-feedback.smoke.cjs",
     "test:kan161-165": "node tests/kan161-165-cooperative-flow.smoke.cjs",
     "test:kan167-169": "node tests/kan167-169-cooperative-completion.smoke.cjs",

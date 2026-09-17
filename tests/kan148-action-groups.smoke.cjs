@@ -87,7 +87,7 @@ function talent(kind, name, index) {
     assert.equal(await page.locator('#leaderPermanentRecords [data-permanent-section="abilities"]').count(), 0);
 
     await page.evaluate(() => window.renderPrintDossier());
-    const printGroups = page.locator("[data-print-leader-action-group]");
+    const printGroups = page.locator(".print-rules-page [data-print-leader-action-group]");
     assert.deepEqual(await printGroups.evaluateAll((nodes) => nodes.map((node) => node.dataset.printLeaderActionGroup)), ["attack", "tactical", "ability"]);
     assert.deepEqual(await printGroups.nth(0).locator("[data-print-leader-action]").evaluateAll((nodes) => nodes.map((node) => node.dataset.printLeaderAction)), ["Attack First"]);
     assert.deepEqual(await printGroups.nth(2).locator("[data-print-leader-ability]").evaluateAll((nodes) => nodes.map((node) => node.dataset.printLeaderAbility)), ["Borrowed Ability", "Ruthless"]);
