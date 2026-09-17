@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.17.1",
+      date: "2026-09-17",
+      title: {
+        ru: "Формы превращающихся моделей собраны вместе",
+        en: "Transforming model forms stay together",
+      },
+      summary: {
+        ru: "Арсенал распознаёт взаимные замены из текста карточек и сохраняет все связанные формы одной модели.",
+        en: "The arsenal recognizes reciprocal replacement rules and saves every linked form of a model.",
+      },
+      items: [
+        {
+          ru: "Способности с формулировкой replace itself with автоматически связывают формы.",
+          en: "Abilities using replace itself with now link model forms automatically.",
+        },
+        {
+          ru: "Стоимость модели учитывается один раз, а в арсенале доступны карточки каждой формы.",
+          en: "The model is paid for once while every form card remains available in the arsenal.",
+        },
+        {
+          ru: "Все связанные профили также попадают в печатное досье.",
+          en: "Every linked profile is also included in the printed dossier.",
+        },
+      ],
+    },
+    {
       version: "2026.09.16.1",
       date: "2026-09-16",
       title: {

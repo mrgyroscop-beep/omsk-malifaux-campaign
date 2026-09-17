@@ -1410,6 +1410,7 @@ const defaultState = {
 let state = loadState();
 const cardCatalog = window.BiggerHatCards || null;
 let pendingModelCard = null;
+let pendingModelForms = [];
 let activeTalentSlot = null;
 let selectedTalentSource = null;
 let pendingAdvancementTalent = null;
@@ -1796,6 +1797,17 @@ function normalizeStoredModel(model) {
   const legacyType = String(source.type || "Other");
   const type = ["Minion", "Peon", "Other"].includes(legacyType) ? legacyType : "Other";
   const snapshot = normalizeStoredCardSnapshot(source.cardSnapshot);
+  const formSnapshots = (Array.isArray(source.cardForms) ? source.cardForms : [])
+    .slice(0, 12)
+    .map(normalizeStoredCardSnapshot)
+    .filter(Boolean);
+  if (snapshot && !formSnapshots.some((form) => form.slug === snapshot.slug)) {
+    formSnapshots.unshift(snapshot);
+  }
+  const uniqueForms = Array.from(
+    new Map(formSnapshots.map((form) => [form.slug || form.displayName, form])).values(),
+  );
+  const primarySnapshot = snapshot || uniqueForms[0] || null;
   const id = safeIdentifier(source.id, "model");
   return {
     id,
@@ -1806,7 +1818,7 @@ function normalizeStoredModel(model) {
     keywords: safeText(source.keywords, 500),
     versatile: Boolean(source.versatile),
     outOfKeyword: Boolean(source.outOfKeyword),
-    modelLimit: safeInteger(source.modelLimit ?? snapshot?.count, 1, 1, 100),
+    modelLimit: safeInteger(source.modelLimit ?? primarySnapshot?.count, 1, 1, 100),
     characteristics: Array.isArray(source.characteristics)
       ? [...new Set(source.characteristics
           .slice(0, 12)
@@ -1822,8 +1834,9 @@ function normalizeStoredModel(model) {
       source.cardId === null || source.cardId === undefined
         ? null
         : safeExternalId(source.cardId, "card"),
-    cardSlug: safeSlug(source.cardSlug || source.cardSnapshot?.slug) || null,
-    cardSnapshot: snapshot,
+    cardSlug: safeSlug(source.cardSlug || primarySnapshot?.slug) || null,
+    cardSnapshot: primarySnapshot,
+    cardForms: uniqueForms.length ? uniqueForms : primarySnapshot ? [primarySnapshot] : [],
   };
 }
 
@@ -5388,6 +5401,29 @@ function submitDoctorVisit(event) {
   toast(localized("Приём сохранён. Списан 1 скрип.", "Visit saved. 1 scrip paid."));
 }
 
+function storedModelForms(model) {
+  const forms = Array.isArray(model?.cardForms) ? model.cardForms.filter(Boolean) : [];
+  if (forms.length) return forms;
+  return model?.cardSnapshot ? [model.cardSnapshot] : [];
+}
+
+function modelCardLinksHtml(model) {
+  const forms = storedModelForms(model);
+  if (!forms.length && !model.cardSlug) return "";
+  const records = forms.length ? forms : [null];
+  return records
+    .map((form) => {
+      const label = form?.displayName || model.name;
+      return `<button class="model-card-link" type="button" data-view-model-card="${escapeHtml(model.id)}" data-view-model-form="${escapeHtml(form?.slug || model.cardSlug || "")}">
+        ${message("openCard")} · ${escapeHtml(label)} · ${message("cardCounts", {
+          actions: form?.actions?.length || 0,
+          abilities: form?.abilities?.length || 0,
+        })}
+      </button>`;
+    })
+    .join("");
+}
+
 function renderArsenal() {
   repairLoadout();
   const { cost, injuriesCount } = arsenalTotals();
@@ -5432,14 +5468,7 @@ function renderArsenal() {
                   .join(" · "),
               )}</small>
               ${modelCharacteristicsHtml(model)}
-              ${model.cardSnapshot || model.cardSlug
-                ? `<button class="model-card-link" type="button" data-view-model-card="${escapeHtml(model.id)}">
-                    ${message("openCard")} · ${message("cardCounts", {
-                      actions: model.cardSnapshot?.actions?.length || 0,
-                      abilities: model.cardSnapshot?.abilities?.length || 0,
-                    })}
-                  </button>`
-                : ""}
+              ${modelCardLinksHtml(model)}
               ${
                 isModelHired(model.id)
                   ? `<span class="model-loadout-equipment">${loadoutEquipmentHtml(
@@ -5587,7 +5616,7 @@ function renderArsenal() {
       const model = state.arsenal.models.find(
         (item) => item.id === button.dataset.viewModelCard,
       );
-      if (model) openStoredModelCard(model);
+      if (model) openStoredModelCard(model, button.dataset.viewModelForm);
     });
   });
   list.querySelectorAll("[data-edit-model-characteristics]").forEach((button) => {
@@ -8733,9 +8762,10 @@ function openCardDialog(card) {
   if (!dialog.open) dialog.showModal();
 }
 
-async function openStoredModelCard(model) {
-  if (model.cardSnapshot) {
-    openCardDialog(model.cardSnapshot);
+async function openStoredModelCard(model, formSlug = "") {
+  const storedForm = storedModelForms(model).find((form) => form.slug === formSlug);
+  if (storedForm || model.cardSnapshot) {
+    openCardDialog(storedForm || model.cardSnapshot);
     return;
   }
   if (!model.cardSlug || !cardCatalog) {
@@ -8764,6 +8794,7 @@ async function openStoredModelCard(model) {
 
 function clearPendingModelCard(announce = false) {
   pendingModelCard = null;
+  pendingModelForms = [];
   modelSelectionRequest += 1;
   const selection = document.querySelector("#modelCardSelection");
   selection.hidden = true;
@@ -8785,6 +8816,7 @@ function resetModelPicker(options = {}) {
   modelDetailController?.abort();
   modelDetailController = null;
   pendingModelCard = null;
+  pendingModelForms = [];
   const form = document.querySelector("#modelForm");
   if (options.resetForm !== false) form.reset();
   syncTraitorModelForm();
@@ -8813,6 +8845,11 @@ function renderModelCardSelection(card) {
         .filter(Boolean)
         .join(" · "),
     )}</small>
+    ${pendingModelForms.length > 1
+      ? `<small>${escapeHtml(localized("Связанные формы", "Linked forms"))}: ${escapeHtml(
+          pendingModelForms.map((form) => form.displayName).join(" · "),
+        )}</small>`
+      : ""}
     <button type="button" data-clear-model-card aria-label="${message("deleteItem")}">×</button>`;
   selection
     .querySelector("[data-clear-model-card]")
@@ -8870,7 +8907,12 @@ async function selectModelCatalogCard(slug) {
     const card = await cardCatalog.getCharacter(slug, { signal: controller.signal });
     if (request !== modelSelectionRequest) return;
     if (!isHireableCard(card)) throw new Error("This character cannot be hired");
+    const forms = typeof cardCatalog.getReplacementForms === "function"
+      ? await cardCatalog.getReplacementForms(card, { signal: controller.signal })
+      : [card];
+    if (request !== modelSelectionRequest) return;
     pendingModelCard = card;
+    pendingModelForms = forms.length ? forms : [card];
     fillModelFormFromCard(card);
     renderModelCardSelection(card);
     document
@@ -10737,6 +10779,9 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
     cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,
+    cardForms: pendingModelCard
+      ? clone(pendingModelForms.length ? pendingModelForms : [pendingModelCard])
+      : [],
     acquisition: traitorTransfer ? "traitor" : "",
   };
   if (traitorTransfer && state.games.length === 0) {

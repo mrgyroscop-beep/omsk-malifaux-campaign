@@ -439,6 +439,57 @@
       .slice(0, Math.max(1, limit));
   }
 
+  function comparableCharacterName(value) {
+    return compactText(value)
+      .replace(/[’‘]/gu, "'")
+      .toLocaleLowerCase("en");
+  }
+
+  function replacementTargetNames(character) {
+    const targets = [];
+    (Array.isArray(character?.abilities) ? character.abilities : []).forEach((ability) => {
+      const description = compactText(ability?.description);
+      const match = description.match(
+        /\breplace itself with\s+(.+?)(?=(?:\s+(?:and|to)\s+heal\b)|[.;]|$)/iu,
+      );
+      if (match?.[1]) targets.push(compactText(match[1]));
+    });
+    return [...new Set(targets)];
+  }
+
+  function characterMatchesName(character, name) {
+    const expected = comparableCharacterName(name);
+    return [character?.displayName, character?.name]
+      .filter(Boolean)
+      .some((value) => comparableCharacterName(value) === expected);
+  }
+
+  function characterReplaces(character, target) {
+    return replacementTargetNames(character).some((name) => characterMatchesName(target, name));
+  }
+
+  async function getReplacementForms(character, options = {}) {
+    if (!character?.slug) return [];
+    const forms = new Map([[character.slug, character]]);
+    const queue = [character];
+    while (queue.length && forms.size < 12) {
+      const current = queue.shift();
+      for (const targetName of replacementTargetNames(current)) {
+        const matches = await searchCharacters(targetName, {
+          limit: 1000,
+          onProgress: options.onProgress,
+        });
+        const summary = matches.find((candidate) => characterMatchesName(candidate, targetName));
+        if (!summary?.slug || forms.has(summary.slug)) continue;
+        const detail = await getCharacter(summary.slug, { signal: options.signal });
+        if (!characterReplaces(detail, current)) continue;
+        forms.set(detail.slug, detail);
+        queue.push(detail);
+      }
+    }
+    return Array.from(forms.values());
+  }
+
   function getStoredKeywords() {
     const stored = readStorage(KEYWORDS_KEY, null);
     if (!stored || !Array.isArray(stored.items)) return null;
@@ -732,6 +783,8 @@
     normalizeCrewUpgradeDetail,
     loadCatalog,
     searchCharacters,
+    replacementTargetNames,
+    getReplacementForms,
     loadKeywords,
     searchKeywords,
     getCharacter,

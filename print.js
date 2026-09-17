@@ -473,7 +473,12 @@
       <div class="print-model-cards">
         ${models
           .map((model) => {
-            const profile = model.cardSnapshot || null;
+            const profiles = Array.isArray(model.cardForms) && model.cardForms.length
+              ? model.cardForms.filter(Boolean)
+              : model.cardSnapshot
+                ? [model.cardSnapshot]
+                : [];
+            const profile = profiles[0] || null;
             const traits = [
               profile?.stationLabel || model.type,
               model.henchman ? "Henchman" : "",
@@ -490,7 +495,15 @@
                 <b class="print-model-cost">${escapePrintHtml(model.cost ?? "—")}</b>
               </header>
               <p class="print-model-traits">${escapePrintHtml(traits.join(" · ") || "—")}</p>
-              ${profile ? renderModelProfile(profile) : `<p class="print-model-profile-missing">${printText("Полный профиль не сохранён для этой модели.", "A full profile is not saved for this model.")}</p>`}
+              ${profiles.length
+                ? profiles
+                    .map(
+                      (form) => `${profiles.length > 1
+                        ? `<p class="print-model-traits"><b>${escapePrintHtml(form.displayName || form.name || "—")}</b></p>`
+                        : ""}${renderModelProfile(form)}`,
+                    )
+                    .join("")
+                : `<p class="print-model-profile-missing">${printText("Полный профиль не сохранён для этой модели.", "A full profile is not saved for this model.")}</p>`}
               <div class="print-model-upgrades">
                 ${renderPrintInjurySection(model.injuries)}
                 ${renderPrintEquipmentSection(assigned)}
@@ -1125,15 +1138,23 @@
     const models = new Map(data.arsenal.models.map((model) => [model.id || model.name, model]));
     element.querySelectorAll("[data-print-model-card]").forEach((card) => {
       const model = models.get(card.dataset.printModelCard);
-      if (!model?.cardSnapshot) return;
-      const details = document.createElement("details");
-      details.className = "org-model-card";
-      const summary = document.createElement("summary");
-      summary.textContent = printText("Карточка модели", "Model card");
-      const body = document.createElement("div");
-      body.innerHTML = modelCardHtml(model.cardSnapshot);
-      details.append(summary, body);
-      card.append(details);
+      const profiles = Array.isArray(model?.cardForms) && model.cardForms.length
+        ? model.cardForms.filter(Boolean)
+        : model?.cardSnapshot
+          ? [model.cardSnapshot]
+          : [];
+      profiles.forEach((profile) => {
+        const details = document.createElement("details");
+        details.className = "org-model-card";
+        const summary = document.createElement("summary");
+        summary.textContent = profiles.length > 1
+          ? `${printText("Карточка модели", "Model card")} · ${profile.displayName || profile.name}`
+          : printText("Карточка модели", "Model card");
+        const body = document.createElement("div");
+        body.innerHTML = modelCardHtml(profile);
+        details.append(summary, body);
+        card.append(details);
+      });
     });
     element.removeAttribute("id");
     element.removeAttribute("aria-hidden");
