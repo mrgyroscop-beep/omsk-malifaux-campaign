@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.18.1",
+      date: "2026-09-18",
+      title: {
+        ru: "Хроника сохраняет все выполненные схемы",
+        en: "The chronicle records every completed scheme",
+      },
+      summary: {
+        ru: "Можно записать четыре и более выполненных схем, сохранив официальный лимит Aftermath hand.",
+        en: "Four or more completed schemes can be recorded while preserving the official Aftermath hand cap.",
+      },
+      items: [
+        {
+          ru: "Поле выполненных схем больше не ограничено тремя записями.",
+          en: "The completed-schemes field is no longer limited to three entries.",
+        },
+        {
+          ru: "Фактическое количество сохраняется в хронике и переживает перезагрузку.",
+          en: "The actual count is saved in the chronicle and survives reloads.",
+        },
+        {
+          ru: "При расчёте Aftermath hand по-прежнему учитываются максимум три схемы.",
+          en: "The Aftermath hand calculation still counts no more than three schemes.",
+        },
+      ],
+    },
+    {
       version: "2026.09.17.1",
       date: "2026-09-17",
       title: {

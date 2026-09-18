@@ -192,6 +192,8 @@ const STATIC_TEXT_EN = {
   "Ваши VP": "Your VP",
   "Разница CR в пользу соперника": "Opponent’s CR advantage",
   "Выполнено схем": "Schemes completed",
+  "В хронике сохраняется фактическое число; для Aftermath hand учитываются максимум 3.":
+    "The chronicle saves the actual count; no more than 3 count toward the Aftermath hand.",
   "Победа": "Victory",
   "+1 скрип": "+1 scrip",
   "Поражение": "Defeat",
@@ -5977,7 +5979,7 @@ function renderGamePreview() {
   const form = document.querySelector("#gameForm");
   const data = new FormData(form);
   const vp = Number(data.get("vp") || 0);
-  const schemes = Math.min(3, Number(data.get("schemes") || 0));
+  const schemes = Math.max(0, Math.trunc(Number(data.get("schemes") || 0)));
   const won = data.get("won") === "on";
   const lost = data.get("lost") === "on";
   const pathGoal = data.get("pathGoal") === "on";
@@ -5985,7 +5987,9 @@ function renderGamePreview() {
   const withdrewLate = data.get("withdrewLate") === "on";
   const gap = Number(data.get("ratingGap") || 0);
 
-  const hand = withdrewEarly ? 0 : schemes + (withdrewLate ? 0 : 1);
+  const hand = withdrewEarly
+    ? 0
+    : Math.min(3, schemes) + (withdrewLate ? 0 : 1);
   const scrip = withdrewEarly ? 0 : Math.ceil(vp / 3) + (won ? 1 : 0) + gap;
   const xp = withdrewEarly ? 0 : 1 + (lost ? 1 : 0) + (pathGoal ? 1 : 0);
   const creditedXp = Math.min(xp, Math.max(0, xpTiers.length - state.leader.xp));
