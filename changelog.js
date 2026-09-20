@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.20.1",
+      date: "2026-09-20",
+      title: {
+        ru: "Sniveling Coward можно заменить в арсенале",
+        en: "Sniveling Coward can be replaced in the arsenal",
+      },
+      summary: {
+        ru: "Fight Another Day теперь оформляется прямо в досье с проверкой условия и допустимых профилей.",
+        en: "Fight Another Day can now be resolved directly in the dossier with condition and profile validation.",
+      },
+      items: [
+        {
+          ru: "Кнопка замены появляется только у Sniveling Coward, полученного по Black Joker.",
+          en: "The replacement action appears only for a Sniveling Coward gained from the Black Joker.",
+        },
+        {
+          ru: "В списке доступны только тотемы без Black Joker и Red Joker.",
+          en: "Only non-Black-Joker and non-Red-Joker Totems are available.",
+        },
+        {
+          ru: "Продвижения, травмы и назначенное снаряжение сохраняются после замены и перезагрузки.",
+          en: "Advancements, injuries, and assigned equipment persist after replacement and reload.",
+        },
+      ],
+    },
+    {
       version: "2026.09.18.1",
       date: "2026-09-18",
       title: {

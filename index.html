@@ -23,11 +23,11 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.09.18.1" />
+    <meta name="app-version" content="2026.09.20.1" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=15" />
+    <link rel="stylesheet" href="styles.css?v=16" />
     <link rel="stylesheet" href="dossier-theme.css?v=19" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=5" />
@@ -1544,6 +1544,44 @@
       </div>
     </dialog>
 
+    <dialog id="totemReplacementDialog" class="modal" aria-labelledby="totemReplacementTitle">
+      <form method="dialog" id="totemReplacementForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Fight Another Day</span>
+            <h2 id="totemReplacementTitle">Замена тотема</h2>
+            <p class="injury-dialog-target" id="totemReplacementCurrent"></p>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="totemReplacementDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <p class="totem-replacement-dialog-note">
+          Текущий тотем будет заменён навсегда. Полученные продвижения и назначенное снаряжение сохранятся.
+        </p>
+        <label class="field field-wide">
+          <span>Новый тотем</span>
+          <select name="replacementProfile" required></select>
+          <small>Доступны только результаты без джокеров.</small>
+        </label>
+        <label class="check-tile equipment-free-choice totem-replacement-confirmation">
+          <input name="conditionConfirmed" type="checkbox" required />
+          <span class="equipment-choice-mark" aria-hidden="true">✓</span>
+          <span>
+            <b>Условие Fight Another Day выполнено</b>
+            <small>Sniveling Coward был в игре в конце встречи и повредил вражескую модель.</small>
+          </span>
+        </label>
+        <div class="totem-replacement-actions">
+          <button class="button button-ghost" type="button" data-close-dialog="totemReplacementDialog">Отмена</button>
+          <button class="button button-red" type="submit" value="default">Заменить тотема</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="doctorDialog" class="modal modal-wide" aria-labelledby="doctorDialogTitle">
       <form method="dialog" id="doctorForm" class="doctor-form">
         <div class="modal-heading">
@@ -1970,9 +2008,9 @@
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=46"></script>
+    <script src="app.js?v=47"></script>
     <script src="account.js?v=4"></script>
-    <script src="changelog.js?v=5"></script>
+    <script src="changelog.js?v=6"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
     <script src="print.js?v=16"></script>

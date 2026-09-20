@@ -36,6 +36,7 @@
     "test:kan202-205-print": "node tests/kan202-205-print-roster-feedback.smoke.cjs",
     "test:kan206": "node tests/kan206-replacement-forms.smoke.cjs",
     "test:kan207": "node tests/kan207-chronicle-schemes.smoke.cjs",
+    "test:kan208": "node tests/kan208-totem-replacement.smoke.cjs",
     "test:changelog": "node tests/release-changelog.smoke.cjs"
   },
   "devDependencies": {

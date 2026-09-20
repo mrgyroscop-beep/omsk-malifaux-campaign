@@ -254,6 +254,15 @@ const STATIC_TEXT_EN = {
   "Доплата скрип": "Scrip surcharge",
   "Личное дело тотема": "Totem dossier",
   "Имя тотема": "Totem name",
+  "Замена тотема": "Replace Totem",
+  "Новый тотем": "New Totem",
+  "Доступны только результаты без джокеров.": "Only non-Joker results are available.",
+  "Условие Fight Another Day выполнено": "Fight Another Day condition met",
+  "Sniveling Coward был в игре в конце встречи и повредил вражескую модель.":
+    "Sniveling Coward was in play at the end of the encounter and damaged an enemy model.",
+  "Текущий тотем будет заменён навсегда. Полученные продвижения и назначенное снаряжение сохранятся.":
+    "The current Totem will be replaced permanently. Earned advancements and assigned equipment will be retained.",
+  "Заменить тотема": "Replace Totem",
   "Характеристика I": "Characteristic I",
   "Характеристика II": "Characteristic II",
   "Записать продвижение": "Record advancement",
@@ -2236,14 +2245,32 @@ function storedTotemProfile(advance, leaderXp = null) {
   return profile;
 }
 
+function storedTotemReplacementProfile(sourceProfile, replacementProfileId) {
+  if (sourceProfile?.id !== "sniveling-coward" || sourceProfile.flip !== "black-joker") {
+    return null;
+  }
+  const replacementId = safeText(replacementProfileId, 96);
+  if (!replacementId) return null;
+  return (advancementData?.tier3?.totems || []).find(
+    (profile) =>
+      profile.id === replacementId &&
+      !String(profile.flip).includes("joker"),
+  ) || null;
+}
+
 function normalizeStoredTotem(totem, sourceAdvancement, leaderKeywords = []) {
   const sourceProfile = storedTotemProfile(sourceAdvancement);
   if (!sourceProfile) return null;
   const source = storedAdvancementSource(sourceAdvancement);
   const stored =
     totem && typeof totem === "object" && !Array.isArray(totem) ? totem : {};
-  const snapshot = clone(sourceProfile);
-  const statsSource = sourceProfile.stats || {};
+  const replacementProfile = storedTotemReplacementProfile(
+    sourceProfile,
+    stored.replacementProfileId,
+  );
+  const activeProfile = replacementProfile || sourceProfile;
+  const snapshot = clone(activeProfile);
+  const statsSource = activeProfile.stats || {};
   const base = safeInteger(stored.base, 30, 1, 100);
   const characteristics = Array.isArray(stored.characteristics)
     ? stored.characteristics
@@ -2253,19 +2280,25 @@ function normalizeStoredTotem(totem, sourceAdvancement, leaderKeywords = []) {
   const linkedTotemId = storedIdentifier(source.acquiredTotemId);
   const deterministicId = `totem-${sourceId || sourceProfile.id}`.slice(0, 96);
   const id = storedId || linkedTotemId || deterministicId;
-  const customName = safeText(stored.customName || stored.name, 200).trim();
+  const customName = safeText(
+    Object.prototype.hasOwnProperty.call(stored, "customName")
+      ? stored.customName
+      : stored.name,
+    200,
+  ).trim();
   return {
     id,
-    profileId: sourceProfile.id,
+    profileId: activeProfile.id,
+    replacementProfileId: replacementProfile?.id || null,
     snapshot,
     profile: clone(snapshot),
     customName,
-    name: customName || sourceProfile.name,
+    name: customName || activeProfile.name,
     stats: {
-      df: safeNumber(statsSource.df, sourceProfile.stats?.df ?? 0, -20, 50),
-      wp: safeNumber(statsSource.wp, sourceProfile.stats?.wp ?? 0, -20, 50),
-      sp: safeNumber(statsSource.sp, sourceProfile.stats?.sp ?? 0, -20, 50),
-      health: safeNumber(statsSource.health, sourceProfile.stats?.health ?? 0, 0, 100),
+      df: safeNumber(statsSource.df, activeProfile.stats?.df ?? 0, -20, 50),
+      wp: safeNumber(statsSource.wp, activeProfile.stats?.wp ?? 0, -20, 50),
+      sp: safeNumber(statsSource.sp, activeProfile.stats?.sp ?? 0, -20, 50),
+      health: safeNumber(statsSource.health, activeProfile.stats?.health ?? 0, 0, 100),
     },
     size: safeInteger(stored.size, 1, 1, 4),
     base: [30, 40, 50].includes(base) ? base : 30,
@@ -8197,6 +8230,80 @@ function totemActionHtml(action) {
     </article>`;
 }
 
+function totemReplacementContext() {
+  const totem = state.leader.totem;
+  if (!totem || totem.replacementProfileId) return null;
+  const sourceId = totem.sourceAdvancementId || totem.acquiredBy;
+  const source = state.leader.advances.find((advance) => advance.id === sourceId);
+  const sourceProfile = storedTotemProfile(source);
+  if (sourceProfile?.id !== "sniveling-coward" || sourceProfile.flip !== "black-joker") {
+    return null;
+  }
+  const profiles = (advancementData?.tier3?.totems || []).filter(
+    (profile) => !String(profile.flip).includes("joker"),
+  );
+  return profiles.length ? { totem, source, sourceProfile, profiles } : null;
+}
+
+function openTotemReplacementDialog() {
+  const context = totemReplacementContext();
+  if (!context) {
+    toast(localized("Замена для этого тотема недоступна.", "Replacement is unavailable for this Totem."));
+    return;
+  }
+  const dialog = document.querySelector("#totemReplacementDialog");
+  const form = document.querySelector("#totemReplacementForm");
+  const select = form.elements.replacementProfile;
+  form.reset();
+  document.querySelector("#totemReplacementCurrent").textContent = localized(
+    `Сейчас: ${context.totem.name} · Black Joker`,
+    `Current: ${context.totem.name} · Black Joker`,
+  );
+  select.innerHTML = context.profiles
+    .map(
+      (profile) =>
+        `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.flip)} · ${escapeHtml(profile.name)}</option>`,
+    )
+    .join("");
+  dialog.showModal();
+  select.focus();
+}
+
+function submitTotemReplacement(event) {
+  event.preventDefault();
+  const context = totemReplacementContext();
+  const form = event.currentTarget;
+  const replacementProfile = context?.profiles.find(
+    (profile) => profile.id === form.elements.replacementProfile.value,
+  );
+  if (!context || !replacementProfile || !form.elements.conditionConfirmed.checked) {
+    toast(localized("Подтвердите условие и выберите допустимого тотема.", "Confirm the condition and choose an eligible Totem."));
+    return;
+  }
+  const before = clone(state);
+  const snapshot = clone(replacementProfile);
+  Object.assign(context.totem, {
+    profileId: replacementProfile.id,
+    replacementProfileId: replacementProfile.id,
+    snapshot,
+    profile: clone(snapshot),
+    customName: "",
+    name: replacementProfile.name,
+    stats: clone(replacementProfile.stats || {}),
+  });
+  if (!saveState()) {
+    state = before;
+    renderAll();
+    return;
+  }
+  document.querySelector("#totemReplacementDialog").close();
+  renderAll();
+  toast(localized(
+    `Тотем заменён на ${replacementProfile.name}. Продвижения сохранены.`,
+    `Totem replaced with ${replacementProfile.name}. Advancements retained.`,
+  ));
+}
+
 function renderTotemCard(selector = "#totemCard") {
   const wrap = document.querySelector(selector);
   if (!wrap) return;
@@ -8229,6 +8336,9 @@ function renderTotemCard(selector = "#totemCard") {
       advance.resultType !== "ability",
   );
   const totemEquipment = equipmentAssignedTo("totem");
+  const replacementContext = selector === "#arsenalTotemCard"
+    ? totemReplacementContext()
+    : null;
   wrap.innerHTML = `
     <section class="totem-dossier">
       <header class="totem-dossier-head">
@@ -8244,6 +8354,22 @@ function renderTotemCard(selector = "#totemCard") {
           )}</p>
         </div>
       </header>
+      ${
+        replacementContext
+          ? `<aside class="totem-replacement-callout">
+              <div>
+                <b>Fight Another Day</b>
+                <p>${localized(
+                  "После подходящей встречи Sniveling Coward можно навсегда заменить на тотема без джокера, сохранив продвижения.",
+                  "After an eligible encounter, Sniveling Coward may be permanently replaced with a non-Joker Totem while retaining advancements.",
+                )}</p>
+              </div>
+              <button type="button" class="button button-red" data-replace-totem>
+                ${localized("Заменить тотема", "Replace Totem")}
+              </button>
+            </aside>`
+          : ""
+      }
       <div class="permanent-record-grid totem-permanent-grid">
         <section class="permanent-record-section" data-permanent-section="abilities">
           <div class="permanent-record-heading">
@@ -8325,6 +8451,7 @@ function renderTotemCard(selector = "#totemCard") {
   wrap.querySelector("[data-add-injury-totem]")?.addEventListener("click", () => {
     openInjuryDialog("totem");
   });
+  wrap.querySelector("[data-replace-totem]")?.addEventListener("click", openTotemReplacementDialog);
   bindPermanentRecordActions(wrap);
 }
 
@@ -10714,6 +10841,7 @@ document.querySelector("#doctorForm").addEventListener("change", (event) => {
   syncDoctorForm({ targetChanged: event.target.name === "target" });
 });
 document.querySelector("#doctorForm").addEventListener("submit", submitDoctorVisit);
+document.querySelector("#totemReplacementForm").addEventListener("submit", submitTotemReplacement);
 
 document
   .querySelector("#modelCardSearch")
@@ -11120,7 +11248,7 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
       toast(message("importSaveFailed"));
       return;
     }
-    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
     });
@@ -11151,7 +11279,7 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
-  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
     const dialog = document.querySelector(`#${id}`);
     if (dialog.open) dialog.close();
   });

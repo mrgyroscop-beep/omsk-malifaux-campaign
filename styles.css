@@ -1944,6 +1944,17 @@ h1 {
     display: grid;
     grid-template-columns: 1fr;
   }
+
+  .totem-replacement-callout,
+  .totem-replacement-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .totem-replacement-callout .button,
+  .totem-replacement-actions .button {
+    width: 100%;
+  }
 }
 
 .mini-stepper {
@@ -3210,6 +3221,64 @@ h1 {
   background:
     linear-gradient(120deg, rgba(181, 151, 83, 0.08), transparent 45%),
     rgba(255, 255, 255, 0.2);
+}
+
+.totem-replacement-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(156, 40, 36, 0.34);
+  background: rgba(156, 40, 36, 0.06);
+}
+
+.totem-replacement-callout b {
+  color: var(--red);
+  font-family: var(--display);
+}
+
+.totem-replacement-callout p,
+.totem-replacement-dialog-note {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.totem-replacement-callout .button,
+.totem-replacement-actions .button {
+  min-height: 44px;
+}
+
+.totem-replacement-callout .button {
+  flex: 0 0 auto;
+}
+
+.totem-replacement-dialog-note {
+  margin: -10px 0 20px;
+}
+
+.totem-replacement-confirmation {
+  margin-top: 18px;
+}
+
+.totem-replacement-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.totem-replacement-actions .button-ghost {
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+
+.totem-replacement-actions .button-ghost:hover {
+  color: var(--ink);
+  border-color: var(--brass-deep);
 }
 
 .permanent-record-card {
