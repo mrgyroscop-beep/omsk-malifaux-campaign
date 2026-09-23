@@ -23,11 +23,11 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.09.20.1" />
+    <meta name="app-version" content="2026.09.23.1" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=16" />
+    <link rel="stylesheet" href="styles.css?v=17" />
     <link rel="stylesheet" href="dossier-theme.css?v=19" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=5" />
@@ -1544,6 +1544,43 @@
       </div>
     </dialog>
 
+    <dialog id="luckyMissDialog" class="modal" aria-labelledby="luckyMissDialogTitle">
+      <div class="modal-panel">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Close Call · Lucky Miss</span>
+            <h2 id="luckyMissDialogTitle">Добавить эффект Lucky Miss</h2>
+            <p class="injury-dialog-target" id="luckyMissDialogTarget"></p>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="luckyMissDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <section class="catalog-block" aria-label="Таблица Lucky Miss">
+          <label class="catalog-search">
+            <span class="sr-only">Поиск по названию или флипу Lucky Miss</span>
+            <input
+              id="luckyMissSearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Название эффекта или флип"
+              aria-controls="luckyMissSearchResults"
+            />
+            <span aria-hidden="true">⌕</span>
+          </label>
+          <p class="catalog-status" id="luckyMissCatalogStatus" aria-live="polite"></p>
+          <div
+            class="catalog-results injury-search-results"
+            id="luckyMissSearchResults"
+            role="listbox"
+          ></div>
+        </section>
+      </div>
+    </dialog>
+
     <dialog id="totemReplacementDialog" class="modal" aria-labelledby="totemReplacementTitle">
       <form method="dialog" id="totemReplacementForm">
         <div class="modal-heading">
@@ -2008,9 +2045,9 @@
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=47"></script>
+    <script src="app.js?v=48"></script>
     <script src="account.js?v=4"></script>
-    <script src="changelog.js?v=6"></script>
+    <script src="changelog.js?v=7"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
     <script src="print.js?v=16"></script>

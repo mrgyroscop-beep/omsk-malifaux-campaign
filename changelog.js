@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.23.1",
+      date: "2026-09-23",
+      title: {
+        ru: "Эффекты Lucky Miss добавляются прямо к модели",
+        en: "Lucky Miss effects can be added directly to a model",
+      },
+      summary: {
+        ru: "Результат дополнительного флипа после Close Call теперь можно выбрать, сохранить и удалить в Арсенале.",
+        en: "The extra flip after Close Call can now be selected, saved, and removed in the Arsenal.",
+      },
+      items: [
+        {
+          ru: "Отдельный каталог показывает все результаты Lucky Miss от 1 до Joker.",
+          en: "A dedicated catalog lists every Lucky Miss result from 1 through Joker.",
+        },
+        {
+          ru: "Эффекты доступны для моделей, лидера и тотема и сохраняются после перезагрузки.",
+          en: "Effects are available for models, the leader, and the Totem and persist after reload.",
+        },
+        {
+          ru: "Ошибочно добавленный эффект можно удалить из карточки.",
+          en: "An incorrectly added effect can be removed from the card.",
+        },
+      ],
+    },
+    {
       version: "2026.09.20.1",
       date: "2026-09-20",
       title: {

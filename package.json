@@ -37,6 +37,7 @@
     "test:kan206": "node tests/kan206-replacement-forms.smoke.cjs",
     "test:kan207": "node tests/kan207-chronicle-schemes.smoke.cjs",
     "test:kan208": "node tests/kan208-totem-replacement.smoke.cjs",
+    "test:kan209": "node tests/kan209-lucky-miss-upgrades.smoke.cjs",
     "test:changelog": "node tests/release-changelog.smoke.cjs"
   },
   "devDependencies": {

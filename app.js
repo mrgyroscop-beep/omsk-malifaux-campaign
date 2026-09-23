@@ -1436,6 +1436,7 @@ let crewCardCatalogKeywordKey = "";
 let returnToAdvancementAfterTalent = false;
 let activeCardView = null;
 let activeInjuryTarget = null;
+let activeLuckyMissTarget = null;
 let activeModelCharacteristicsId = null;
 let modelSearchRequest = 0;
 let talentSearchRequest = 0;
@@ -4838,7 +4839,10 @@ function injuryListHtml(
     .join("")}</span>`;
 }
 
-function luckyMissListHtml(records) {
+function luckyMissListHtml(
+  records,
+  { targetKind = "", targetId = "", removable = false } = {},
+) {
   const items = Array.isArray(records) ? records : [];
   if (!items.length) return "";
   return `<span class="lucky-miss-list">${items
@@ -4846,8 +4850,21 @@ function luckyMissListHtml(records) {
       const effect = currentLocale === "en" && record.effectEn ? record.effectEn : record.effect;
       const flip = record.flip === "joker" ? localized("Joker", "Joker") : record.flip;
       return `<span class="lucky-miss-chip" title="${escapeHtml(effect)}">
-        <b>Lucky Miss · ${escapeHtml(record.name)}</b>
-        <small>${escapeHtml(flip)}${record.cheated ? ` · ${localized("читинг", "cheated")}` : ""}</small>
+        <span><b>Lucky Miss · ${escapeHtml(record.name)}</b>
+        <small>${escapeHtml(flip)}${record.cheated ? ` · ${localized("читинг", "cheated")}` : ""}</small></span>
+        ${
+          removable
+            ? `<button type="button" data-remove-lucky-miss="${escapeHtml(
+                record.id,
+              )}" data-lucky-miss-target-kind="${escapeHtml(
+                targetKind,
+              )}" data-lucky-miss-target-id="${escapeHtml(
+                targetId,
+              )}" aria-label="${localized("Удалить эффект Lucky Miss", "Remove Lucky Miss effect")} ${escapeHtml(
+                record.name,
+              )}">×</button>`
+            : ""
+        }
       </span>`;
     })
     .join("")}</span>`;
@@ -5516,7 +5533,11 @@ function renderArsenal() {
                 targetId: model.id,
                 removable: model.type !== "Peon",
               })}
-              ${luckyMissListHtml(model.luckyMissUpgrades)}
+              ${luckyMissListHtml(model.luckyMissUpgrades, {
+                targetKind: "model",
+                targetId: model.id,
+                removable: model.type !== "Peon",
+              })}
             </span>
             <button
               class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
@@ -5540,10 +5561,13 @@ function renderArsenal() {
                 ? ""
                 : `<span class="injury-controls">
                     <span>${message("injuries")}: <b>${injuryCount(model.injuries)}</b></span>
-                    <button type="button" data-add-injury-model="${escapeHtml(
+                     <button type="button" data-add-injury-model="${escapeHtml(
+                       model.id,
+                     )}">${message("addInjury")}</button>
+                    <button type="button" data-add-lucky-miss-model="${escapeHtml(
                       model.id,
-                    )}">${message("addInjury")}</button>
-                  </span>`
+                    )}">+ Lucky Miss</button>
+                   </span>`
             }
             <button class="row-delete" type="button" data-delete-model="${escapeHtml(model.id)}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
           </div>`,
@@ -5618,12 +5642,26 @@ function renderArsenal() {
       openInjuryDialog("model", button.dataset.addInjuryModel),
     );
   });
+  list.querySelectorAll("[data-add-lucky-miss-model]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openLuckyMissDialog("model", button.dataset.addLuckyMissModel),
+    );
+  });
   list.querySelectorAll("[data-remove-injury]").forEach((button) => {
     button.addEventListener("click", () =>
       removeInjury(
         button.dataset.injuryTargetKind,
         button.dataset.injuryTargetId,
         button.dataset.removeInjury,
+      ),
+    );
+  });
+  list.querySelectorAll("[data-remove-lucky-miss]").forEach((button) => {
+    button.addEventListener("click", () =>
+      removeLuckyMiss(
+        button.dataset.luckyMissTargetKind,
+        button.dataset.luckyMissTargetId,
+        button.dataset.removeLuckyMiss,
       ),
     );
   });
@@ -5721,6 +5759,15 @@ function bindPermanentRecordActions(wrap) {
         button.dataset.injuryTargetKind,
         button.dataset.injuryTargetId,
         button.dataset.removeInjury,
+      ),
+    );
+  });
+  wrap.querySelectorAll("[data-remove-lucky-miss]").forEach((button) => {
+    button.addEventListener("click", () =>
+      removeLuckyMiss(
+        button.dataset.luckyMissTargetKind,
+        button.dataset.luckyMissTargetId,
+        button.dataset.removeLuckyMiss,
       ),
     );
   });
@@ -5853,17 +5900,19 @@ function renderLeaderPermanentRecords() {
         ${message("addInjury")}
       </button>
     </section>
-    ${
-      state.leader.luckyMissUpgrades.length
-        ? `<section class="permanent-record-section" data-permanent-section="lucky-miss">
-            <div class="permanent-record-heading">
-              <span>Lucky Miss</span>
-              <b>${state.leader.luckyMissUpgrades.length}</b>
-            </div>
-            ${luckyMissListHtml(state.leader.luckyMissUpgrades)}
-          </section>`
-        : ""
-    }
+    <section class="permanent-record-section" data-permanent-section="lucky-miss">
+      <div class="permanent-record-heading">
+        <span>Lucky Miss</span>
+        <b>${state.leader.luckyMissUpgrades.length}</b>
+      </div>
+      ${luckyMissListHtml(state.leader.luckyMissUpgrades, {
+        targetKind: "leader",
+        removable: true,
+      }) || `<p class="permanent-empty">${localized("Эффектов пока нет.", "No effects yet.")}</p>`}
+      <button type="button" class="injury-add-button" data-add-lucky-miss-leader>
+        ${localized("Добавить Lucky Miss", "Add Lucky Miss")}
+      </button>
+    </section>
     <section class="permanent-record-section manual-upgrade-section" data-permanent-section="manual-upgrades">
       <div class="permanent-record-heading">
         <span>${localized("Улучшения", "Upgrades")}</span>
@@ -5883,6 +5932,9 @@ function renderLeaderPermanentRecords() {
     </section>`;
   wrap.querySelector("[data-add-injury-leader]")?.addEventListener("click", () => {
     openInjuryDialog("leader");
+  });
+  wrap.querySelector("[data-add-lucky-miss-leader]")?.addEventListener("click", () => {
+    openLuckyMissDialog("leader");
   });
   bindPermanentRecordActions(wrap);
   bindManualUpgradeActions(wrap);
@@ -5904,14 +5956,24 @@ function renderInjuryCatalog(query = "") {
   );
   results.innerHTML = matches
     .map(
-      (entry) => `
+      (entry) => {
+        const isRedJoker = canonical(entry.flip) === canonical("Red Joker");
+        return `
         <button class="catalog-result injury-catalog-result" type="button" data-select-injury="${escapeHtml(
           entry.id,
         )}">
           <b>${escapeHtml(entry.name)}</b>
           <em>${escapeHtml(displayFlip(entry.flip))}</em>
-          <small>${escapeHtml(localized(entry.effect, entry.effectEn))}</small>
-        </button>`,
+          <small>${escapeHtml(
+            isRedJoker
+              ? localized(
+                  "Открывает таблицу Lucky Miss; травма не прикрепляется.",
+                  "Opens the Lucky Miss table; no injury is attached.",
+                )
+              : localized(entry.effect, entry.effectEn),
+          )}</small>
+        </button>`;
+      },
     )
     .join("");
   results.querySelectorAll("[data-select-injury]").forEach((button) => {
@@ -5945,6 +6007,11 @@ function addSelectedInjury(catalogId) {
     : null;
   const catalogEntry = injuryCatalog.find((entry) => entry.id === catalogId);
   if (!target || !catalogEntry) return;
+  if (canonical(catalogEntry.flip) === canonical("Red Joker")) {
+    document.querySelector("#injuryDialog")?.close();
+    openLuckyMissDialog(activeInjuryTarget.kind, activeInjuryTarget.id);
+    return;
+  }
   const before = clone(target.injuries);
   target.injuries.push({
     id: `injury-instance-${uid()}`,
@@ -5992,6 +6059,111 @@ function removeInjury(kind, id, injuryId) {
   renderArsenal();
   renderTotemCard();
   calculateRating();
+}
+
+function renderLuckyMissCatalog(query = "") {
+  const results = document.querySelector("#luckyMissSearchResults");
+  const status = document.querySelector("#luckyMissCatalogStatus");
+  if (!results || !status) return;
+  const needle = canonical(query);
+  const matches = luckyMissCatalog.filter((entry) =>
+    canonical(`${entry.flip} ${entry.name} ${entry.effect} ${entry.effectEn}`).includes(
+      needle,
+    ),
+  );
+  status.textContent = localized(
+    `Найдено: ${matches.length}. Выберите итог физического флипа по таблице Lucky Miss.`,
+    `${matches.length} found. Choose the result of the physical Lucky Miss flip.`,
+  );
+  results.innerHTML = matches
+    .map(
+      (entry) => `
+        <button class="catalog-result injury-catalog-result" type="button" data-select-lucky-miss="${escapeHtml(
+          entry.id,
+        )}">
+          <b>${escapeHtml(entry.name)}</b>
+          <em>${escapeHtml(entry.flip === "joker" ? "Joker" : entry.flip)}</em>
+          <small>${escapeHtml(localized(entry.effect, entry.effectEn))}</small>
+        </button>`,
+    )
+    .join("");
+  results.querySelectorAll("[data-select-lucky-miss]").forEach((button) => {
+    button.addEventListener("click", () => addSelectedLuckyMiss(button.dataset.selectLuckyMiss));
+  });
+}
+
+function openLuckyMissDialog(kind, id = "") {
+  const target = injuryTarget(kind, id);
+  if (!target || (kind === "model" && target.type === "Peon")) {
+    toast(message("peonNoInjuries"));
+    return;
+  }
+  activeLuckyMissTarget = { kind, id };
+  document.querySelector("#luckyMissDialogTarget").textContent =
+    target.name || target.profile?.name || localized("Модель без имени", "Unnamed model");
+  const search = document.querySelector("#luckyMissSearch");
+  search.value = "";
+  renderLuckyMissCatalog();
+  const dialog = document.querySelector("#luckyMissDialog");
+  if (!dialog.open) dialog.showModal();
+  search.focus();
+}
+
+function addSelectedLuckyMiss(catalogId) {
+  const target = activeLuckyMissTarget
+    ? injuryTarget(activeLuckyMissTarget.kind, activeLuckyMissTarget.id)
+    : null;
+  const result = luckyMissCatalog.find((entry) => entry.id === catalogId);
+  if (!target || !result) return;
+  const before = clone(target.luckyMissUpgrades || []);
+  target.luckyMissUpgrades = Array.isArray(target.luckyMissUpgrades)
+    ? target.luckyMissUpgrades
+    : [];
+  target.luckyMissUpgrades.push({
+    id: `lucky-miss-${uid()}`,
+    catalogId: result.id,
+    name: result.name,
+    effect: result.effect,
+    effectEn: result.effectEn,
+    flip: result.flip,
+    cheated: false,
+    week: state.campaign.week,
+  });
+  if (!saveState()) {
+    target.luckyMissUpgrades = before;
+    return;
+  }
+  document.querySelector("#luckyMissDialog").close();
+  renderLeaderPermanentRecords();
+  renderArsenal();
+  renderTotemCard();
+}
+
+function removeLuckyMiss(kind, id, luckyMissId) {
+  const target = injuryTarget(kind, id);
+  const record = target?.luckyMissUpgrades?.find((item) => item.id === luckyMissId);
+  if (!target || !record) return;
+  if (
+    !window.confirm(
+      localized(
+        `Удалить эффект Lucky Miss «${record.name}»?`,
+        `Remove Lucky Miss effect “${record.name}”?`,
+      ),
+    )
+  ) {
+    return;
+  }
+  const before = clone(target.luckyMissUpgrades);
+  target.luckyMissUpgrades = target.luckyMissUpgrades.filter(
+    (item) => item.id !== luckyMissId,
+  );
+  if (!saveState()) {
+    target.luckyMissUpgrades = before;
+    return;
+  }
+  renderLeaderPermanentRecords();
+  renderArsenal();
+  renderTotemCard();
 }
 
 function calculateRating() {
@@ -8407,17 +8579,19 @@ function renderTotemCard(selector = "#totemCard") {
             ${message("addInjury")}
           </button>
         </section>
-        ${
-          (totem.luckyMissUpgrades || []).length
-            ? `<section class="permanent-record-section" data-permanent-section="lucky-miss">
-                <div class="permanent-record-heading">
-                  <span>Lucky Miss</span>
-                  <b>${(totem.luckyMissUpgrades || []).length}</b>
-                </div>
-                ${luckyMissListHtml(totem.luckyMissUpgrades || [])}
-              </section>`
-            : ""
-        }
+        <section class="permanent-record-section" data-permanent-section="lucky-miss">
+          <div class="permanent-record-heading">
+            <span>Lucky Miss</span>
+            <b>${(totem.luckyMissUpgrades || []).length}</b>
+          </div>
+          ${luckyMissListHtml(totem.luckyMissUpgrades || [], {
+            targetKind: "totem",
+            removable: true,
+          }) || `<p class="permanent-empty">${localized("Эффектов пока нет.", "No effects yet.")}</p>`}
+          <button type="button" class="injury-add-button" data-add-lucky-miss-totem>
+            ${localized("Добавить Lucky Miss", "Add Lucky Miss")}
+          </button>
+        </section>
       </div>
       <div class="totem-stat-strip">
         ${[
@@ -8450,6 +8624,9 @@ function renderTotemCard(selector = "#totemCard") {
     </section>`;
   wrap.querySelector("[data-add-injury-totem]")?.addEventListener("click", () => {
     openInjuryDialog("totem");
+  });
+  wrap.querySelector("[data-add-lucky-miss-totem]")?.addEventListener("click", () => {
+    openLuckyMissDialog("totem");
   });
   wrap.querySelector("[data-replace-totem]")?.addEventListener("click", openTotemReplacementDialog);
   bindPermanentRecordActions(wrap);
@@ -10872,6 +11049,9 @@ document.querySelector("#advancementCrewCardParameter").addEventListener("input"
 document.querySelector("#injurySearch").addEventListener("input", (event) => {
   renderInjuryCatalog(event.currentTarget.value);
 });
+document.querySelector("#luckyMissSearch").addEventListener("input", (event) => {
+  renderLuckyMissCatalog(event.currentTarget.value);
+});
 document.querySelector("#modelForm").addEventListener("input", (event) => {
   if (
     pendingModelCard &&
@@ -11248,7 +11428,7 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
       toast(message("importSaveFailed"));
       return;
     }
-    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
     });
@@ -11279,7 +11459,7 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
-  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
     const dialog = document.querySelector(`#${id}`);
     if (dialog.open) dialog.close();
   });
@@ -11369,6 +11549,10 @@ document.querySelector("#cardDialog").addEventListener("close", () => {
 document.querySelector("#injuryDialog").addEventListener("close", () => {
   activeInjuryTarget = null;
   document.querySelector("#injurySearch").value = "";
+});
+document.querySelector("#luckyMissDialog").addEventListener("close", () => {
+  activeLuckyMissTarget = null;
+  document.querySelector("#luckyMissSearch").value = "";
 });
 
 bindFields();
