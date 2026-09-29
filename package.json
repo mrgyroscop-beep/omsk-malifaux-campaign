@@ -39,6 +39,7 @@
     "test:kan208": "node tests/kan208-totem-replacement.smoke.cjs",
     "test:kan209": "node tests/kan209-lucky-miss-upgrades.smoke.cjs",
     "test:kan210": "node tests/kan210-mutagen-abilities.smoke.cjs",
+    "test:workspace-switch": "node tests/workspace-switch-theme.smoke.cjs",
     "test:changelog": "node tests/release-changelog.smoke.cjs"
   },
   "devDependencies": {

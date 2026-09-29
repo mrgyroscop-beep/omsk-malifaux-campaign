@@ -1,6 +1,49 @@
 .workspace-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 10px; border-bottom: 1px solid var(--line); }
 .workspace-switch button { min-height: 44px; padding: 9px 8px; border: 1px solid transparent; background: transparent; color: inherit; font-size: 13px; cursor: pointer; }
 .workspace-switch button[aria-pressed="true"] { color: var(--paper-bright); background: var(--red); border-color: var(--red); }
+.theme-dossier .rail { display: grid; grid-template-columns: clamp(210px, 22vw, 260px) minmax(0, 1fr); align-items: end; }
+.theme-dossier .workspace-switch {
+  min-width: 0;
+  height: 100%;
+  align-items: end;
+  gap: 6px;
+  padding: 6px 10px 0 14px;
+  border-right: 1px solid var(--folder-line);
+  border-bottom: 0;
+  background: transparent;
+}
+.theme-dossier .workspace-switch button {
+  appearance: none;
+  min-width: 0;
+  min-height: 46px;
+  padding: 12px 6px 9px;
+  color: rgba(232, 221, 196, .78);
+  border: 1px solid rgba(232, 221, 196, .12);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  background: #262720;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 15px, 100% 100%, 0 100%, 0 15px);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .025em;
+  line-height: 1.1;
+  text-shadow: none;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.theme-dossier .workspace-switch button:hover {
+  color: var(--dossier-paper-light);
+  background: var(--folder-raised);
+  transform: translateY(-2px);
+}
+.theme-dossier .workspace-switch button[aria-pressed="true"] {
+  color: var(--dossier-ink);
+  border-color: rgba(121, 97, 56, .52);
+  background: var(--dossier-paper-deep);
+  box-shadow: 0 -5px 9px rgba(0, 0, 0, .18);
+  transform: translateY(1px);
+}
+.theme-dossier .primary-nav { padding-inline: 14px; }
 .is-organizer-mode .primary-nav, .is-organizer-mode .rail-footer { display: none; }
 .is-organizer-mode #resetButton, .is-organizer-mode #importButton, .is-organizer-mode #exportButton, .is-organizer-mode #printButton, .is-organizer-mode #openCloudButton { display: none; }
 .theme-dossier .organizer-route .button-ghost { color: #342b1f; border: 1px solid #99825a; background: #f6edda; }
@@ -107,5 +150,7 @@
 @media (min-width: 1100px) { .org-participants { position: sticky; top: calc(var(--sticky-chrome-height, 134px) + 12px); max-height: calc(100vh - var(--sticky-chrome-height, 134px) - 30px); overflow-y: auto; } }
 @media (max-width: 1100px) { .org-desk { grid-template-columns: 215px minmax(0, 1fr); gap: 16px; } .org-form { grid-template-columns: 1fr 1fr; } .org-form > button { grid-column: 1 / -1; } }
 @media (max-width: 860px) { .workspace-switch { padding: 4px 10px; } .workspace-switch button { font-size: 14px; } .is-organizer-mode .rail-index { display: none; } .org-desk { grid-template-columns: 1fr; } #orgParticipantList { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 6px; } .org-member { min-width: 210px; max-width: 260px; flex: 0 0 auto; } .org-member > button { min-height: 70px; } .org-member-stat { display: none; } .org-participants { min-width: 0; } .org-heading { margin-bottom: 20px; gap: 10px; } .org-heading-number { font-size: 56px; } }
+@media (max-width: 420px) { .theme-dossier .rail { grid-template-columns: 194px minmax(0, 1fr); } .theme-dossier .workspace-switch { gap: 4px; padding-inline: 8px 6px; } .theme-dossier .workspace-switch button { padding-inline: 4px; font-size: 11px; } .theme-dossier .primary-nav { padding-inline: 7px; } }
+@media (max-width: 260px) { .theme-dossier .rail { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .theme-dossier .workspace-switch { gap: 2px; padding-inline: 3px; } .theme-dossier .workspace-switch button { padding-inline: 2px; font-size: 9px; letter-spacing: 0; } .theme-dossier .primary-nav { padding-inline: 3px; } }
 @media (max-width: 540px) { .org-heading { flex-wrap: wrap; } .org-heading-number { display: none; } .org-panel, .org-viewer { padding: 15px; } .org-form { grid-template-columns: 1fr; } .org-events li { grid-template-columns: 1fr; gap: 8px; } .org-viewer-head { flex-wrap: wrap; } .org-reader { font-size: 13px; } .org-reader table { font-size: 11px; } .org-reader th, .org-reader td { padding: 6px 3px; } .org-toolbar > button { flex: 1 1 160px; } }
 @media (prefers-reduced-motion: reduce) { .org-campaign-card { transition: none; } }

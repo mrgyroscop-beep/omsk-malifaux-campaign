@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.29.2",
+      date: "2026-09-29",
+      title: {
+        ru: "Переключатель областей вписан в тему досье",
+        en: "The workspace switch now matches the dossier theme",
+      },
+      summary: {
+        ru: "«Мой арсенал» и «Кампании» больше не выглядят как светлые системные кнопки с белым текстом.",
+        en: "My Arsenal and Campaigns no longer look like light system buttons with white text.",
+      },
+      items: [
+        {
+          ru: "Выбранная область оформлена как бумажная вкладка с тёмной контрастной подписью.",
+          en: "The selected workspace is a paper tab with a dark, high-contrast label.",
+        },
+        {
+          ru: "Неактивная область использует тёмный фон папки и светлую подпись.",
+          en: "The inactive workspace uses the dark folder background and a light label.",
+        },
+        {
+          ru: "Переключатель и разделы досье теперь занимают одну строку на компьютере и телефоне.",
+          en: "The workspace switch and dossier sections now share one row on desktop and mobile.",
+        },
+      ],
+    },
+    {
       version: "2026.09.29.1",
       date: "2026-09-29",
       title: {

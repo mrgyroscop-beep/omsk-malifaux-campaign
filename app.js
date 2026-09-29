@@ -4067,8 +4067,12 @@ function activateRoute(route) {
     requestAnimationFrame(() => {
       const nav = activeNav.closest(".primary-nav");
       if (!nav) return;
-      const left =
-        activeNav.offsetLeft - (nav.clientWidth - activeNav.offsetWidth) / 2;
+      const navBox = nav.getBoundingClientRect();
+      const activeBox = activeNav.getBoundingClientRect();
+      const activeLeft = activeBox.left - navBox.left + nav.scrollLeft;
+      const left = activeBox.width >= nav.clientWidth
+        ? activeLeft
+        : activeLeft - (nav.clientWidth - activeBox.width) / 2;
       nav.scrollTo({ left: Math.max(0, left), behavior: "auto" });
     });
   }
