@@ -465,6 +465,25 @@
     </section>`;
   }
 
+  function renderPrintMutagenAbilitySection(records) {
+    const items = Array.isArray(records) ? records : [];
+    if (!items.length) return "";
+    return `<section class="print-permanent-block" data-print-section="mutagen-abilities">
+      <h3>Mutagen Injector · Ability</h3>
+      <ul class="print-ability-list">${items
+        .map(
+          (ability) => `<li><b>${escapePrintHtml(ability.name || printText("Способность", "Ability"))}</b>
+            <small>${escapePrintHtml([
+              ability.flip ? `${printText("флип", "flip")} ${ability.flip}` : "",
+              ability.week ? `${printText("неделя", "week")} ${ability.week}` : "",
+            ].filter(Boolean).join(" · "))}</small>
+            ${ability.effect ? `<p>${richPrintText(ability.effect)}</p>` : ""}
+          </li>`,
+        )
+        .join("")}</ul>
+    </section>`;
+  }
+
   function renderModels(models, loadout, equipment) {
     if (!models.length) {
       return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
@@ -505,6 +524,7 @@
                     .join("")
                 : `<p class="print-model-profile-missing">${printText("Полный профиль не сохранён для этой модели.", "A full profile is not saved for this model.")}</p>`}
               <div class="print-model-upgrades">
+                ${renderPrintMutagenAbilitySection(model.mutagenAbilities)}
                 ${renderPrintInjurySection(model.injuries)}
                 ${renderPrintEquipmentSection(assigned)}
               </div>

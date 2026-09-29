@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.09.29.1",
+      date: "2026-09-29",
+      title: {
+        ru: "Mutagen Injector добавляет Ability прямо модели",
+        en: "Mutagen Injector adds an Ability directly to a model",
+      },
+      summary: {
+        ru: "Физический флип по таблице Ability Advancement теперь можно записать в Арсенале без ручной заметки.",
+        en: "A physical Ability Advancement flip can now be recorded in the Arsenal without a separate note.",
+      },
+      items: [
+        {
+          ru: "Выберите результат флипа и любую допустимую Ability со значением не выше него.",
+          en: "Choose the flip result and any eligible Ability at or below that value.",
+        },
+        {
+          ru: "Natural Joker поддерживает ручную запись способности с карточки подходящей модели.",
+          en: "A natural Joker supports a manual Ability entry from an eligible model card.",
+        },
+        {
+          ru: "Ability сохраняется у модели, показывается в ростере и печатном досье и может быть удалена.",
+          en: "The Ability persists on the model, appears in the roster and printed dossier, and can be removed.",
+        },
+      ],
+    },
+    {
       version: "2026.09.23.1",
       date: "2026-09-23",
       title: {

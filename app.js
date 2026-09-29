@@ -104,6 +104,12 @@ const STATIC_TEXT_EN = {
   "Название улучшения *": "Upgrade title *",
   "Связанное действие": "Associated action",
   "Необязательно": "Optional",
+  "Результат физического флипа": "Physical flip result",
+  "Чёрный джокер": "Black Joker",
+  "Красный джокер": "Red Joker",
+  "Название Ability": "Ability name",
+  "Текст Ability": "Ability text",
+  "Добавить Ability от Mutagen Injector": "Add a Mutagen Injector Ability",
   "Эффект или заметка *": "Effect or note *",
   "Добавить запись": "Add record",
   "Выберите архетип. Билдер покажет допустимое число талантов и предел стоимости модели-источника.":
@@ -1305,6 +1311,13 @@ const luckyMissCatalog = Object.freeze(
   ),
 );
 
+const mutagenAbilityCatalog = Object.freeze(
+  [
+    ...(advancementData?.tier2?.abilities?.always || []),
+    ...Object.values(advancementData?.tier2?.abilities?.byValue || {}).flat(),
+  ].map((entry) => ({ ...entry })),
+);
+
 const equipment = [
   ...barterEquipment.map((entry) => [...entry, { group: "barter" }]),
   ...thoseWhoThirstEquipment,
@@ -1437,6 +1450,7 @@ let returnToAdvancementAfterTalent = false;
 let activeCardView = null;
 let activeInjuryTarget = null;
 let activeLuckyMissTarget = null;
+let activeMutagenAbilityModelId = null;
 let activeModelCharacteristicsId = null;
 let modelSearchRequest = 0;
 let talentSearchRequest = 0;
@@ -1800,6 +1814,41 @@ function normalizeLuckyMissUpgrades(value, ownerId = "model") {
     .filter((record) => record.name);
 }
 
+function normalizeMutagenAbilities(value, ownerId = "model") {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, 100)
+    .map((record, index) => {
+      const source = record && typeof record === "object" && !Array.isArray(record) ? record : {};
+      const flip = /^(?:[1-9]|1[0-3]|black-joker|red-joker)$/u.test(String(source.flip || ""))
+        ? String(source.flip)
+        : "";
+      const matchedCatalogEntry = mutagenAbilityCatalog.find(
+        (entry) => entry.id === source.catalogId || entry.name === source.name,
+      );
+      const naturalJoker = ["black-joker", "red-joker"].includes(flip);
+      const numericFlip = Number(flip);
+      const catalogEntry =
+        !naturalJoker &&
+        matchedCatalogEntry &&
+        (matchedCatalogEntry.value === "always" || Number(matchedCatalogEntry.value) <= numericFlip)
+          ? matchedCatalogEntry
+          : null;
+      if (!flip || (!catalogEntry && !naturalJoker)) return null;
+      return {
+        id: safeIdentifier(source.id, `${ownerId}-mutagen-ability-${index + 1}`),
+        catalogId: catalogEntry?.id || null,
+        name: catalogEntry?.name || safeText(source.name, 200),
+        effect: catalogEntry ? "" : safeText(source.effect, 4_000),
+        flip,
+        page: catalogEntry?.page || safeInteger(source.page, 51, 50, 51),
+        week: safeInteger(source.week, 1, 1, 99),
+        source: "Mutagen Injector",
+      };
+    })
+    .filter((record) => record?.name);
+}
+
 function injuryCount(value) {
   return Array.isArray(value) ? value.length : safeInteger(value, 0, 0, 100);
 }
@@ -1839,6 +1888,7 @@ function normalizeStoredModel(model) {
       : [],
     injuries: normalizeStoredInjuries(source.injuries, id),
     luckyMissUpgrades: normalizeLuckyMissUpgrades(source.luckyMissUpgrades, id),
+    mutagenAbilities: normalizeMutagenAbilities(source.mutagenAbilities, id),
     addedWeek: safeInteger(source.addedWeek, 1, 1, 99),
     scripPaid: safeNumber(source.scripPaid, 0, 0, 1_000),
     acquisition: source.acquisition === "traitor" ? "traitor" : "",
@@ -4760,7 +4810,13 @@ function currentLoadoutSnapshot() {
         henchman: Boolean(model.henchman),
         injuries: clone(model.injuries),
         luckyMissUpgrades: clone(model.luckyMissUpgrades || []),
-        abilities: [],
+        abilities: (model.mutagenAbilities || []).map((record) => ({
+          id: record.id,
+          name: record.name,
+          effect: record.effect,
+          source: "Mutagen Injector",
+          flip: { card: record.flip },
+        })),
         equipment: snapshotEquipment(equipmentAssignedTo("model", model.id)),
       })),
     totem: state.leader.totem
@@ -4870,6 +4926,29 @@ function luckyMissListHtml(
     .join("")}</span>`;
 }
 
+function mutagenAbilityListHtml(records, { targetId = "", removable = false } = {}) {
+  const items = Array.isArray(records) ? records : [];
+  if (!items.length) return "";
+  return `<span class="mutagen-ability-list">${items
+    .map(
+      (record) => `<span class="mutagen-ability-chip" title="${escapeHtml(record.effect || "Mutagen Injector")}">
+        <span><b>Mutagen · ${escapeHtml(record.name)}</b>
+        <small>${escapeHtml(`${flipLabel(record.flip)} · ${localized("неделя", "week")} ${record.week}`)}</small></span>
+        ${
+          removable
+            ? `<button type="button" data-remove-mutagen-ability="${escapeHtml(
+                record.id,
+              )}" data-mutagen-model-id="${escapeHtml(targetId)}" aria-label="${localized(
+                "Удалить способность Mutagen Injector",
+                "Remove Mutagen Injector ability",
+              )} ${escapeHtml(record.name)}">×</button>`
+            : ""
+        }
+      </span>`,
+    )
+    .join("")}</span>`;
+}
+
 function loadoutMemberHtml(member, { compact = false } = {}) {
   const role =
     member.role === "leader"
@@ -4897,7 +4976,7 @@ function loadoutMemberHtml(member, { compact = false } = {}) {
             .join(" · "),
         )}</small>
         ${
-          member.role !== "model"
+          member.abilities?.length
             ? `<div class="loadout-permanent-section" data-loadout-section="abilities">
                 <b>${localized("Способности", "Abilities")}</b>
                 ${abilityListHtml(member.abilities)}
@@ -5538,6 +5617,10 @@ function renderArsenal() {
                 targetId: model.id,
                 removable: model.type !== "Peon",
               })}
+              ${mutagenAbilityListHtml(model.mutagenAbilities, {
+                targetId: model.id,
+                removable: model.type !== "Peon",
+              })}
             </span>
             <button
               class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
@@ -5567,6 +5650,9 @@ function renderArsenal() {
                     <button type="button" data-add-lucky-miss-model="${escapeHtml(
                       model.id,
                     )}">+ Lucky Miss</button>
+                    <button type="button" data-add-mutagen-ability-model="${escapeHtml(
+                      model.id,
+                    )}">+ Mutagen Ability</button>
                    </span>`
             }
             <button class="row-delete" type="button" data-delete-model="${escapeHtml(model.id)}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
@@ -5647,6 +5733,11 @@ function renderArsenal() {
       openLuckyMissDialog("model", button.dataset.addLuckyMissModel),
     );
   });
+  list.querySelectorAll("[data-add-mutagen-ability-model]").forEach((button) => {
+    button.addEventListener("click", () =>
+      openMutagenAbilityDialog(button.dataset.addMutagenAbilityModel),
+    );
+  });
   list.querySelectorAll("[data-remove-injury]").forEach((button) => {
     button.addEventListener("click", () =>
       removeInjury(
@@ -5663,6 +5754,11 @@ function renderArsenal() {
         button.dataset.luckyMissTargetId,
         button.dataset.removeLuckyMiss,
       ),
+    );
+  });
+  list.querySelectorAll("[data-remove-mutagen-ability]").forEach((button) => {
+    button.addEventListener("click", () =>
+      removeMutagenAbility(button.dataset.mutagenModelId, button.dataset.removeMutagenAbility),
     );
   });
   list.querySelectorAll("[data-toggle-hired-model]").forEach((button) => {
@@ -6164,6 +6260,115 @@ function removeLuckyMiss(kind, id, luckyMissId) {
   renderLeaderPermanentRecords();
   renderArsenal();
   renderTotemCard();
+}
+
+function renderMutagenAbilityDialog() {
+  const form = document.querySelector("#mutagenAbilityForm");
+  const flipSelect = form.elements.flip;
+  const choiceSelect = form.elements.choice;
+  const manualFields = document.querySelector("#mutagenAbilityManualFields");
+  const status = document.querySelector("#mutagenAbilityStatus");
+  const submit = document.querySelector("#mutagenAbilitySubmit");
+  const model = state.arsenal.models.find((item) => item.id === activeMutagenAbilityModelId);
+  const flip = flipSelect.value || "1";
+  const naturalJoker = ["black-joker", "red-joker"].includes(flip);
+  const choices = naturalJoker ? [] : advancementChoices("ability", flip, false);
+  const used = new Set((model?.mutagenAbilities || []).map((record) => record.catalogId));
+  const previous = choiceSelect.value;
+  setSelectOptions(
+    choiceSelect,
+    choices.map((choice) => ({
+      value: choice.id,
+      label: advancementChoiceLabel(choice),
+      disabled: used.has(choice.id),
+    })),
+    previous,
+  );
+  choiceSelect.closest("label").hidden = naturalJoker;
+  choiceSelect.required = !naturalJoker;
+  manualFields.hidden = !naturalJoker;
+  form.elements.manualName.required = naturalJoker;
+  status.textContent = naturalJoker
+    ? localized(
+        "Natural Joker: запишите выбранную Ability модели Cost ≤ 10 с общим ключевым словом. Этот флип нельзя жульничать.",
+        "Natural Joker: record the chosen Ability from a Cost ≤ 10 model sharing a keyword. This flip cannot be cheated.",
+      )
+    : localized(
+        `Доступны постоянные результаты и значения не выше ${flip}. Этот флип нельзя жульничать.`,
+        `Always results and values up to ${flip} are available. This flip cannot be cheated.`,
+      );
+  submit.disabled = !model || (!naturalJoker && !choices.some((choice) => !used.has(choice.id)));
+}
+
+function openMutagenAbilityDialog(modelId) {
+  const model = state.arsenal.models.find((item) => item.id === modelId);
+  if (!model || model.type === "Peon") return;
+  activeMutagenAbilityModelId = model.id;
+  const form = document.querySelector("#mutagenAbilityForm");
+  form.reset();
+  form.elements.flip.value = "1";
+  document.querySelector("#mutagenAbilityTarget").textContent = model.name;
+  document.querySelector("#mutagenAbilityDialogTitle").textContent = localized(
+    "Добавить Ability от Mutagen Injector",
+    "Add a Mutagen Injector Ability",
+  );
+  document.querySelector("#mutagenAbilitySubmit").textContent = localized("Добавить", "Add");
+  renderMutagenAbilityDialog();
+  const dialog = document.querySelector("#mutagenAbilityDialog");
+  if (!dialog.open) dialog.showModal();
+  form.elements.flip.focus();
+}
+
+function addSelectedMutagenAbility() {
+  const model = state.arsenal.models.find((item) => item.id === activeMutagenAbilityModelId);
+  const form = document.querySelector("#mutagenAbilityForm");
+  if (!model) return;
+  const flip = form.elements.flip.value;
+  const naturalJoker = ["black-joker", "red-joker"].includes(flip);
+  const choices = naturalJoker ? [] : advancementChoices("ability", flip, false);
+  const choice = choices.find((entry) => entry.id === form.elements.choice.value) || null;
+  const name = naturalJoker ? form.elements.manualName.value.trim() : choice?.name || "";
+  if (!name || (!naturalJoker && !choice)) return;
+  if (choice && (model.mutagenAbilities || []).some((record) => record.catalogId === choice.id)) {
+    toast(localized("Эта способность уже добавлена модели.", "This Ability is already on the model."));
+    return;
+  }
+  const before = clone(model.mutagenAbilities || []);
+  model.mutagenAbilities = Array.isArray(model.mutagenAbilities) ? model.mutagenAbilities : [];
+  model.mutagenAbilities.push({
+    id: `mutagen-ability-${uid()}`,
+    catalogId: choice?.id || null,
+    name,
+    effect: naturalJoker ? form.elements.manualEffect.value.trim() : "",
+    flip,
+    page: choice?.page || 51,
+    week: state.campaign.week,
+    source: "Mutagen Injector",
+  });
+  if (!saveState()) {
+    model.mutagenAbilities = before;
+    return;
+  }
+  document.querySelector("#mutagenAbilityDialog").close();
+  renderArsenal();
+  toast(localized("Ability добавлена модели.", "Ability added to the model."));
+}
+
+function removeMutagenAbility(modelId, abilityId) {
+  const model = state.arsenal.models.find((item) => item.id === modelId);
+  const ability = model?.mutagenAbilities?.find((item) => item.id === abilityId);
+  if (!model || !ability) return;
+  if (!window.confirm(localized(
+    `Удалить Ability «${ability.name}» от Mutagen Injector?`,
+    `Remove the Mutagen Injector Ability “${ability.name}”?`,
+  ))) return;
+  const before = clone(model.mutagenAbilities);
+  model.mutagenAbilities = model.mutagenAbilities.filter((item) => item.id !== abilityId);
+  if (!saveState()) {
+    model.mutagenAbilities = before;
+    return;
+  }
+  renderArsenal();
 }
 
 function calculateRating() {
@@ -11052,6 +11257,13 @@ document.querySelector("#injurySearch").addEventListener("input", (event) => {
 document.querySelector("#luckyMissSearch").addEventListener("input", (event) => {
   renderLuckyMissCatalog(event.currentTarget.value);
 });
+document.querySelector("#mutagenAbilityFlip").addEventListener("change", () => {
+  renderMutagenAbilityDialog();
+});
+document.querySelector("#mutagenAbilityForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  addSelectedMutagenAbility();
+});
 document.querySelector("#modelForm").addEventListener("input", (event) => {
   if (
     pendingModelCard &&
@@ -11088,6 +11300,7 @@ document.querySelector("#modelForm").addEventListener("submit", (event) => {
     characteristics: [],
     injuries: [],
     luckyMissUpgrades: [],
+    mutagenAbilities: [],
     cardId: pendingModelCard?.id ?? null,
     cardSlug: pendingModelCard?.slug ?? null,
     cardSnapshot: pendingModelCard ? clone(pendingModelCard) : null,
@@ -11428,7 +11641,7 @@ document.querySelector("#importFile").addEventListener("change", async (event) =
       toast(message("importSaveFailed"));
       return;
     }
-    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+    ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "mutagenAbilityDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
       const dialog = document.querySelector(`#${id}`);
       if (dialog.open) dialog.close();
     });
@@ -11459,7 +11672,7 @@ document.querySelector("#resetButton").addEventListener("click", () => {
   if (!window.confirm(message("resetConfirm"))) return;
   state = clone(defaultState);
   saveState();
-  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
+  ["modelDialog", "talentDialog", "cardDialog", "injuryDialog", "luckyMissDialog", "mutagenAbilityDialog", "totemReplacementDialog", "advancementDialog", "manualUpgradeDialog"].forEach((id) => {
     const dialog = document.querySelector(`#${id}`);
     if (dialog.open) dialog.close();
   });
@@ -11514,6 +11727,14 @@ document.querySelectorAll("[data-locale]").forEach((button) => {
     if (document.querySelector("#injuryDialog").open) {
       renderInjuryCatalog(document.querySelector("#injurySearch").value);
     }
+    if (document.querySelector("#mutagenAbilityDialog").open) {
+      document.querySelector("#mutagenAbilityDialogTitle").textContent = localized(
+        "Добавить Ability от Mutagen Injector",
+        "Add a Mutagen Injector Ability",
+      );
+      document.querySelector("#mutagenAbilitySubmit").textContent = localized("Добавить", "Add");
+      renderMutagenAbilityDialog();
+    }
     updateManualUpgradeDialogTranslations();
   });
 });
@@ -11554,6 +11775,10 @@ document.querySelector("#luckyMissDialog").addEventListener("close", () => {
   activeLuckyMissTarget = null;
   document.querySelector("#luckyMissSearch").value = "";
 });
+document.querySelector("#mutagenAbilityDialog").addEventListener("close", () => {
+  activeMutagenAbilityModelId = null;
+  document.querySelector("#mutagenAbilityForm").reset();
+});
 
 bindFields();
 setupKeywordValidation();
@@ -11572,6 +11797,7 @@ window.MalifauxBuilder = Object.freeze({
   getEquipment: () => clone(equipment),
   getInjuries: () => clone(injuryCatalog),
   getLuckyMisses: () => clone(luckyMissCatalog),
+  getMutagenAbilities: () => clone(mutagenAbilityCatalog),
   getCrewStatPresentation: (value) => clone(crewStatPresentation(value)),
   notify: (text) => toast(String(text)),
   replaceState(value, options = {}) {

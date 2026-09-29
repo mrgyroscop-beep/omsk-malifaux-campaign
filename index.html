@@ -23,11 +23,11 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.09.23.1" />
+    <meta name="app-version" content="2026.09.29.1" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=17" />
+    <link rel="stylesheet" href="styles.css?v=18" />
     <link rel="stylesheet" href="dossier-theme.css?v=19" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=5" />
@@ -1581,6 +1581,65 @@
       </div>
     </dialog>
 
+    <dialog id="mutagenAbilityDialog" class="modal" aria-labelledby="mutagenAbilityDialogTitle">
+      <form id="mutagenAbilityForm">
+        <div class="modal-heading">
+          <div>
+            <span class="kicker">Mutagen Injector · Ability Advancement</span>
+            <h2 id="mutagenAbilityDialogTitle">Добавить Ability от Mutagen Injector</h2>
+            <p class="injury-dialog-target" id="mutagenAbilityTarget"></p>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            data-close-dialog="mutagenAbilityDialog"
+            aria-label="Закрыть"
+          >×</button>
+        </div>
+        <div class="form-grid mutagen-ability-form-grid">
+          <label class="field">
+            <span>Результат физического флипа</span>
+            <select id="mutagenAbilityFlip" name="flip" required>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="black-joker">Чёрный джокер</option>
+              <option value="red-joker">Красный джокер</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Ability</span>
+            <select id="mutagenAbilityChoice" name="choice" required></select>
+          </label>
+          <div class="field field-wide mutagen-ability-manual" id="mutagenAbilityManualFields" hidden>
+            <label class="field">
+              <span>Название Ability</span>
+              <input name="manualName" type="text" maxlength="200" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Текст Ability</span>
+              <textarea name="manualEffect" rows="4" maxlength="4000" placeholder="Необязательно"></textarea>
+            </label>
+          </div>
+        </div>
+        <p class="catalog-status mutagen-ability-status" id="mutagenAbilityStatus" aria-live="polite"></p>
+        <div class="totem-replacement-actions">
+          <button class="button button-ghost" type="button" data-close-dialog="mutagenAbilityDialog">Отмена</button>
+          <button class="button button-red" id="mutagenAbilitySubmit" type="submit">Добавить</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="totemReplacementDialog" class="modal" aria-labelledby="totemReplacementTitle">
       <form method="dialog" id="totemReplacementForm">
         <div class="modal-heading">
@@ -2045,12 +2104,12 @@
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=48"></script>
+    <script src="app.js?v=49"></script>
     <script src="account.js?v=4"></script>
-    <script src="changelog.js?v=7"></script>
+    <script src="changelog.js?v=8"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
-    <script src="print.js?v=16"></script>
+    <script src="print.js?v=17"></script>
     <script src="organizer.js?v=1"></script>
   </body>
 </html>

@@ -1891,14 +1891,16 @@ h1 {
   gap: 10px;
 }
 
-.lucky-miss-list {
+.lucky-miss-list,
+.mutagen-ability-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 7px;
 }
 
-.lucky-miss-chip {
+.lucky-miss-chip,
+.mutagen-ability-chip {
   display: inline-flex;
   align-items: stretch;
   max-width: 100%;
@@ -1908,26 +1910,30 @@ h1 {
   font-size: 9px;
 }
 
-.lucky-miss-chip > span {
+.lucky-miss-chip > span,
+.mutagen-ability-chip > span {
   display: grid;
   gap: 2px;
   min-width: 0;
   padding: 5px 8px;
 }
 
-.lucky-miss-chip b {
+.lucky-miss-chip b,
+.mutagen-ability-chip b {
   color: var(--gold-dark);
   font-family: var(--sans);
   letter-spacing: 0.04em;
 }
 
-.lucky-miss-chip small {
+.lucky-miss-chip small,
+.mutagen-ability-chip small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lucky-miss-chip button {
+.lucky-miss-chip button,
+.mutagen-ability-chip button {
   width: 26px;
   padding: 0;
   color: var(--gold-dark);
@@ -1937,9 +1943,51 @@ h1 {
   cursor: pointer;
 }
 
-.lucky-miss-chip button:hover {
+.lucky-miss-chip button:hover,
+.mutagen-ability-chip button:hover {
   color: white;
   background: var(--gold-dark);
+}
+
+.mutagen-ability-chip {
+  border-color: rgba(85, 119, 86, 0.52);
+  background: rgba(85, 119, 86, 0.1);
+}
+
+.mutagen-ability-chip b,
+.mutagen-ability-chip button {
+  color: #466647;
+}
+
+.mutagen-ability-chip button {
+  border-left-color: rgba(85, 119, 86, 0.35);
+}
+
+.mutagen-ability-chip button:hover {
+  background: #466647;
+}
+
+.mutagen-ability-form-grid {
+  margin-top: 18px;
+}
+
+.mutagen-ability-manual {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.mutagen-ability-manual[hidden] {
+  display: none;
+}
+
+.catalog-status.mutagen-ability-status {
+  margin: 14px 0;
+  padding: 9px 11px;
+  color: var(--muted);
+  border-left: 3px solid var(--brass-deep);
+  background: rgba(181, 151, 83, 0.08);
+  line-height: 1.45;
 }
 
 @media (max-width: 720px) {
