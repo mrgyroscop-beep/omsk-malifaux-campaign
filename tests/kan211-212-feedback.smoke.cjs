@@ -49,7 +49,14 @@ function model(id, name, cost) {
   await mkdir(artifacts, { recursive: true });
   const server = await startServer();
   const browser = await chromium.launch({ channel: browserChannel, headless: true });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({
+    locale: "ru-RU",
+    viewport: { width: 1280, height: 900 },
+  });
+  await context.addInitScript(() => {
+    localStorage.setItem("m4e-untold-locale", "ru");
+  });
+  const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
