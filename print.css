@@ -679,17 +679,22 @@
   }
 
   .print-model-cards {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 3mm;
+    display: block;
     margin-bottom: 4mm;
   }
 
   .print-model-card {
+    margin-bottom: 3mm;
     padding: 3mm;
     border: 0.8pt solid var(--print-line);
     background: var(--print-paper);
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-model-card + .print-model-card {
+    break-before: page;
+    page-break-before: always;
   }
 
   .print-talent-compact {

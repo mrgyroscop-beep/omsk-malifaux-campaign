@@ -3092,6 +3092,17 @@ body.theme-dossier {
   background: var(--dossier-red);
 }
 
+.theme-dossier .model-row.is-annihilated {
+  border-color: rgba(159, 48, 40, 0.42);
+  box-shadow: none;
+}
+
+.theme-dossier .model-badge.is-annihilated {
+  color: var(--dossier-paper-light);
+  border-color: var(--dossier-red);
+  background: var(--dossier-red);
+}
+
 .theme-dossier .traitor-transfer-note {
   color: var(--dossier-muted);
   border-color: rgba(159, 48, 40, 0.36);

@@ -1515,6 +1515,11 @@ h1 {
   color: var(--brass);
 }
 
+.loadout-toggle.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .loadout-toggle:focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 2px;
@@ -1624,6 +1629,21 @@ h1 {
 .model-badge.is-traitor {
   color: var(--paper-bright);
   border-color: rgba(156, 40, 36, 0.72);
+  background: var(--red);
+}
+
+.model-row.is-annihilated {
+  background: rgba(156, 40, 36, 0.05);
+}
+
+.model-row.is-annihilated .model-cost {
+  opacity: 0.56;
+  text-decoration: line-through;
+}
+
+.model-badge.is-annihilated {
+  color: var(--paper-bright);
+  border-color: var(--red);
   background: var(--red);
 }
 

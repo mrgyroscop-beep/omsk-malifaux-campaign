@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.10.02.1",
+      date: "2026-10-02",
+      title: {
+        ru: "Печать разделяет модели, а Traitor исключает их из Арсенала",
+        en: "Print separates models and Traitor removes them from the Arsenal",
+      },
+      summary: {
+        ru: "Карточки моделей больше не разрываются между листами, а аннигилированные модели не завышают стоимость.",
+        en: "Model cards no longer split across sheets, and annihilated models no longer inflate the cost.",
+      },
+      items: [
+        {
+          ru: "Каждая следующая модель при печати начинается с нового листа.",
+          en: "Each following model starts on a new printed sheet.",
+        },
+        {
+          ru: "Traitor исключает модель из стоимости, активного ростера и печатного досье.",
+          en: "Traitor excludes a model from the cost, active roster, and printed dossier.",
+        },
+        {
+          ru: "Аннигилированная модель остаётся архивной записью, чтобы ошибочно добавленную травму можно было удалить.",
+          en: "An annihilated model remains as an archive entry so an accidental injury can be removed.",
+        },
+      ],
+    },
+    {
       version: "2026.09.29.2",
       date: "2026-09-29",
       title: {

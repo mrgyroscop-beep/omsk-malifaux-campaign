@@ -1853,6 +1853,14 @@ function injuryCount(value) {
   return Array.isArray(value) ? value.length : safeInteger(value, 0, 0, 100);
 }
 
+function isModelAnnihilated(model) {
+  return (Array.isArray(model?.injuries) ? model.injuries : []).some(
+    (injury) =>
+      injury?.catalogId === "injury-01" ||
+      canonical(injury?.name || injury?.nameEn) === canonical("Traitor"),
+  );
+}
+
 function normalizeStoredModel(model) {
   const source = model && typeof model === "object" ? model : {};
   const legacyType = String(source.type || "Other");
@@ -4679,8 +4687,9 @@ function renderCrewCards() {
 }
 
 function arsenalTotals() {
-  const cost = state.arsenal.models.reduce((sum, model) => sum + Number(model.cost || 0), 0);
-  const injuriesCount = state.arsenal.models.reduce(
+  const activeModels = state.arsenal.models.filter((model) => !isModelAnnihilated(model));
+  const cost = activeModels.reduce((sum, model) => sum + Number(model.cost || 0), 0);
+  const injuriesCount = activeModels.reduce(
     (sum, model) => sum + injuryCount(model.injuries),
     0,
   );
@@ -4727,7 +4736,10 @@ function equipmentTargets(item) {
       unique: true,
     },
     ...state.arsenal.models
-      .filter((model) => isModelHired(model.id) && model.type !== "Peon")
+      .filter(
+        (model) =>
+          !isModelAnnihilated(model) && isModelHired(model.id) && model.type !== "Peon",
+      )
       .map((model) => ({
         key: `model:${model.id}`,
         targetId: model.id,
@@ -4805,7 +4817,7 @@ function currentLoadoutSnapshot() {
     },
     models: state.loadout.hiredModelIds
       .map((id) => state.arsenal.models.find((model) => model.id === id))
-      .filter(Boolean)
+      .filter((model) => model && !isModelAnnihilated(model))
       .map((model) => ({
         id: model.id,
         role: "model",
@@ -5081,7 +5093,11 @@ function campaignAdvanceCount() {
 
 function repairLoadout() {
   const previous = JSON.stringify(state.loadout);
-  const modelIds = new Set(state.arsenal.models.map((model) => model.id));
+  const modelIds = new Set(
+    state.arsenal.models
+      .filter((model) => !isModelAnnihilated(model))
+      .map((model) => model.id),
+  );
   const equipmentById = new Map(
     state.arsenal.equipment.map((item) => [item.id, item]),
   );
@@ -5564,7 +5580,9 @@ function renderArsenal() {
   const { cost, injuriesCount } = arsenalTotals();
   const ratingInjuries = hiredInjuriesCount();
   document.querySelector("#arsenalCost").textContent = cost;
-  document.querySelector("#modelCount").textContent = state.arsenal.models.length;
+  document.querySelector("#modelCount").textContent = state.arsenal.models.filter(
+    (model) => !isModelAnnihilated(model),
+  ).length;
   document.querySelector("#scripCount").textContent = state.arsenal.scrip;
   document.querySelector("#injuryCount").textContent = injuriesCount;
   document.querySelector("#ratingInjuries").value = ratingInjuries;
@@ -5591,9 +5609,10 @@ function renderArsenal() {
       </div>`;
   } else {
     list.innerHTML = state.arsenal.models
-      .map(
-        (model) => `
-          <div class="model-row">
+      .map((model) => {
+        const annihilated = isModelAnnihilated(model);
+        return `
+          <div class="model-row${annihilated ? " is-annihilated" : ""}">
             <span class="model-cost">${escapeHtml(model.cost)}</span>
             <span class="model-main">
               <b>${escapeHtml(model.name)}</b>
@@ -5626,20 +5645,24 @@ function renderArsenal() {
                 removable: model.type !== "Peon",
               })}
             </span>
-            <button
-              class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
-              type="button"
-              data-toggle-hired-model="${escapeHtml(model.id)}"
-              aria-pressed="${isModelHired(model.id)}"
-              aria-label="${message(
-                isModelHired(model.id) ? "modelInLoadoutAria" : "modelOutsideLoadoutAria",
-                { name: model.name },
-              )}"
-            >
-              <span aria-hidden="true">${isModelHired(model.id) ? "✓" : "+"}</span>
-              ${message(isModelHired(model.id) ? "modelInLoadout" : "modelOutsideLoadout")}
-            </button>
-            <span class="model-badge ${model.acquisition === "traitor" ? "is-traitor" : ""}">${model.acquisition === "traitor" ? message("traitorBadge") : model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
+            ${
+              annihilated
+                ? `<span class="loadout-toggle is-disabled" aria-label="${localized("Аннигилированная модель исключена из ростера", "An annihilated model is excluded from the roster")}"><span aria-hidden="true">×</span>${localized("Вне ростера", "Out of roster")}</span>`
+                : `<button
+                    class="loadout-toggle ${isModelHired(model.id) ? "is-active" : ""}"
+                    type="button"
+                    data-toggle-hired-model="${escapeHtml(model.id)}"
+                    aria-pressed="${isModelHired(model.id)}"
+                    aria-label="${message(
+                      isModelHired(model.id) ? "modelInLoadoutAria" : "modelOutsideLoadoutAria",
+                      { name: model.name },
+                    )}"
+                  >
+                    <span aria-hidden="true">${isModelHired(model.id) ? "✓" : "+"}</span>
+                    ${message(isModelHired(model.id) ? "modelInLoadout" : "modelOutsideLoadout")}
+                  </button>`
+            }
+            <span class="model-badge ${annihilated ? "is-annihilated" : model.acquisition === "traitor" ? "is-traitor" : ""}">${annihilated ? localized("Аннигилирована", "Annihilated") : model.acquisition === "traitor" ? message("traitorBadge") : model.outOfKeyword ? message("outOfKeyword") : model.versatile ? "versatile" : message("inKeyword")}</span>
             <button class="model-characteristics-button" type="button" data-edit-model-characteristics="${escapeHtml(model.id)}">
               ${localized("Характеристики", "Characteristics")}
             </button>
@@ -5660,8 +5683,8 @@ function renderArsenal() {
                    </span>`
             }
             <button class="row-delete" type="button" data-delete-model="${escapeHtml(model.id)}" aria-label="${message("deleteItem")} ${escapeHtml(model.name)}">×</button>
-          </div>`,
-      )
+          </div>`;
+      })
       .join("");
   }
 
@@ -6132,7 +6155,14 @@ function addSelectedInjury(catalogId) {
   renderArsenal();
   renderTotemCard();
   calculateRating();
-  if (injuryCount(target.injuries) >= 3) toast(message("threeInjuries"));
+  if (activeInjuryTarget?.kind === "model" && isModelAnnihilated(target)) {
+    toast(localized(
+      "Traitor: модель аннигилирована и исключена из стоимости Арсенала.",
+      "Traitor: the model is annihilated and excluded from the Arsenal cost.",
+    ));
+  } else if (injuryCount(target.injuries) >= 3) {
+    toast(message("threeInjuries"));
+  }
 }
 
 function removeInjury(kind, id, injuryId) {

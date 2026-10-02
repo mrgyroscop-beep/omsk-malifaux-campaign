@@ -484,13 +484,21 @@
     </section>`;
   }
 
+  function printModelIsAnnihilated(model) {
+    return (Array.isArray(model?.injuries) ? model.injuries : []).some((injury) => {
+      const name = String(injury?.name || injury?.nameEn || "").trim().toLocaleLowerCase("en");
+      return injury?.catalogId === "injury-01" || name === "traitor";
+    });
+  }
+
   function renderModels(models, loadout, equipment) {
-    if (!models.length) {
+    const activeModels = models.filter((model) => !printModelIsAnnihilated(model));
+    if (!activeModels.length) {
       return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
     }
     return `
       <div class="print-model-cards">
-        ${models
+        ${activeModels
           .map((model) => {
             const profiles = Array.isArray(model.cardForms) && model.cardForms.length
               ? model.cardForms.filter(Boolean)
@@ -974,10 +982,11 @@
     const characteristics = Array.isArray(leader.characteristics)
       ? leader.characteristics.filter(Boolean)
       : [];
-    const totalCost = models.reduce((sum, model) => sum + Number(model.cost || 0), 0);
+    const activeModels = models.filter((model) => !printModelIsAnnihilated(model));
+    const totalCost = activeModels.reduce((sum, model) => sum + Number(model.cost || 0), 0);
     const totalInjuries =
       printInjuryCount(leader.injuries) +
-      models.reduce((sum, model) => sum + printInjuryCount(model.injuries), 0) +
+      activeModels.reduce((sum, model) => sum + printInjuryCount(model.injuries), 0) +
       printInjuryCount(leader.totem?.injuries);
     const archetypeName = archetype
       ? isEnglishPrint()
@@ -1104,7 +1113,7 @@
             <p>${escapePrintHtml(crew.name || "—")}</p>
           </div>
           <div class="print-summary">
-            <span><small>${printText("Модели", "Models")}</small><b>${models.length}</b></span>
+            <span><small>${printText("Модели", "Models")}</small><b>${activeModels.length}</b></span>
             <span><small>${printText("Стоимость", "Cost")}</small><b>${totalCost}</b></span>
             <span><small>${printText("Скрип", "Scrip")}</small><b>${escapePrintHtml(arsenal.scrip || 0)}</b></span>
             <span><small>${printText("Травмы", "Injuries")}</small><b>${totalInjuries}</b></span>
