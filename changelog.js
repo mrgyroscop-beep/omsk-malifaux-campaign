@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.10.06.1",
+      date: "2026-10-06",
+      title: {
+        ru: "Триггеры закрепляются на снаряжении, а Red Joker открывает младшие результаты",
+        en: "Triggers attach to equipment and Red Joker unlocks lower results",
+      },
+      summary: {
+        ru: "Продвижения лидера и тотема теперь учитывают снаряжение как цель триггера и правильно обрабатывают Red Joker.",
+        en: "Leader and Totem advancements can now target equipment with triggers and handle Red Joker correctly.",
+      },
+      items: [
+        {
+          ru: "Триггер из Attack или Tactical Modification можно назначить снаряжению лидера или тотема.",
+          en: "A trigger from Attack or Tactical Modification can be assigned to Leader or Totem equipment.",
+        },
+        {
+          ru: "Снаряжение с триггером фиксируется за получателем и показывает связь в Арсенале и печатном досье.",
+          en: "Equipment with a trigger is locked to its recipient and shows the link in the Arsenal and printed dossier.",
+        },
+        {
+          ru: "Red Joker в Tier I продвижении позволяет выбрать любой допустимый результат не выше его значения.",
+          en: "A Red Joker in a Tier I advancement allows any eligible result at or below its value.",
+        },
+      ],
+    },
+    {
       version: "2026.10.02.1",
       date: "2026-10-02",
       title: {

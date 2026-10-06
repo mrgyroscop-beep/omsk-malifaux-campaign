@@ -23,16 +23,16 @@
       name="public-site-url"
       content="https://mrgyroscop-beep.github.io/omsk-malifaux-campaign/"
     />
-    <meta name="app-version" content="2026.10.02.1" />
+    <meta name="app-version" content="2026.10.06.1" />
     <meta name="turnstile-sitekey" content="0x4AAAAAAEBz3433wGFHrqZi" />
     <title>Неписаный реестр — M4E Campaign Builder</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="styles.css?v=20" />
     <link rel="stylesheet" href="dossier-theme.css?v=20" />
     <link rel="stylesheet" href="feedback.css?v=1" />
     <link rel="stylesheet" href="cooperative.css?v=5" />
     <link rel="stylesheet" href="organizer.css?v=2" />
-    <link rel="stylesheet" href="print.css?v=12" media="print" />
+    <link rel="stylesheet" href="print.css?v=13" media="print" />
   </head>
   <body class="theme-dossier">
     <div class="noise" aria-hidden="true"></div>
@@ -2031,11 +2031,11 @@
           <input name="name" id="advancementName" required />
         </label>
         <label class="field" id="advancementAppliesField" hidden>
-          <span>Изменяемое действие</span>
+          <span id="advancementAppliesLabel">Изменяемое действие</span>
           <select name="appliesTo" id="advancementAppliesTo"></select>
         </label>
         <label class="field" id="advancementExistingTriggersField" hidden>
-          <span>Триггеров на действии до продвижения</span>
+          <span id="advancementExistingTriggersLabel">Триггеров на действии до продвижения</span>
           <input name="existingTriggers" id="advancementExistingTriggers" type="number" min="0" max="20" value="0" readonly />
         </label>
         <label class="field">
@@ -2104,12 +2104,12 @@
     <script src="cooperative-rules.js?v=1"></script>
     <script src="advancement-data.js?v=2"></script>
     <script src="cooperative.js?v=4"></script>
-    <script src="app.js?v=51"></script>
+    <script src="app.js?v=52"></script>
     <script src="account.js?v=4"></script>
-    <script src="changelog.js?v=10"></script>
+    <script src="changelog.js?v=11"></script>
     <script src="cloud.js?v=2"></script>
     <script src="feedback.js?v=1"></script>
-    <script src="print.js?v=18"></script>
+    <script src="print.js?v=19"></script>
     <script src="organizer.js?v=1"></script>
   </body>
 </html>

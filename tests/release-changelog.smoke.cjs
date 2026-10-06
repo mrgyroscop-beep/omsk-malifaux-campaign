@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const artifacts = path.join(root, ".artifacts", "changelog");
 const browserChannel = process.env.BROWSER_CHANNEL || "msedge";
-const expectedVersion = "2026.10.02.1";
+const expectedVersion = "2026.10.06.1";
 const seenKey = "m4e-release-notes-seen-v1";
 const localeKey = "m4e-untold-locale";
 
@@ -80,9 +80,9 @@ async function openCleanPage(browser, baseUrl, options = {}) {
     assert.match(await banner.innerText(), /Новая версия/iu);
     assert.match(
       await banner.innerText(),
-      /Печать разделяет модели, а Traitor исключает их из Арсенала/iu,
+      /Триггеры закрепляются на снаряжении, а Red Joker открывает младшие результаты/iu,
     );
-    assert.match(await banner.innerText(), /v2026\.10\.02\.1/iu);
+    assert.match(await banner.innerText(), /v2026\.10\.06\.1/iu);
     assert.equal(await banner.locator("li").count(), 3);
     await banner.screenshot({ path: path.join(artifacts, "release-banner-desktop.png") });
 
@@ -102,7 +102,7 @@ async function openCleanPage(browser, baseUrl, options = {}) {
     const changelog = desktop.page.locator("#changelogDialog");
     await changelog.waitFor({ state: "visible" });
     assert.equal(await desktop.page.locator("#accountDialog").getAttribute("open"), null);
-    assert.equal(await changelog.locator(".changelog-entry").count(), 13);
+    assert.equal(await changelog.locator(".changelog-entry").count(), 14);
     assert.match(await changelog.locator(".changelog-entry").first().innerText(), /Текущая/iu);
     assert.match(await changelog.innerText(), /Колода Судьбы под рукой/iu);
     await changelog.screenshot({ path: path.join(artifacts, "changelog-dialog-desktop.png") });

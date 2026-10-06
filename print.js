@@ -162,16 +162,35 @@
       .filter(Boolean);
   }
 
-  function renderPrintEquipmentSection(items) {
+  function printEquipmentTriggers(item, advances) {
+    return (Array.isArray(advances) ? advances : [])
+      .filter(
+        (advance) =>
+          !advance?.legacy &&
+          advance?.resultType === "trigger" &&
+          advance?.equipmentId === item?.id,
+      )
+      .map((advance) => advance.name)
+      .filter(Boolean);
+  }
+
+  function renderPrintEquipmentSection(items, advances = []) {
     const records = Array.isArray(items) ? items : [];
     return `<section class="print-permanent-block${records.length ? "" : " is-empty"}" data-print-section="equipment">
       <h3>${printText("Снаряжение", "Equipment")}</h3>
       ${
         records.length
           ? `<ul class="print-equipment-list">${records
-              .map((item) => `<li><b>${escapePrintHtml(item.name || "—")}</b>${
-                printKnownRuleText(item.name, item.effect) ? `<p>${richPrintText(printKnownRuleText(item.name, item.effect))}</p>` : ""
-              }</li>`)
+              .map((item) => {
+                const triggers = printEquipmentTriggers(item, advances);
+                return `<li><b>${escapePrintHtml(item.name || "—")}</b>${
+                  triggers.length
+                    ? `<small>${printText("Триггер", "Trigger")}: ${escapePrintHtml(triggers.join(" · "))}</small>`
+                    : ""
+                }${
+                  printKnownRuleText(item.name, item.effect) ? `<p>${richPrintText(printKnownRuleText(item.name, item.effect))}</p>` : ""
+                }</li>`;
+              })
               .join("")}</ul>`
           : `<p class="print-empty">—</p>`
       }
@@ -455,12 +474,15 @@
       </section>`;
   }
 
-  function renderPrintEquipmentSummary(items) {
+  function renderPrintEquipmentSummary(items, advances = []) {
     const records = Array.isArray(items) ? items : [];
     return `<section class="print-permanent-block${records.length ? "" : " is-empty"}" data-print-section="equipment">
       <h3>${printText("Снаряжение", "Equipment")}</h3>
       ${records.length
-        ? `<ul class="print-equipment-list">${records.map((item) => `<li><b>${escapePrintHtml(item.name || "—")}</b></li>`).join("")}</ul>`
+        ? `<ul class="print-equipment-list">${records.map((item) => {
+            const triggers = printEquipmentTriggers(item, advances);
+            return `<li><b>${escapePrintHtml(item.name || "—")}</b>${triggers.length ? `<small>${printText("Триггер", "Trigger")}: ${escapePrintHtml(triggers.join(" · "))}</small>` : ""}</li>`;
+          }).join("")}</ul>`
         : `<p class="print-empty">—</p>`}
     </section>`;
   }
@@ -491,7 +513,7 @@
     });
   }
 
-  function renderModels(models, loadout, equipment) {
+  function renderModels(models, loadout, equipment, advances = []) {
     const activeModels = models.filter((model) => !printModelIsAnnihilated(model));
     if (!activeModels.length) {
       return `<p class="print-empty">${printText("В арсенале пока нет моделей.", "There are no models in the arsenal yet.")}</p>`;
@@ -534,7 +556,7 @@
               <div class="print-model-upgrades">
                 ${renderPrintMutagenAbilitySection(model.mutagenAbilities)}
                 ${renderPrintInjurySection(model.injuries)}
-                ${renderPrintEquipmentSection(assigned)}
+                ${renderPrintEquipmentSection(assigned, advances)}
               </div>
             </article>`;
           })
@@ -671,6 +693,7 @@
             <th>BR</th>
             <th>CC</th>
             <th>${printText("Назначено", "Assigned to")}</th>
+            <th>${printText("Триггеры", "Triggers")}</th>
           </tr>
         </thead>
         <tbody>
@@ -689,12 +712,14 @@
                           (model) => model.id === assignment.targetId,
                         )?.name
                       : "";
+              const triggers = printEquipmentTriggers(item, data.leader?.advances);
               return `
                 <tr>
                   <td><b>${escapePrintHtml(item.name || "—")}</b></td>
                   <td>${escapePrintHtml(item.br || "—")}</td>
                   <td>${escapePrintHtml(item.cc ?? "—")}</td>
                   <td>${escapePrintHtml(target || "—")}${item.ratingExempt ? ` · ${printText("вне CR", "CR-exempt")}` : ""}</td>
+                  <td>${escapePrintHtml(triggers.join(" · ") || "—")}</td>
                 </tr>`;
             })
             .join("")}
@@ -924,7 +949,7 @@
         <div class="print-permanent-grid">
           ${renderPrintAbilitySection(advances, "totem", profile.abilities || [])}
           ${renderPrintInjurySection(totem.injuries)}
-          ${renderPrintEquipmentSection(totemEquipment)}
+          ${renderPrintEquipmentSection(totemEquipment, advances)}
         </div>
         <div class="print-stat-strip">
           ${[
@@ -1059,7 +1084,7 @@
 
         <div class="print-permanent-grid print-leader-permanent">
           ${renderPrintInjurySection(leader.injuries)}
-          ${renderPrintEquipmentSection(leaderEquipment)}
+          ${renderPrintEquipmentSection(leaderEquipment, advances)}
           ${renderManualUpgrades(manualUpgrades)}
         </div>
 
@@ -1099,7 +1124,7 @@
         ${renderAcquiredAdvancesReference(advances)}
         <section class="print-section print-acquired-equipment">
           <div class="print-section-heading"><span class="print-kicker">${printText("Предметы", "Equipment")}</span><h2>${printText("Снаряжение лидера", "Leader equipment")}</h2></div>
-          ${renderPrintEquipmentSummary(leaderEquipment)}
+          ${renderPrintEquipmentSummary(leaderEquipment, advances)}
         </section>
 
         <footer class="print-footer"><span>${printText("Справочник приобретённых правил", "Acquired rules reference")}</span><b>02</b></footer>
@@ -1134,7 +1159,7 @@
             <span class="print-kicker">${printText("Состав", "Roster")}</span>
             <h2>${printText("Модели в арсенале", "Models in the arsenal")}</h2>
           </div>
-          ${renderModels(models, loadout, equipment)}
+          ${renderModels(models, loadout, equipment, advances)}
         </section>
 
         <section class="print-section print-equipment">

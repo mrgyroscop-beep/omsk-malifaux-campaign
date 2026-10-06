@@ -40,6 +40,7 @@
     "test:kan209": "node tests/kan209-lucky-miss-upgrades.smoke.cjs",
     "test:kan210": "node tests/kan210-mutagen-abilities.smoke.cjs",
     "test:kan211-212": "node tests/kan211-212-feedback.smoke.cjs",
+    "test:kan213-214": "node tests/kan213-214-feedback.smoke.cjs",
     "test:workspace-switch": "node tests/workspace-switch-theme.smoke.cjs",
     "test:changelog": "node tests/release-changelog.smoke.cjs"
   },

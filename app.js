@@ -2458,9 +2458,10 @@ function storedCanonicalAdvancementChoice(source) {
   if (!choice) return null;
   const flip = normalizeStoredFlip(source.flip);
   if (["attack-modification", "tactical-modification"].includes(tableId)) {
-    const numericFlip = Number(flip.card);
+    const numericFlip = flip.card === "red-joker" ? 14 : Number(flip.card);
     const valid = Number.isInteger(numericFlip)
-      ? typeof choice.value === "number" && choice.value <= numericFlip
+      ? (typeof choice.value === "number" && choice.value <= numericFlip) ||
+        (flip.card === "red-joker" && choice.value === "red-joker")
       : choice.value === flip.card ||
         (choice.value === "any-joker" && ["black-joker", "red-joker"].includes(flip.card));
     return valid ? clone(choice) : null;
@@ -2627,7 +2628,7 @@ function normalizeStoredAdvancements(
   rawAdvances,
   leaderXp,
   preferredTotemSourceId = "",
-  { talents = [] } = {},
+  { talents = [], equipmentItems = [], loadout = {} } = {},
 ) {
   if (!Array.isArray(rawAdvances)) return [];
   const slots = advancementThresholds();
@@ -2723,10 +2724,11 @@ function normalizeStoredAdvancements(
         ? canonicalChoice.name
         : importedName || localized("Продвижение", "Advancement");
     const appliesTo = safeText(source.appliesTo || source.target?.name, 200).trim();
+    const equipmentId = safeText(source.equipmentId, 96).trim();
     const isModification = ["attack-modification", "tactical-modification"].includes(tableId);
     const actionKind = tableId === "attack-modification" ? "attack" : "tactical";
     const importedTotem = acceptedTotem ? { profile: acceptedTotem.snapshot } : null;
-    const action = isModification
+    const action = isModification && !equipmentId
       ? advancementKnownActionsFrom({
           recipient,
           kind: actionKind,
@@ -2735,7 +2737,28 @@ function normalizeStoredAdvancements(
           advances: accepted,
         }).find((entry) => entry.name === appliesTo)
       : null;
-    if (known && isModification && !action) continue;
+    const equipment = equipmentId
+      ? equipmentItems.find((item) => item.id === equipmentId) || null
+      : null;
+    const equipmentAssignment = equipment
+      ? (loadout.assignments || []).find(
+          (assignment) =>
+            assignment.equipmentId === equipment.id &&
+            assignment.targetKind === recipient,
+        ) || null
+      : null;
+    const equipmentRules = equipment
+      ? normalizeEquipmentAssignmentRules(equipment.assignmentRules, equipment.name)
+      : null;
+    const validEquipmentTarget = Boolean(
+      equipment &&
+      equipmentAssignment &&
+      canonicalChoice?.type === "trigger" &&
+      (!equipmentRules ||
+        (equipmentRules.allowedTargetKinds.includes(recipient) &&
+          !equipmentRules.requireNonUnique)),
+    );
+    if (known && isModification && !action && !validEquipmentTarget) continue;
     if (
       known &&
       canonicalChoice?.requirements?.currentSkill &&
@@ -2754,7 +2777,12 @@ function normalizeStoredAdvancements(
       known &&
       isModification &&
       canonicalChoice?.type === "trigger" &&
-      (action?.triggerNames || []).some(
+      [
+        ...(action?.triggerNames || []),
+        ...accepted
+          .filter((entry) => entry.equipmentId === equipmentId)
+          .map((entry) => entry.name),
+      ].some(
         (triggerName) => canonical(triggerName) === canonical(canonicalChoice.name),
       )
     ) {
@@ -2769,7 +2797,9 @@ function normalizeStoredAdvancements(
           entry.tableId === tableId &&
           entry.recipient === recipient &&
           entry.choiceId === canonicalChoice?.id &&
-          canonical(entry.appliesTo) === canonical(appliesTo),
+          (equipmentId || entry.equipmentId
+            ? entry.equipmentId === equipmentId
+            : canonical(entry.appliesTo) === canonical(appliesTo)),
       )
     ) {
       continue;
@@ -2824,7 +2854,10 @@ function normalizeStoredAdvancements(
       known &&
       isModification &&
       canonicalChoice?.type === "trigger" &&
-      Number(action?.triggers || 0) >= Number(table.triggerSurcharge?.existingTriggerCount || 2)
+      Number(
+        action?.triggers ||
+        accepted.filter((entry) => entry.equipmentId === equipmentId).length,
+      ) >= Number(table.triggerSurcharge?.existingTriggerCount || 2)
         ? Number(table.triggerSurcharge?.scrip || 2)
         : 0;
     const snapshot =
@@ -2853,7 +2886,8 @@ function normalizeStoredAdvancements(
             ? canonicalChoice.type || ({ action: "action", ability: "ability" }[tableId] || "")
             : safeText(source.resultType || source.type || (legacy ? "legacy" : ""), 60),
       flip: normalizeStoredFlip(source.flip),
-      appliesTo,
+      appliesTo: validEquipmentTarget ? equipment.name : appliesTo,
+      equipmentId: validEquipmentTarget ? equipment.id : null,
       notes: safeText(source.notes, 4_000),
       snapshot,
       cardId: safeText(source.cardId, 120) || null,
@@ -2917,7 +2951,7 @@ function mergeDefaults(saved) {
     savedLeader.advances,
     leaderXp,
     preferredTotemSourceId,
-    { talents: normalizedTalents },
+    { talents: normalizedTalents, equipmentItems: storedEquipment, loadout },
   );
   const totemSource = normalizedAdvances.find(
     (advance) =>
@@ -5124,7 +5158,16 @@ function repairLoadout() {
   if (JSON.stringify(state.loadout) !== previous) saveState();
 }
 
-function setEquipmentAssignment(item, targetKey) {
+function setEquipmentAssignment(item, targetKey, { allowAdvancementLock = false } = {}) {
+  if (!allowAdvancementLock && equipmentAdvancementTriggers(item.id).length) {
+    toast(
+      localized(
+        "Снаряжение закреплено продвижением. Сначала удалите связанный триггер.",
+        "This equipment is locked by an advancement. Remove the linked trigger first.",
+      ),
+    );
+    return false;
+  }
   const currentIndex = state.loadout.assignments.findIndex(
     (assignment) => assignment.equipmentId === item.id,
   );
@@ -5699,18 +5742,28 @@ function renderArsenal() {
           const targets = equipmentTargets(item);
           const assignment = equipmentAssignment(item.id);
           const selectedTargetKey = assignmentTargetKey(assignment);
+          const advancementTriggers = equipmentAdvancementTriggers(item.id);
+          const advancementLocked = advancementTriggers.length > 0;
           const ratingLabel =
             item.ratingExempt === true
               ? ` · ${message("equipmentOutsideRating")}`
               : "";
           return `
-          <div class="equipment-item">
+          <div class="equipment-item${advancementLocked ? " is-advancement-locked" : ""}">
             <b>${escapeHtml(item.name)}</b>
-            <button class="row-delete" type="button" data-delete-equipment="${escapeHtml(item.id)}" aria-label="${message("deleteItem")}">×</button>
+            <button class="row-delete" type="button" data-delete-equipment="${escapeHtml(item.id)}" aria-label="${message("deleteItem")}" ${advancementLocked ? "disabled" : ""}>×</button>
             <small>${item.cc != null ? `CC ${escapeHtml(item.cc)} · BR ${escapeHtml(displayBr(item.br))}` : message("customEntry")}${acquisition ? ` · ${escapeHtml(acquisition)}` : ""}${escapeHtml(ratingLabel)}</small>
+            ${
+              advancementLocked
+                ? `<div class="equipment-advancement-lock">
+                    <span>${localized("Закреплено продвижением", "Locked by advancement")}</span>
+                    <b>${escapeHtml(advancementTriggers.map((advance) => advance.name).join(" · "))}</b>
+                  </div>`
+                : ""
+            }
             <label class="equipment-assignment">
               <span>${message("equipmentAssignmentLabel")}</span>
-              <select data-assign-equipment="${escapeHtml(item.id)}">
+              <select data-assign-equipment="${escapeHtml(item.id)}" ${advancementLocked ? "disabled" : ""}>
                 <option value="">${message("equipmentUnassigned")}</option>
                 ${targets
                   .map(
@@ -5822,6 +5875,15 @@ function renderArsenal() {
   });
   equipmentWrap.querySelectorAll("[data-delete-equipment]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (equipmentAdvancementTriggers(button.dataset.deleteEquipment).length) {
+        toast(
+          localized(
+            "Снаряжение закреплено продвижением. Сначала удалите связанный триггер.",
+            "This equipment is locked by an advancement. Remove the linked trigger first.",
+          ),
+        );
+        return;
+      }
       state.arsenal.equipment = state.arsenal.equipment.filter(
         (item) => item.id !== button.dataset.deleteEquipment,
       );
@@ -7198,10 +7260,12 @@ function advancementChoices(tableId, flip, cheatedJoker) {
         ? advancementData.tier1?.attackModification
         : advancementData.tier1?.tacticalModification;
     if (!Array.isArray(collection)) return [];
-    const numeric = Number(flip);
-    if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 13) {
+    const numeric = flip === "red-joker" ? 14 : Number(flip);
+    if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 14) {
       return collection.filter(
-        (entry) => typeof entry.value === "number" && entry.value <= numeric,
+        (entry) =>
+          (typeof entry.value === "number" && entry.value <= numeric) ||
+          (flip === "red-joker" && entry.value === "red-joker"),
       );
     }
     return collection.filter(
@@ -7361,6 +7425,34 @@ function advancementKnownActions(recipient, kind) {
   });
 }
 
+function advancementEquipmentSelectionValue(item) {
+  return item?.id ? `equipment:${item.id}` : "";
+}
+
+function advancementEquipmentFromSelection(value) {
+  const id = String(value || "").startsWith("equipment:")
+    ? String(value).slice("equipment:".length)
+    : "";
+  return id ? state.arsenal.equipment.find((item) => item.id === id) || null : null;
+}
+
+function advancementEquipmentTargets(recipient) {
+  if (!["leader", "totem"].includes(recipient)) return [];
+  return state.arsenal.equipment.filter((item) =>
+    equipmentTargets(item).some((target) => target.key === recipient),
+  );
+}
+
+function equipmentAdvancementTriggers(equipmentId, advances = state.leader.advances) {
+  if (!equipmentId) return [];
+  return (Array.isArray(advances) ? advances : []).filter(
+    (advance) =>
+      !advance?.legacy &&
+      advance?.resultType === "trigger" &&
+      advance?.equipmentId === equipmentId,
+  );
+}
+
 function advancementValidationFailure(code, ru, en) {
   return { ok: false, code, message: localized(ru, en) };
 }
@@ -7371,6 +7463,7 @@ function advancementResultAlreadyUsed({
   choice,
   name,
   appliesTo,
+  equipmentId = "",
   selectedBiggerHat,
   selectedCrewCardEffect,
 }) {
@@ -7387,7 +7480,9 @@ function advancementResultAlreadyUsed({
         advance.tableId === tableId &&
         advance.recipient === recipient &&
         advance.choiceId === choice?.id &&
-        canonical(advance.appliesTo) === canonical(appliesTo),
+        (equipmentId || advance.equipmentId
+          ? advance.equipmentId === equipmentId
+          : canonical(advance.appliesTo) === canonical(appliesTo)),
     );
   }
   if (["action", "ability"].includes(tableId)) {
@@ -7445,6 +7540,7 @@ function validateAdvancementSelection({
   choiceId,
   name,
   appliesTo = "",
+  equipmentId = "",
   selectedBiggerHat = null,
   selectedCrewCardEffect = null,
 }) {
@@ -7540,11 +7636,22 @@ function validateAdvancementSelection({
         (entry) => entry.name === appliesTo,
       )
     : null;
-  if (isModification && !action) {
+  const equipment =
+    isModification && equipmentId
+      ? advancementEquipmentTargets(recipient).find((item) => item.id === equipmentId) || null
+      : null;
+  if (equipmentId && (!equipment || choice?.type !== "trigger")) {
+    return advancementValidationFailure(
+      "equipment-target",
+      "Выберите доступное снаряжение для триггера.",
+      "Choose eligible equipment for the trigger.",
+    );
+  }
+  if (isModification && !action && !equipment) {
     return advancementValidationFailure(
       "action-target",
-      "Выберите существующее действие получателя.",
-      "Choose an existing action belonging to the recipient.",
+      "Выберите существующее действие получателя или доступное снаряжение для триггера.",
+      "Choose an existing action belonging to the recipient or eligible equipment for a trigger.",
     );
   }
   if (choice?.requirements?.currentSkill) {
@@ -7570,7 +7677,10 @@ function validateAdvancementSelection({
   if (
     isModification &&
     choice?.type === "trigger" &&
-    (action?.triggerNames || []).some(
+    [
+      ...(action?.triggerNames || []),
+      ...equipmentAdvancementTriggers(equipment?.id).map((advance) => advance.name),
+    ].some(
       (triggerName) => canonical(triggerName) === canonical(choice.name),
     )
   ) {
@@ -7587,6 +7697,7 @@ function validateAdvancementSelection({
       choice,
       name: normalizedName,
       appliesTo,
+      equipmentId,
       selectedBiggerHat,
       selectedCrewCardEffect,
     })
@@ -7598,7 +7709,9 @@ function validateAdvancementSelection({
     );
   }
   const scripPaid =
-    isModification && choice?.type === "trigger" && Number(action?.triggers || 0) >= 2
+    isModification &&
+    choice?.type === "trigger" &&
+    Number(action?.triggers || equipmentAdvancementTriggers(equipment?.id).length) >= 2
       ? Number(table.triggerSurcharge?.scrip || 2)
       : 0;
   if (scripPaid > Number(state.arsenal.scrip)) {
@@ -7629,6 +7742,7 @@ function validateAdvancementSelection({
     manualName,
     name: normalizedName,
     appliesTo,
+    equipment,
     action,
     scripPaid,
     selectedCrewCardEffect,
@@ -8324,26 +8438,42 @@ function renderAdvancementForm() {
   const actions = isModification
     ? advancementKnownActions(targetSelect.value, kind)
     : [];
+  const triggerResult = isModification && choice?.type === "trigger";
+  const equipmentTargetsForTrigger = triggerResult
+    ? advancementEquipmentTargets(targetSelect.value)
+    : [];
   const oldApplies = appliesSelect.value;
+  const targetOptions = [
+    ...actions.map((action) => ({
+      value: action.name,
+      label: [
+        localized("Действие", "Action"),
+        action.name,
+        action.skill !== null && action.skill !== undefined ? `Skl ${action.skill}` : "",
+        `${action.triggers} ${localized("триг.", "trg.")}`,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    })),
+    ...equipmentTargetsForTrigger.map((item) => ({
+      value: advancementEquipmentSelectionValue(item),
+      label: `${localized("Снаряжение", "Equipment")} · ${item.name} · ${equipmentAdvancementTriggers(item.id).length} ${localized("триг.", "trg.")}`,
+    })),
+  ];
   setSelectOptions(
     appliesSelect,
-    actions.length
-      ? actions.map((action) => ({
-          value: action.name,
-          label: [
-            action.name,
-            action.skill !== null && action.skill !== undefined ? `Skl ${action.skill}` : "",
-            `${action.triggers} ${localized("триг.", "trg.")}`,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        }))
+    targetOptions.length
+      ? targetOptions
       : [
           {
             value: "",
             label: localized(
-              "Нет записанного подходящего действия",
-              "No eligible recorded action",
+              triggerResult
+                ? "Нет подходящего действия или снаряжения"
+                : "Нет записанного подходящего действия",
+              triggerResult
+                ? "No eligible action or equipment"
+                : "No eligible recorded action",
             ),
             disabled: true,
           },
@@ -8351,13 +8481,21 @@ function renderAdvancementForm() {
     oldApplies,
   );
   const selectedAction = actions.find((action) => action.name === appliesSelect.value);
+  const selectedEquipment = advancementEquipmentFromSelection(appliesSelect.value);
+  document.querySelector("#advancementAppliesLabel").textContent = triggerResult
+    ? localized("Изменяемое действие или снаряжение", "Action or equipment to modify")
+    : localized("Изменяемое действие", "Action to modify");
   const existingTriggersField = document.querySelector(
     "#advancementExistingTriggersField",
   );
   const existingTriggers = document.querySelector("#advancementExistingTriggers");
-  const triggerResult = isModification && choice?.type === "trigger";
   existingTriggersField.hidden = !triggerResult;
-  existingTriggers.value = selectedAction?.triggers || 0;
+  document.querySelector("#advancementExistingTriggersLabel").textContent = selectedEquipment
+    ? localized("Триггеров на снаряжении до продвижения", "Triggers on equipment before advancement")
+    : localized("Триггеров на действии до продвижения", "Triggers on action before advancement");
+  existingTriggers.value = selectedEquipment
+    ? equipmentAdvancementTriggers(selectedEquipment.id).length
+    : selectedAction?.triggers || 0;
   const surcharge = triggerResult && Number(existingTriggers.value) >= 2 ? 2 : 0;
   document.querySelector("#advancementScripCost").value = surcharge;
   document.querySelector("#advancementScripField").hidden = crewCardAdvancement;
@@ -8432,7 +8570,8 @@ function renderAdvancementForm() {
     cheated: cheatedInput.checked,
     choiceId: choiceSelect.value,
     name: pendingCrewCardEffect?.name || selectedBiggerHat?.name || nameInput.value,
-    appliesTo: appliesSelect.value,
+    appliesTo: selectedEquipment?.name || appliesSelect.value,
+    equipmentId: selectedEquipment?.id || "",
     selectedBiggerHat,
     selectedCrewCardEffect: pendingCrewCardEffect,
   });
@@ -8890,7 +9029,9 @@ function submitAdvancement(form) {
   const data = new FormData(form);
   const enteredName =
     selectedCrewCardEffect?.name || selectedBiggerHat?.name || safeText(data.get("name"), 200).trim();
-  const appliesTo = safeText(data.get("appliesTo"), 200).trim();
+  const appliesSelection = safeText(data.get("appliesTo"), 200).trim();
+  const selectedEquipment = advancementEquipmentFromSelection(appliesSelection);
+  const appliesTo = selectedEquipment?.name || appliesSelection;
   const validation = validateAdvancementSelection({
     xp,
     tableId,
@@ -8900,6 +9041,7 @@ function submitAdvancement(form) {
     choiceId,
     name: enteredName,
     appliesTo,
+    equipmentId: selectedEquipment?.id || "",
     selectedBiggerHat,
     selectedCrewCardEffect,
   });
@@ -8908,7 +9050,7 @@ function submitAdvancement(form) {
     renderAdvancementForm();
     return;
   }
-  const { slot, table, choice, name, scripPaid } = validation;
+  const { slot, table, choice, name, scripPaid, equipment: validatedEquipment } = validation;
   const isModification = [
     "attack-modification",
     "tactical-modification",
@@ -8943,6 +9085,7 @@ function submitAdvancement(form) {
         cheated,
     },
     appliesTo: isModification ? appliesTo : "",
+    equipmentId: isModification ? validatedEquipment?.id || null : null,
     notes: safeText(data.get("notes"), 4_000).trim(),
     snapshot: selectedCrewCardEffect
       ? {
@@ -8980,6 +9123,20 @@ function submitAdvancement(form) {
     legacy: false,
     createdAt: new Date().toISOString(),
   };
+  if (validatedEquipment) {
+    const targetKey = recipient === "totem" ? "totem" : "leader";
+    if (!setEquipmentAssignment(validatedEquipment, targetKey, { allowAdvancementLock: true })) {
+      state = before;
+      renderAll();
+      toast(
+        localized(
+          "Не удалось закрепить выбранное снаряжение за получателем продвижения.",
+          "The selected equipment could not be attached to the advancement recipient.",
+        ),
+      );
+      return;
+    }
+  }
   if (tableId === "ability") {
     if (advance.snapshot?.entry) {
       advance.snapshot.entry = {

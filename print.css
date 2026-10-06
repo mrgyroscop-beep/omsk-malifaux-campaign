@@ -814,6 +814,14 @@
     font-size: 7pt;
   }
 
+  .print-equipment-list small {
+    display: block;
+    margin-top: 0.35mm;
+    color: var(--print-muted);
+    font-size: 6pt;
+    line-height: 1.2;
+  }
+
   .print-equipment-list p {
     margin: 0.4mm 0 0;
     color: var(--print-muted);

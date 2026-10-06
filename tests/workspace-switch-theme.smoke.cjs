@@ -59,7 +59,7 @@ function contrast(foreground, background) {
     for (const width of [1440, 448, 360, 195]) {
       const context = await browser.newContext({ viewport: { width, height: 800 } });
       await context.addInitScript(() => {
-        localStorage.setItem("m4e-release-notes-seen-v1", "2026.10.02.1");
+        localStorage.setItem("m4e-release-notes-seen-v1", "2026.10.06.1");
       });
       const page = await context.newPage();
       const errors = [];
