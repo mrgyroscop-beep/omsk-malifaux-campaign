@@ -568,8 +568,8 @@
     const actions = Array.isArray(profile.actions) ? profile.actions : [];
     const abilities = Array.isArray(profile.abilities) ? profile.abilities : [];
     const stats = [
-      ["Df", profile.defense, profile.defenseSuit],
-      ["Wp", profile.willpower, profile.willpowerSuit],
+      ["Df", profile.defense, profile.defenseSuit, profile.defenseModifier],
+      ["Wp", profile.willpower, profile.willpowerSuit, profile.willpowerModifier],
       ["Sp", profile.speed],
       ["Health", profile.health],
       ["Sz", profile.size],
@@ -596,8 +596,17 @@
       <div class="print-stat-strip">
         ${stats
           .map(
-            ([label, value, suit]) =>
-              `<span><small>${label}</small><b>${plainPrintText([value ?? "—", suit].filter(Boolean).join(" "))}</b></span>`,
+            ([label, value, suit, modifier]) => {
+              const normalizedModifier = String(modifier || "").toLowerCase();
+              const modifierText = normalizedModifier === "positive"
+                ? "+"
+                : normalizedModifier === "negative"
+                  ? "−"
+                  : modifier;
+              return `<span><small>${label}</small><b>${plainPrintText(
+                [value ?? "—", suit, modifierText].filter(Boolean).join(" "),
+              )}</b></span>`;
+            },
           )
           .join("")}
       </div>

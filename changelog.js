@@ -4,6 +4,32 @@
   const SEEN_VERSION_KEY = "m4e-release-notes-seen-v1";
   const RELEASES = Object.freeze([
     {
+      version: "2026.10.20.1",
+      date: "2026-10-20",
+      title: {
+        ru: "Встроенные плюсы Hannah Lovelace и Lazarus снова видны",
+        en: "Hannah Lovelace and Lazarus show their built-in positives again",
+      },
+      summary: {
+        ru: "Карточки моделей и печатное досье теперь восстанавливают отсутствующие модификаторы из каталога.",
+        en: "Model cards and the printed dossier now restore modifiers missing from the catalog.",
+      },
+      items: [
+        {
+          ru: "Ancient Words у Hannah Lovelace показывает встроенный положительный модификатор.",
+          en: "Hannah Lovelace's Ancient Words shows its built-in positive modifier.",
+        },
+        {
+          ru: "Wp у Lazarus показывает встроенный положительный модификатор.",
+          en: "Lazarus's Wp shows its built-in positive modifier.",
+        },
+        {
+          ru: "Исправление применяется к новым и уже сохранённым карточкам, включая печатное досье.",
+          en: "The correction applies to new and saved cards, including the printed dossier.",
+        },
+      ],
+    },
+    {
       version: "2026.10.06.1",
       date: "2026-10-06",
       title: {

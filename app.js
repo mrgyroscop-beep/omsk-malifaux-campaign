@@ -1668,8 +1668,10 @@ function normalizeStoredCardSnapshot(snapshot) {
     baseLabel: safeText(snapshot.baseLabel, 80),
     defense: safeOptionalNumber(snapshot.defense, -100, 100),
     defenseSuit: safeText(snapshot.defenseSuit, 80),
+    defenseModifier: safeText(snapshot.defenseModifier, 80),
     willpower: safeOptionalNumber(snapshot.willpower, -100, 100),
     willpowerSuit: safeText(snapshot.willpowerSuit, 80),
+    willpowerModifier: safeText(snapshot.willpowerModifier, 80),
     speed: safeOptionalNumber(snapshot.speed, -100, 100),
     count: safeOptionalNumber(snapshot.count, 0, 1_000),
     isUnhirable: Boolean(snapshot.isUnhirable),
@@ -1703,7 +1705,7 @@ function normalizeStoredCardSnapshot(snapshot) {
         .slice(0, 100)
         .map((action, index) => normalizeStoredAction(action, index, normalized))
     : [];
-  return normalized;
+  return globalThis.BiggerHatCards?.applyCardDataCorrections?.(normalized) || normalized;
 }
 
 function normalizeStoredInjuries(value, ownerId = "model") {
@@ -3640,6 +3642,13 @@ function stoneMarker(value) {
   return amount > 1 ? `◆ ${amount}` : "◆";
 }
 
+function fateModifierText(value) {
+  const modifier = safeText(value, 80).toLowerCase();
+  if (modifier === "positive") return "+";
+  if (modifier === "negative") return "−";
+  return safeText(value, 80);
+}
+
 function abilityMeta(ability) {
   const defensiveType = String(ability.defensiveAbilityType || "")
     .replaceAll("_", " ")
@@ -3658,15 +3667,8 @@ function actionMeta(action) {
   if (action.stat) {
     const resist = action.resistedBy ? ` vs ${action.resistedBy}` : "";
     const suits = action.statSuits ? ` ${action.statSuits}` : "";
-    const modifier =
-      action.statModifier === "positive"
-        ? " +"
-        : action.statModifier === "negative"
-          ? " −"
-          : action.statModifier
-            ? ` ${action.statModifier}`
-            : "";
-    pieces.push(`Stat ${action.stat}${suits}${modifier}${resist}`);
+    const modifier = fateModifierText(action.statModifier);
+    pieces.push(`Stat ${action.stat}${suits}${modifier ? ` ${modifier}` : ""}${resist}`);
   }
   if (action.targetNumber) {
     const suits = action.targetSuits ? ` ${action.targetSuits}` : "";
@@ -3717,15 +3719,8 @@ function actionMetaHtml(action) {
   if (action.stat) {
     const resist = action.resistedBy ? ` vs ${action.resistedBy}` : "";
     const suits = action.statSuits ? ` ${action.statSuits}` : "";
-    const modifier =
-      action.statModifier === "positive"
-        ? " +"
-        : action.statModifier === "negative"
-          ? " −"
-          : action.statModifier
-            ? ` ${action.statModifier}`
-            : "";
-    pieces.push(escapeHtml(`Stat ${action.stat}${suits}${modifier}${resist}`));
+    const modifier = fateModifierText(action.statModifier);
+    pieces.push(escapeHtml(`Stat ${action.stat}${suits}${modifier ? ` ${modifier}` : ""}${resist}`));
   }
   if (action.targetNumber) {
     const suits = action.targetSuits ? ` ${action.targetSuits}` : "";
@@ -3764,14 +3759,15 @@ function cardRuleHtml(entry, kind, options = {}) {
 }
 
 function modelCardHtml(card) {
+  card = normalizeStoredCardSnapshot(card) || card;
   const keywords = characterKeywordNames(card).join(", ");
   const characteristics = (card.characteristics || []).join(", ");
   const faction = [card.factionLabel, card.secondFactionLabel].filter(Boolean).join(" / ");
   const actions = Array.isArray(card.actions) ? card.actions : [];
   const abilities = Array.isArray(card.abilities) ? card.abilities : [];
   const stats = [
-    ["Df", card.defense],
-    ["Wp", card.willpower],
+    ["Df", card.defense, card.defenseSuit, card.defenseModifier],
+    ["Wp", card.willpower, card.willpowerSuit, card.willpowerModifier],
     ["Sp", card.speed],
     ["Health", card.health],
     ["Sz", card.size],
@@ -3792,8 +3788,10 @@ function modelCardHtml(card) {
       <div class="card-stat-strip">
         ${stats
           .map(
-            ([label, value]) =>
-              `<span><small>${label}</small><b>${escapeHtml(value ?? "—")}</b></span>`,
+            ([label, value, suit, modifier]) =>
+              `<span><small>${label}</small><b>${cardText(
+                [value ?? "—", suit, fateModifierText(modifier)].filter(Boolean).join(" "),
+              )}</b></span>`,
           )
           .join("")}
       </div>
@@ -3843,8 +3841,10 @@ function compactTalentSourceCard(card, entry, slot) {
     baseLabel: card.baseLabel,
     defense: card.defense,
     defenseSuit: card.defenseSuit,
+    defenseModifier: card.defenseModifier,
     willpower: card.willpower,
     willpowerSuit: card.willpowerSuit,
+    willpowerModifier: card.willpowerModifier,
     speed: card.speed,
     keywords: clone(card.keywords || []),
     characteristics: clone(card.characteristics || []),
@@ -9483,7 +9483,7 @@ async function openStoredModelCard(model, formSlug = "") {
     `<div class="empty-state"><div><strong>${message("catalogSelecting")}</strong></div></div>`;
   if (!dialog.open) dialog.showModal();
   try {
-    const card = await cardCatalog.getCharacter(model.cardSlug);
+    const card = normalizeStoredCardSnapshot(await cardCatalog.getCharacter(model.cardSlug));
     model.cardSnapshot = card;
     activeCardView = card;
     saveState();
@@ -9608,7 +9608,9 @@ async function selectModelCatalogCard(slug) {
   modelDetailController = controller;
   setCatalogStatus("#modelCatalogStatus", message("catalogSelecting"));
   try {
-    const card = await cardCatalog.getCharacter(slug, { signal: controller.signal });
+    const card = normalizeStoredCardSnapshot(
+      await cardCatalog.getCharacter(slug, { signal: controller.signal }),
+    );
     if (request !== modelSelectionRequest) return;
     if (!isHireableCard(card)) throw new Error("This character cannot be hired");
     const forms = typeof cardCatalog.getReplacementForms === "function"
@@ -9616,7 +9618,9 @@ async function selectModelCatalogCard(slug) {
       : [card];
     if (request !== modelSelectionRequest) return;
     pendingModelCard = card;
-    pendingModelForms = forms.length ? forms : [card];
+    pendingModelForms = (forms.length ? forms : [card])
+      .map(normalizeStoredCardSnapshot)
+      .filter(Boolean);
     fillModelFormFromCard(card);
     renderModelCardSelection(card);
     document

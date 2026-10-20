@@ -16,6 +16,14 @@
   const DETAIL_CACHE_LIMIT = 50;
   const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000;
   const KEYWORDS_CACHE_TTL = 24 * 60 * 60 * 1000;
+  const CARD_DATA_CORRECTIONS = Object.freeze({
+    "hannah-lovelace": Object.freeze({
+      actions: Object.freeze({
+        "ancient-words": Object.freeze({ statModifier: "positive" }),
+      }),
+    }),
+    lazarus: Object.freeze({ willpowerModifier: "positive" }),
+  });
 
   let catalogMemory = null;
   let catalogPromise = null;
@@ -47,6 +55,33 @@
 
   function compactText(value) {
     return String(value ?? "").trim().replace(/\s+/g, " ");
+  }
+
+  function correctionIdentity(value) {
+    return compactText(value)
+      .normalize("NFKD")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  function applyCardDataCorrections(card) {
+    if (!card || typeof card !== "object") return card;
+    const identity = correctionIdentity(card.slug || card.displayName || card.name);
+    const correction = CARD_DATA_CORRECTIONS[identity];
+    if (!correction) return card;
+    const actionCorrections = correction.actions || {};
+    return {
+      ...card,
+      defenseModifier: correction.defenseModifier || card.defenseModifier || "",
+      willpowerModifier: correction.willpowerModifier || card.willpowerModifier || "",
+      actions: Array.isArray(card.actions)
+        ? card.actions.map((action) => ({
+            ...action,
+            ...(actionCorrections[correctionIdentity(action.slug || action.name)] || {}),
+          }))
+        : card.actions,
+    };
   }
 
   function normalizeKeywords(value) {
@@ -131,8 +166,10 @@
       baseLabel: compactText(raw.base_label),
       defense: nullableNumber(raw.defense),
       defenseSuit: compactText(raw.defense_suit),
+      defenseModifier: compactText(raw.defense_modifier),
       willpower: nullableNumber(raw.willpower),
       willpowerSuit: compactText(raw.willpower_suit),
+      willpowerModifier: compactText(raw.willpower_modifier),
       speed: nullableNumber(raw.speed),
       count: nullableNumber(raw.count),
       isUnhirable: Boolean(raw.is_unhirable),
@@ -194,7 +231,7 @@
   }
 
   function normalizeDetail(raw = {}) {
-    return {
+    return applyCardDataCorrections({
       ...normalizeSummary(raw),
       actions: Array.isArray(raw.actions) ? raw.actions.map(normalizeAction) : [],
       abilities: Array.isArray(raw.abilities) ? raw.abilities.map(normalizeAbility) : [],
@@ -205,7 +242,7 @@
           ? `${SOURCE_API_BASE}/characters/${encodeURIComponent(raw.slug)}`
           : SOURCE_API_BASE,
       },
-    };
+    });
   }
 
   function normalizeCrewUpgradeMaster(raw = {}) {
@@ -608,7 +645,7 @@
   }
 
   function getCachedCharacter(slug) {
-    return loadDetailMemory()[slug]?.detail || null;
+    return applyCardDataCorrections(loadDetailMemory()[slug]?.detail || null);
   }
 
   async function getCharacter(slug, options = {}) {
@@ -778,6 +815,7 @@
     sourceApiBase: SOURCE_API_BASE,
     normalizeSummary,
     normalizeDetail,
+    applyCardDataCorrections,
     normalizeKeyword,
     normalizeCrewUpgradeSummary,
     normalizeCrewUpgradeDetail,
